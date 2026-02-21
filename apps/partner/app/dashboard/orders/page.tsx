@@ -17,6 +17,7 @@ type Status = "pending" | "preparing" | "ready" | "delivered" | "cancelled";
 
 interface Order {
   id: string;
+  _uuid?: string;
   customer: string;
   phone: string;
   items: { name: string; qty: number; price: number }[];
@@ -141,9 +142,9 @@ export default function OrdersPage() {
   async function advance(id: string, next: Status) {
     const order = orders.find(o => o.id === id);
     const uuid  = (order as any)?._uuid ?? id;
-    const tsField: Record<Status, string | null> = {
-      accepted: "accepted_at", preparing: null, ready: "ready_at",
-      picked_up: "picked_up_at", delivered: "delivered_at", cancelled: "cancelled_at", pending: null,
+    const tsField: Partial<Record<Status, string>> = {
+      preparing: "accepted_at", ready: "ready_at",
+      delivered: "delivered_at", cancelled: "cancelled_at",
     };
     const extra = tsField[next] ? { [tsField[next]!]: new Date().toISOString() } : {};
     await supabase.from("orders").update({ status: next, ...extra }).eq("id", uuid);
@@ -203,7 +204,7 @@ export default function OrdersPage() {
             key={f.key}
             onClick={() => setFilter(f.key)}
             style={{
-              padding: "7px 16px", borderRadius: 20, border: "none", cursor: "pointer",
+              padding: "7px 16px", borderRadius: 20, cursor: "pointer",
               fontSize: 13, fontWeight: 700,
               background: filter === f.key ? C.primary : C.surface,
               color: filter === f.key ? "white" : C.textMuted,

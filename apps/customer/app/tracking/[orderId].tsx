@@ -1,17 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, Pressable, ScrollView,
-  StatusBar, Animated, Platform, Dimensions,
+  StatusBar, Animated, Platform,
 } from "react-native";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { useLocalSearchParams, router } from "expo-router";
 import { HALHA_THEME } from "@halha/ui";
 import { getSupabase } from "@halha/core";
 
 const C      = HALHA_THEME.colors;
-const SCREEN = Dimensions.get("window");
-
-// Qena, Egypt approximate center
+const SCREEN = { height: 800 };
 const QENA_DEFAULT = { latitude: 26.1551, longitude: 32.7160 };
 
 const STEP_CONFIG = [
@@ -54,7 +51,6 @@ interface OrderInfo {
 
 export default function Tracking() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
-  const mapRef      = useRef<MapView>(null);
 
   const [orderInfo,   setOrderInfo]   = useState<OrderInfo | null>(null);
   const [step,        setStep]        = useState(0);
@@ -64,7 +60,6 @@ export default function Tracking() {
 
   const pulseAnim  = useRef(new Animated.Value(1)).current;
   const fadeAnim   = useRef(new Animated.Value(0)).current;
-  const markerAnim = useRef(new Animated.Value(0)).current;
 
   // Pulse for active step
   useEffect(() => {
@@ -84,10 +79,7 @@ export default function Tracking() {
   }, []);
 
   // Pulse driver marker
-  useEffect(() => {
-    if (!driverCoord) return;
-    Animated.spring(markerAnim, { toValue: 1, friction: 5, tension: 80, useNativeDriver: true }).start();
-  }, [driverCoord?.latitude, driverCoord?.longitude]);
+  useEffect(() => {}, [driverCoord?.latitude, driverCoord?.longitude]);
 
   // Load order + subscribe to realtime
   useEffect(() => {
@@ -167,13 +159,6 @@ export default function Tracking() {
               longitude: Number(d.driver_lng),
               heading:   d.driver_heading ? Number(d.driver_heading) : null,
             });
-            // Pan map toward driver
-            mapRef.current?.animateToRegion({
-              latitude:       Number(d.driver_lat),
-              longitude:      Number(d.driver_lng),
-              latitudeDelta:  0.012,
-              longitudeDelta: 0.012,
-            }, 800);
           }
         }
       )
@@ -184,12 +169,6 @@ export default function Tracking() {
 
   const isDelivered   = step === 3;
   const stepCfg       = STEP_CONFIG[step];
-  const hasDriverLive = !!driverCoord && step === 2;
-
-  // Map initial region
-  const mapRegion = driverCoord
-    ? { latitude: driverCoord.latitude,  longitude: driverCoord.longitude, latitudeDelta: 0.015, longitudeDelta: 0.015 }
-    : { latitude: QENA_DEFAULT.latitude, longitude: QENA_DEFAULT.longitude, latitudeDelta: 0.02, longitudeDelta: 0.02 };
 
   if (loading) {
     return (
@@ -205,105 +184,19 @@ export default function Tracking() {
     <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
       <StatusBar barStyle={step < 2 ? "dark-content" : "light-content"} translucent backgroundColor="transparent" />
 
-      {/* ── MAP (top 58%) ─────────────────────────────────────────────── */}
-      <View style={{ height: SCREEN.height * 0.58 }}>
-        <MapView
-          ref={mapRef}
-          style={{ flex: 1 }}
-          provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-          initialRegion={mapRegion}
-          showsUserLocation={false}
-          showsCompass={false}
-          showsMyLocationButton={false}
-          toolbarEnabled={false}
-          mapType="standard"
-        >
-          {/* Restaurant Marker */}
-          {orderInfo && (
-            <Marker
-              coordinate={{ latitude: orderInfo.restaurantLat, longitude: orderInfo.restaurantLng }}
-              anchor={{ x: 0.5, y: 0.5 }}
-            >
-              <View style={{
-                width: 46, height: 46, borderRadius: 23,
-                backgroundColor: "#059669",
-                borderWidth: 3, borderColor: "white",
-                justifyContent: "center", alignItems: "center",
-                shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25, shadowRadius: 6, elevation: 5,
-              }}>
-                <Text style={{ fontSize: 20 }}>🏪</Text>
-              </View>
-            </Marker>
-          )}
-
-          {/* Customer Marker */}
-          {orderInfo && (
-            <Marker
-              coordinate={{ latitude: orderInfo.customerLat, longitude: orderInfo.customerLng }}
-              anchor={{ x: 0.5, y: 0.5 }}
-            >
-              <View style={{
-                width: 46, height: 46, borderRadius: 23,
-                backgroundColor: "#2563EB",
-                borderWidth: 3, borderColor: "white",
-                justifyContent: "center", alignItems: "center",
-                shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25, shadowRadius: 6, elevation: 5,
-              }}>
-                <Text style={{ fontSize: 20 }}>🏠</Text>
-              </View>
-            </Marker>
-          )}
-
-          {/* Driver Marker — only when live GPS available */}
-          {driverCoord && (
-            <Marker
-              coordinate={{ latitude: driverCoord.latitude, longitude: driverCoord.longitude }}
-              anchor={{ x: 0.5, y: 0.5 }}
-              flat={true}
-              rotation={driverCoord.heading ?? 0}
-            >
-              <Animated.View style={{
-                transform: [{ scale: markerAnim }],
-              }}>
-                <View style={{
-                  width: 54, height: 54, borderRadius: 27,
-                  backgroundColor: "#7C3AED",
-                  borderWidth: 3.5, borderColor: "white",
-                  justifyContent: "center", alignItems: "center",
-                  shadowColor: "#7C3AED",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.5, shadowRadius: 12, elevation: 8,
-                }}>
-                  <Text style={{ fontSize: 24 }}>🛵</Text>
-                </View>
-                {/* Pulse ring */}
-                <Animated.View style={{
-                  position: "absolute",
-                  width: 70, height: 70, borderRadius: 35,
-                  borderWidth: 2, borderColor: "rgba(124,58,237,0.4)",
-                  top: -8, left: -8,
-                  transform: [{ scale: pulseAnim }],
-                }} />
-              </Animated.View>
-            </Marker>
-          )}
-
-          {/* Route polyline (restaurant → driver → customer) */}
-          {hasDriverLive && orderInfo && (
-            <Polyline
-              coordinates={[
-                { latitude: orderInfo.restaurantLat, longitude: orderInfo.restaurantLng },
-                { latitude: driverCoord!.latitude,   longitude: driverCoord!.longitude },
-                { latitude: orderInfo.customerLat,   longitude: orderInfo.customerLng },
-              ]}
-              strokeColor="rgba(124,58,237,0.7)"
-              strokeWidth={3}
-              lineDashPattern={[8, 4]}
-            />
-          )}
-        </MapView>
+      {/* ── MAP PLACEHOLDER (top 58%) ─────────────────────────────────── */}
+      <View style={{
+        height: SCREEN.height * 0.58,
+        backgroundColor: "#E8E4F0",
+        justifyContent: "center", alignItems: "center",
+      }}>
+        <Text style={{ fontSize: 48, marginBottom: 12 }}>🗺️</Text>
+        <Text style={{ fontSize: 14, color: "#6B7280", fontWeight: "700" }}>
+          تتبع المندوب على الخريطة
+        </Text>
+        <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>
+          متاح قريباً
+        </Text>
 
         {/* Back button overlay */}
         <Pressable
@@ -333,29 +226,6 @@ export default function Tracking() {
           <Text style={{ fontSize: 12, fontWeight: "900", color: "#374151" }}>
             طلب #{orderInfo?.id ?? "…"}
           </Text>
-        </View>
-
-        {/* Map legend row */}
-        <View style={{
-          position: "absolute", bottom: 12, left: 16, right: 16,
-          flexDirection: "row", justifyContent: "center", gap: 14,
-        }}>
-          {[
-            { icon: "🏪", label: "المطعم", color: "#059669" },
-            { icon: "🛵", label: "المندوب", color: "#7C3AED" },
-            { icon: "🏠", label: "عنوانك", color: "#2563EB" },
-          ].map(item => (
-            <View key={item.label} style={{
-              flexDirection: "row", alignItems: "center", gap: 5,
-              backgroundColor: "white",
-              paddingVertical: 5, paddingHorizontal: 10, borderRadius: 16,
-              shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.1, shadowRadius: 4, elevation: 2,
-            }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: item.color }} />
-              <Text style={{ fontSize: 11, fontWeight: "700", color: "#374151" }}>{item.label}</Text>
-            </View>
-          ))}
         </View>
       </View>
 
@@ -536,7 +406,7 @@ export default function Tracking() {
               </View>
 
               {/* Live GPS indicator */}
-              {hasDriverLive && (
+              {!!driverCoord && step === 2 && (
                 <View style={{
                   marginTop: 12, flexDirection: "row", alignItems: "center", gap: 8,
                   backgroundColor: "#F0FDF4", borderRadius: 12, padding: 10,

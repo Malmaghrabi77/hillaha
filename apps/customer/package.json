@@ -15,7 +15,6 @@
     "@halha/ui": "workspace:*",
     "@types/react": "~19.1.17",
     "expo": "~54.0.33",
-    "expo-dev-client": "^6.0.20",
     "expo-local-authentication": "~17.0.8",
     "expo-router": "~6.0.23",
     "expo-secure-store": "~15.0.8",

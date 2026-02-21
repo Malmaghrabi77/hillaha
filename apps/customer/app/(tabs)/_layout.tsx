@@ -1,4 +1,5 @@
 import React from "react";
+import { Text } from "react-native";
 import { Tabs } from "expo-router";
 import { HALHA_THEME } from "@halha/ui";
 
@@ -62,7 +63,6 @@ export default function TabsLayout() {
   );
 }
 
-function TabIcon({ icon, color }: { icon: string; color: string }) {
-  const { Text } = require("react-native");
+function TabIcon({ icon }: { icon: string; color: string }) {
   return <Text style={{ fontSize: 20 }}>{icon}</Text>;
 }

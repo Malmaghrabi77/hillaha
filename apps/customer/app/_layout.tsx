@@ -19,7 +19,7 @@ export default function RootLayout() {
       if (data.session) {
         router.replace("/(tabs)/home");
       }
-    });
+    }).catch(() => setChecking(false));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
@@ -49,7 +49,6 @@ export default function RootLayout() {
           headerStyle: { backgroundColor: C.surface },
           headerTintColor: C.primary,
           headerTitleStyle: { fontWeight: "900", color: C.text, fontSize: 16 },
-          headerBackTitle: "رجوع",
           headerShadowVisible: false,
         }}
       >

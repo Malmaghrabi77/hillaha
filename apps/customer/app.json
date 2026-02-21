@@ -17,7 +17,8 @@
       [
         "expo-local-authentication",
         {}
-      ]
+      ],
+      "expo-secure-store"
     ],
     "android": {
       "package": "com.halha.customer",

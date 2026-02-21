@@ -118,7 +118,7 @@ export default function LandingPage() {
 
           <h1 style={{
             fontSize: isMobile ? 30 : 44, fontWeight: 900, color: C.text,
-            margin: "0 0 14px",
+            margin: "0 0 6px",
             lineHeight: 1.3,
           }}>
             حلها{" "}
@@ -130,6 +130,14 @@ export default function LandingPage() {
               يحلها
             </span>
           </h1>
+          <p style={{
+            fontSize: isMobile ? 13 : 15, fontWeight: 700,
+            color: C.textMuted, margin: "0 0 14px",
+            letterSpacing: 1,
+            direction: "ltr",
+          }}>
+            7illaha logo 7illaha
+          </p>
 
           <p style={{
             fontSize: isMobile ? 15 : 17, color: C.textMuted,
@@ -298,7 +306,7 @@ export default function LandingPage() {
             <span style={{ fontWeight: 900, fontSize: 14, color: C.text }}>حلّها</span>
           </div>
           <p style={{ color: C.textMuted, fontSize: 12, margin: 0 }}>
-            © {new Date().getFullYear()} حلّها — جميع الحقوق محفوظة
+            © {new Date().getFullYear()} مجموعة حلّها — بواسطة مصطفى المغري. جميع الحقوق محفوظة.
           </p>
         </footer>
 

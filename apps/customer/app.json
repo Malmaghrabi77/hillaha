@@ -40,7 +40,7 @@
         "NSFaceIDUsageDescription": "استخدم Face ID لتسجيل الدخول بشكل أسرع وأكثر أماناً"
       }
     },
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "extra": {
       "router": {
         "origin": false

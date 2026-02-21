@@ -33,14 +33,6 @@ export default function RootLayout() {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (checking) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: C.bg }}>
-        <ActivityIndicator size="large" color={C.primary} />
-      </View>
-    );
-  }
-
   return (
     <>
       <StatusBar style="dark" />
@@ -65,6 +57,16 @@ export default function RootLayout() {
         <Stack.Screen name="profile/edit" options={{ title: "تعديل البيانات", headerShown: true }} />
         <Stack.Screen name="loyalty" options={{ title: "🎁 نقاط الولاء", headerShown: true }} />
       </Stack>
+      {checking && (
+        <View style={{
+          position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: C.bg,
+          justifyContent: "center", alignItems: "center",
+          zIndex: 999,
+        }}>
+          <ActivityIndicator size="large" color={C.primary} />
+        </View>
+      )}
     </>
   );
 }

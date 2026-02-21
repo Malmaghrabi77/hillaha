@@ -2,6 +2,7 @@
   "expo": {
     "name": "حلّها",
     "slug": "customer",
+    "owner": "malmaghrabi77",
     "scheme": "customer",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,12 +14,9 @@
     },
     "plugins": [
       "expo-router",
-      ["expo-local-authentication", {}],
       [
-        "react-native-maps",
-        {
-          "googleMapsApiKey": "GOOGLE_MAPS_API_KEY_CUSTOMER"
-        }
+        "expo-local-authentication",
+        {}
       ]
     ],
     "android": {
@@ -30,7 +28,9 @@
       },
       "permissions": [
         "USE_BIOMETRIC",
-        "USE_FINGERPRINT"
+        "USE_FINGERPRINT",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ]
     },
     "ios": {
@@ -39,6 +39,14 @@
         "NSFaceIDUsageDescription": "استخدم Face ID لتسجيل الدخول بشكل أسرع وأكثر أماناً"
       }
     },
-    "newArchEnabled": false
+    "newArchEnabled": false,
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "f5efa312-8b0a-4a79-b35e-0c25776e1873"
+      }
+    }
   }
 }

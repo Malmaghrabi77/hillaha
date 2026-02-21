@@ -1,11 +1,8 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabase } from "@halha/core";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = getSupabase()!;
 
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",

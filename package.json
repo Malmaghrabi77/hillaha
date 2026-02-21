@@ -1,0 +1,14 @@
+{
+  "name": "hillaha",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "pnpm@10.8.1",
+  "scripts": {
+    "dev:customer": "pnpm -C apps/customer start",
+    "dev:driver": "pnpm -C apps/driver start",
+    "dev:partner": "pnpm -C apps/partner dev",
+    "dev:web": "pnpm -C apps/web dev",
+    "lint": "pnpm -r lint || true",
+    "install:all": "pnpm install"
+  }
+}

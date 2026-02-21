@@ -1,0 +1,73 @@
+name: EAS Build
+
+on:
+  push:
+    tags:
+      - "v*"          # trigger on version tags, e.g. v1.0.0
+  workflow_dispatch:  # allow manual trigger from GitHub UI
+    inputs:
+      profile:
+        description: "Build profile"
+        required: true
+        default: "preview"
+        type: choice
+        options: [preview, production]
+      app:
+        description: "Which app to build"
+        required: true
+        default: "both"
+        type: choice
+        options: [customer, driver, both]
+
+jobs:
+  build-customer:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.app == 'customer' || github.event.inputs.app == 'both' || github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build customer app
+        working-directory: apps/customer
+        run: eas build --platform android --profile ${{ github.event.inputs.profile || 'preview' }} --non-interactive
+
+  build-driver:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.app == 'driver' || github.event.inputs.app == 'both' || github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build driver app
+        working-directory: apps/driver
+        run: eas build --platform android --profile ${{ github.event.inputs.profile || 'preview' }} --non-interactive

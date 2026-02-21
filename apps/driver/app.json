@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "حلّها — مندوب",
+    "slug": "driver",
+    "scheme": "driver",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/halha-icon-1024.png",
+    "splash": {
+      "image": "./assets/halha-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FAFAFF"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "حلّها يحتاج الوصول للصور لاختيار صورتك الشخصية",
+          "cameraPermission": "حلّها يحتاج الكاميرا لالتقاط صورة التعريف الخاصة بك"
+        }
+      ],
+      ["expo-local-authentication", {}],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "حلّها يحتاج الوصول لموقعك لتتبع رحلة التوصيل",
+          "locationWhenInUsePermission": "حلّها يحتاج الوصول لموقعك لتتبع رحلة التوصيل",
+          "locationAlwaysPermission": "حلّها يحتاج موقعك في الخلفية أثناء التوصيل",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "GOOGLE_MAPS_API_KEY_DRIVER"
+        }
+      ]
+    ],
+    "android": {
+      "package": "com.halha.driver",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.halha.driver",
+      "infoPlist": {
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "حلّها يحتاج موقعك لتتبع رحلة التوصيل",
+        "NSLocationWhenInUseUsageDescription": "حلّها يحتاج موقعك لتتبع رحلة التوصيل",
+        "NSCameraUsageDescription": "حلّها يحتاج الكاميرا لالتقاط صورة التعريف الخاصة بك",
+        "NSPhotoLibraryUsageDescription": "حلّها يحتاج الوصول للصور",
+        "NSFaceIDUsageDescription": "استخدم Face ID لتسجيل الدخول بشكل أسرع وأكثر أماناً"
+      }
+    }
+  }
+}

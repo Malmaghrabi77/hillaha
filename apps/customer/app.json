@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "حلّها",
+    "slug": "customer",
+    "scheme": "customer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/halha-icon-1024.png",
+    "splash": {
+      "image": "./assets/halha-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FAFAFF"
+    },
+    "plugins": [
+      "expo-router",
+      ["expo-local-authentication", {}],
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "GOOGLE_MAPS_API_KEY_CUSTOMER"
+        }
+      ]
+    ],
+    "android": {
+      "package": "com.halha.customer",
+      "config": {
+        "googleMaps": {
+          "apiKey": "GOOGLE_MAPS_API_KEY_CUSTOMER"
+        }
+      },
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.halha.customer",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "استخدم Face ID لتسجيل الدخول بشكل أسرع وأكثر أماناً"
+      }
+    },
+    "newArchEnabled": false
+  }
+}

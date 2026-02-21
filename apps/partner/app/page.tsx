@@ -135,8 +135,11 @@ export default function LandingPage() {
             color: C.textMuted, margin: "0 0 14px",
             letterSpacing: 1,
             direction: "ltr",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           }}>
-            7illaha logo 7illaha
+            <span>7illaha</span>
+            <img src="/logo.png" alt="" style={{ width: 22, height: 22, objectFit: "contain" }} />
+            <span>7illaha</span>
           </p>
 
           <p style={{
@@ -306,7 +309,7 @@ export default function LandingPage() {
             <span style={{ fontWeight: 900, fontSize: 14, color: C.text }}>حلّها</span>
           </div>
           <p style={{ color: C.textMuted, fontSize: 12, margin: 0 }}>
-            © {new Date().getFullYear()} مجموعة حلّها — بواسطة مصطفى المغري. جميع الحقوق محفوظة.
+            جميع الحقوق محفوظة لمجموعة حلّها {new Date().getFullYear()} بواسطة مصطفى المغربي
           </p>
         </footer>
 

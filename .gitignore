@@ -53,3 +53,8 @@ coverage/
 
 # Misc
 tmpclaude-*
+nul
+fix_imports.js
+
+# Claude temp directories (all levels)
+tmpclaude-*

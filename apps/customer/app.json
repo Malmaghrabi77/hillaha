@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/halha-logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FAFAFF"
+      "backgroundColor": "#0F0A1E"
     },
     "plugins": [
       "expo-router",
@@ -22,11 +22,6 @@
     ],
     "android": {
       "package": "com.halha.customer",
-      "config": {
-        "googleMaps": {
-          "apiKey": "GOOGLE_MAPS_API_KEY_CUSTOMER"
-        }
-      },
       "permissions": [
         "USE_BIOMETRIC",
         "USE_FINGERPRINT",

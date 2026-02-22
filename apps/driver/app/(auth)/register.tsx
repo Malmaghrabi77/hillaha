@@ -6,16 +6,20 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { getSupabase } from "@halha/core";
 
 const C = {
-  primary: "#8B5CF6", primarySoft: "#EDE9FE",
-  pink: "#EC4899", pinkSoft: "#FCE7F3",
-  bg: "#FAFAFF", surface: "#FFFFFF",
-  border: "#E7E3FF", text: "#1F1B2E",
-  textMuted: "#6B6480", danger: "#EF4444",
-  success: "#059669",
-};
+  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
+  pink: "#EC4899",       pinkSoft: "#FCE7F3",
+  bg: "#FAFAFF",         surface: "#FFFFFF",
+  border: "#E7E3FF",     text: "#1F1B2E",
+  textMuted: "#6B6480",  success: "#34D399",
+  warning: "#F59E0B",    danger: "#EF4444",
+  deepPurple: "#6D28D9",
+} as const;
+
+function getSB() {
+  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
+}
 
 type Step = 1 | 2;
 
@@ -69,7 +73,7 @@ export default function DriverRegister() {
     setLoading(true);
 
     try {
-      const supabase = getSupabase();
+      const supabase = getSB();
       if (!supabase) throw new Error("خطأ في الاتصال");
 
       // 1. Sign up

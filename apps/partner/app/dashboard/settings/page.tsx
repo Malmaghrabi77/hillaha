@@ -1,6 +1,12 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { getSupabase } from "@halha/core";
+import { getSupabase } from "@hillaha/core";
+
+// عناوين البريد الإلكتروني لمنصة حلّها
+const EMAILS = {
+  admin: "admin1@hillaha.com",           // مدير التطبيق المفوَّض من السوبرادمن
+  masterAdmin: "masteradmin@hillaha.com", // السوبرادمن — طلبات الشركاء الرسمية
+} as const;
 
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",
@@ -281,7 +287,16 @@ export default function SettingsPage() {
           </div>
         ))}
         <p style={{ color: C.textMuted, fontSize: 12, marginTop: 14, marginBottom: 0 }}>
-          لتعديل بيانات المتجر تواصل مع فريق حلّها
+          لتعديل بيانات المتجر تواصل مع فريق حلّها:&nbsp;
+          <a href={`mailto:${EMAILS.admin}?subject=طلب تعديل بيانات متجر`}
+             style={{ color: C.primary, fontWeight: 700 }}>
+            {EMAILS.admin}
+          </a>
+          &nbsp;|&nbsp;
+          <a href={`mailto:${EMAILS.masterAdmin}?subject=طلب رسمي — تعديل بيانات شريك`}
+             style={{ color: C.primary, fontWeight: 700 }}>
+            {EMAILS.masterAdmin}
+          </a>
         </p>
       </div>
     </div>

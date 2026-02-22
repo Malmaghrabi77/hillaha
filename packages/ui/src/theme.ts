@@ -1,4 +1,4 @@
-export const HalhaColors = {
+export const HillahColors = {
   primary: "#8B5CF6",
   primarySoft: "#EDE9FE",
   pink: "#EC4899",
@@ -14,6 +14,6 @@ export const HalhaColors = {
   deepPurple: "#6D28D9",
 } as const;
 
-export const HalhaRadius = { card: 16, button: 14, input: 12 } as const;
+export const HillahRadius = { card: 16, button: 14, input: 12 } as const;
 
-export const HALHA_THEME = { colors: HalhaColors, radius: HalhaRadius } as const;
+export const HILLAHA_THEME = { colors: HillahColors, radius: HillahRadius } as const;

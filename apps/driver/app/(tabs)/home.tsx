@@ -3,10 +3,20 @@ import {
   View, Text, ScrollView, Pressable,
   StatusBar, RefreshControl,
 } from "react-native";
-import { HALHA_THEME } from "@halha/ui";
-import { getSupabase } from "@halha/core";
 
-const C = HALHA_THEME.colors;
+const C = {
+  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
+  pink: "#EC4899",       pinkSoft: "#FCE7F3",
+  bg: "#FAFAFF",         surface: "#FFFFFF",
+  border: "#E7E3FF",     text: "#1F1B2E",
+  textMuted: "#6B6480",  success: "#34D399",
+  warning: "#F59E0B",    danger: "#EF4444",
+  deepPurple: "#6D28D9",
+} as const;
+
+function getSB() {
+  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
+}
 
 interface AvailableOrder {
   _uuid:             string;
@@ -44,7 +54,7 @@ export default function HomeTab() {
   const [driverId, setDriverId]     = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = getSupabase();
+    const supabase = getSB();
     if (!supabase) return;
 
     // جلب ID السائق الحالي
@@ -85,7 +95,7 @@ export default function HomeTab() {
   }, [driverId]);
 
   async function acceptOrder(uuid: string) {
-    const supabase = getSupabase();
+    const supabase = getSB();
     if (!supabase || !driverId) return;
     await supabase.from("orders").update({
       driver_id:    driverId,
@@ -101,7 +111,7 @@ export default function HomeTab() {
 
   async function onRefresh() {
     setRefreshing(true);
-    const supabase = getSupabase();
+    const supabase = getSB();
     if (supabase) {
       const { data } = await supabase
         .from("orders")

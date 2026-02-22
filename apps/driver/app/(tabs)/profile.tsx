@@ -4,10 +4,20 @@ import {
   StatusBar, ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
-import { getSupabase } from "@halha/core";
-import { HALHA_THEME } from "@halha/ui";
 
-const C = HALHA_THEME.colors;
+const C = {
+  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
+  pink: "#EC4899",       pinkSoft: "#FCE7F3",
+  bg: "#FAFAFF",         surface: "#FFFFFF",
+  border: "#E7E3FF",     text: "#1F1B2E",
+  textMuted: "#6B6480",  success: "#34D399",
+  warning: "#F59E0B",    danger: "#EF4444",
+  deepPurple: "#6D28D9",
+} as const;
+
+function getSB() {
+  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
+}
 
 export default function ProfileTab() {
   const [name, setName]     = useState("المندوب");
@@ -15,7 +25,7 @@ export default function ProfileTab() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = getSupabase();
+    const supabase = getSB();
     if (!supabase) { setLoading(false); return; }
     supabase.auth.getUser().then(({ data }) => {
       const meta = data.user?.user_metadata as any;
@@ -26,7 +36,7 @@ export default function ProfileTab() {
   }, []);
 
   async function handleLogout() {
-    const supabase = getSupabase();
+    const supabase = getSB();
     if (supabase) await supabase.auth.signOut();
     router.replace("/(auth)/login");
   }

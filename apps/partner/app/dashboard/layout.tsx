@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { getSupabase } from "@halha/core";
+import { getSupabase } from "@hillaha/core";
 
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",

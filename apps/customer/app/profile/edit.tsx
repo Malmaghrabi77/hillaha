@@ -1,9 +1,15 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, Image } from "react-native";
+import { View, Text, TextInput, Pressable, ScrollView } from "react-native";
 import { router } from "expo-router";
-import { HALHA_THEME } from "@halha/ui";
-
-const C = HALHA_THEME.colors;
+const C = {
+  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
+  pink: "#EC4899",       pinkSoft: "#FCE7F3",
+  bg: "#FAFAFF",         surface: "#FFFFFF",
+  border: "#E7E3FF",     text: "#1F1B2E",
+  textMuted: "#6B6480",  success: "#34D399",
+  warning: "#F59E0B",    danger: "#EF4444",
+  deepPurple: "#6D28D9",
+} as const;
 
 export default function EditProfile() {
   const [name, setName]     = useState("مصطفى محمد");

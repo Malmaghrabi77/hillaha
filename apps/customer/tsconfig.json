@@ -7,10 +7,10 @@
       "@/*": [
         "./*"
       ],
-      "@halha/ui": [
+      "@hillaha/ui": [
         "../../packages/ui/src"
       ],
-      "@halha/core": [
+      "@hillaha/core": [
         "../../packages/core/src"
       ]
     }

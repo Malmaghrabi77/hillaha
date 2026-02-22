@@ -1,72 +1,69 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Stack, router } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { HALHA_THEME } from "@halha/ui";
-import { getSupabase } from "@halha/core";
-import { View, ActivityIndicator } from "react-native";
+import * as SplashScreen from "expo-splash-screen";
 
-const C = HALHA_THEME.colors;
+// ── حل مشكلة الـ splash المجمّد ──────────────────────────────────────────────
+// يُستدعى على مستوى الـ module — قبل أي تصيير لـ React تمامًا.
+// هذا هو أبكر نقطة ممكنة في دورة حياة JS، لذا لن يُجمَّد الـ splash أبداً.
+SplashScreen.hideAsync().catch(() => {});
+
+// ── Inline colors only — zero workspace-package imports at module level ──────
+const PURPLE = "#8B5CF6";
+const WHITE  = "#FFFFFF";
+const DARK   = "#1F1B2E";
 
 export default function RootLayout() {
-  const [checking, setChecking] = useState(true);
-
+  // Auth-state listener — runs for the entire app lifetime.
+  // Uses require() inside try/catch so a module error here never
+  // blocks the layout from rendering or showing screens.
   useEffect(() => {
-    const supabase = getSupabase();
-    if (!supabase) { setChecking(false); return; }
-
-    supabase.auth.getSession().then(({ data }) => {
-      setChecking(false);
-      if (data.session) {
-        router.replace("/(tabs)/home");
+    let unsub: (() => void) | null = null;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { getSupabase } = require("@hillaha/core") as any;
+      const sb = getSupabase?.();
+      if (sb) {
+        const { data: { subscription } } = sb.auth.onAuthStateChange(
+          (event: string, session: any) => {
+            if (event === "SIGNED_IN"  && session) router.replace("/(tabs)/home");
+            if (event === "SIGNED_OUT")              router.replace("/(auth)");
+          }
+        );
+        unsub = () => subscription.unsubscribe();
       }
-    }).catch(() => setChecking(false));
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        router.replace("/(tabs)/home");
-      }
-      if (event === "SIGNED_OUT") {
-        router.replace("/(auth)");
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    } catch { /* auth unavailable — app stays on current screen */ }
+    return () => unsub?.();
   }, []);
 
   return (
-    <>
-      <StatusBar style="dark" />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: C.surface },
-          headerTintColor: C.primary,
-          headerTitleStyle: { fontWeight: "900", color: C.text, fontSize: 16 },
-          headerShadowVisible: false,
-        }}
-      >
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="legal/consent" options={{ headerShown: false }} />
-        <Stack.Screen name="restaurant/[id]" options={{ title: "تفاصيل المتجر", headerShown: true }} />
-        <Stack.Screen name="cart" options={{ title: "🛒 السلة", headerShown: true }} />
-        <Stack.Screen name="checkout" options={{ title: "الدفع", headerShown: true }} />
-        <Stack.Screen name="tracking/[orderId]" options={{ title: "📦 تتبع الطلب", headerShown: true }} />
-        <Stack.Screen name="medical" options={{ title: "🏥 الخدمات الطبية", headerShown: true }} />
-        <Stack.Screen name="medical/booking" options={{ title: "حجز موعد طبيب", headerShown: true }} />
-        <Stack.Screen name="medical/prescription" options={{ title: "رفع روشتة", headerShown: true }} />
-        <Stack.Screen name="profile/edit" options={{ title: "تعديل البيانات", headerShown: true }} />
-        <Stack.Screen name="loyalty" options={{ title: "🎁 نقاط الولاء", headerShown: true }} />
-      </Stack>
-      {checking && (
-        <View style={{
-          position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: C.bg,
-          justifyContent: "center", alignItems: "center",
-          zIndex: 999,
-        }}>
-          <ActivityIndicator size="large" color={C.primary} />
-        </View>
-      )}
-    </>
+    <Stack
+      screenOptions={{
+        headerStyle:       { backgroundColor: WHITE },
+        headerTintColor:   PURPLE,
+        headerTitleStyle:  { fontWeight: "900", color: DARK, fontSize: 16 },
+        headerShadowVisible: false,
+      }}
+    >
+      {/* Initialization screen — our custom JS splash */}
+      <Stack.Screen name="index"               options={{ headerShown: false }} />
+
+      {/* Auth group */}
+      <Stack.Screen name="(auth)"              options={{ headerShown: false }} />
+
+      {/* Main tabs */}
+      <Stack.Screen name="(tabs)"              options={{ headerShown: false }} />
+
+      {/* Other screens */}
+      <Stack.Screen name="legal/consent"       options={{ headerShown: false }} />
+      <Stack.Screen name="restaurant/[id]"     options={{ title: "تفاصيل المتجر" }} />
+      <Stack.Screen name="cart"                options={{ title: "🛒 السلة" }} />
+      <Stack.Screen name="checkout"            options={{ title: "الدفع" }} />
+      <Stack.Screen name="tracking/[orderId]"  options={{ title: "📦 تتبع الطلب" }} />
+      <Stack.Screen name="medical"             options={{ title: "🏥 الخدمات الطبية" }} />
+      <Stack.Screen name="medical/booking"     options={{ title: "حجز موعد طبيب" }} />
+      <Stack.Screen name="medical/prescription" options={{ title: "رفع روشتة" }} />
+      <Stack.Screen name="profile/edit"        options={{ title: "تعديل البيانات" }} />
+      <Stack.Screen name="loyalty"             options={{ title: "🎁 نقاط الولاء" }} />
+    </Stack>
   );
 }

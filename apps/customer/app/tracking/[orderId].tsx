@@ -4,10 +4,19 @@ import {
   StatusBar, Animated, Platform,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
-import { HALHA_THEME } from "@halha/ui";
-import { getSupabase } from "@halha/core";
+const C = {
+  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
+  pink: "#EC4899",       pinkSoft: "#FCE7F3",
+  bg: "#FAFAFF",         surface: "#FFFFFF",
+  border: "#E7E3FF",     text: "#1F1B2E",
+  textMuted: "#6B6480",  success: "#34D399",
+  warning: "#F59E0B",    danger: "#EF4444",
+  deepPurple: "#6D28D9",
+} as const;
 
-const C      = HALHA_THEME.colors;
+function getSB() {
+  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
+}
 const SCREEN = { height: 800 };
 const QENA_DEFAULT = { latitude: 26.1551, longitude: 32.7160 };
 
@@ -59,7 +68,6 @@ export default function Tracking() {
   const [loading,     setLoading]     = useState(true);
 
   const pulseAnim  = useRef(new Animated.Value(1)).current;
-  const fadeAnim   = useRef(new Animated.Value(0)).current;
 
   // Pulse for active step
   useEffect(() => {
@@ -73,18 +81,10 @@ export default function Tracking() {
     return () => loop.stop();
   }, [step]);
 
-  // Fade in on mount
-  useEffect(() => {
-    Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-  }, []);
-
-  // Pulse driver marker
-  useEffect(() => {}, [driverCoord?.latitude, driverCoord?.longitude]);
-
   // Load order + subscribe to realtime
   useEffect(() => {
     if (!orderId) return;
-    const supabase = getSupabase();
+    const supabase = getSB();
     if (!supabase) return;
 
     async function loadOrder() {
@@ -181,7 +181,7 @@ export default function Tracking() {
   }
 
   return (
-    <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+    <View style={{ flex: 1 }}>
       <StatusBar barStyle={step < 2 ? "dark-content" : "light-content"} translucent backgroundColor="transparent" />
 
       {/* ── MAP PLACEHOLDER (top 58%) ─────────────────────────────────── */}
@@ -453,6 +453,6 @@ export default function Tracking() {
           )}
         </ScrollView>
       </View>
-    </Animated.View>
+    </View>
   );
 }

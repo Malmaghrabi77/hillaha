@@ -20,7 +20,10 @@
           "cameraPermission": "حلّها يحتاج الكاميرا لالتقاط صورة التعريف الخاصة بك"
         }
       ],
-      ["expo-local-authentication", {}],
+      [
+        "expo-local-authentication",
+        {}
+      ],
       [
         "expo-location",
         {
@@ -39,7 +42,7 @@
       ]
     ],
     "android": {
-      "package": "com.halha.driver",
+      "package": "com.hillaha.driver",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -52,7 +55,7 @@
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.halha.driver",
+      "bundleIdentifier": "com.hillaha.driver",
       "infoPlist": {
         "NSLocationAlwaysAndWhenInUseUsageDescription": "حلّها يحتاج موقعك لتتبع رحلة التوصيل",
         "NSLocationWhenInUseUsageDescription": "حلّها يحتاج موقعك لتتبع رحلة التوصيل",

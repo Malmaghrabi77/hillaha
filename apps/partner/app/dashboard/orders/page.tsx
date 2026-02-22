@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { getSupabase } from "@halha/core";
+import { getSupabase } from "@hillaha/core";
 
 const supabase = getSupabase()!;
 

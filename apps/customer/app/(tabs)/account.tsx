@@ -1,10 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, ScrollView, Image } from "react-native";
+import { View, Text, Pressable, ScrollView, Image, Linking } from "react-native";
 import { router } from "expo-router";
-import { HALHA_THEME } from "@halha/ui";
-import { getSupabase } from "@halha/core";
 
-const C = HALHA_THEME.colors;
+// عناوين البريد الإلكتروني الرسمية لمنصة حلّها
+const EMAILS = {
+  info: "info@hillaha.com",           // معلومات عامة والتواصل مع العملاء
+  webmaster: "webmaster@hillaha.com", // طلبات تسجيل الشركاء الجدد
+} as const;
+const C = {
+  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
+  pink: "#EC4899",       pinkSoft: "#FCE7F3",
+  bg: "#FAFAFF",         surface: "#FFFFFF",
+  border: "#E7E3FF",     text: "#1F1B2E",
+  textMuted: "#6B6480",  success: "#34D399",
+  warning: "#F59E0B",    danger: "#EF4444",
+  deepPurple: "#6D28D9",
+} as const;
+
+function getSB() {
+  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
+}
 
 const MENU = [
   { icon: "📦", label: "طلباتي السابقة",    route: "/(tabs)/orders" },
@@ -21,7 +36,7 @@ export default function Account() {
   const [userEmail, setUserEmail] = useState("...");
 
   useEffect(() => {
-    const supabase = getSupabase();
+    const supabase = getSB();
     if (!supabase) return;
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
@@ -33,7 +48,7 @@ export default function Account() {
   }, []);
 
   async function handleLogout() {
-    const supabase = getSupabase();
+    const supabase = getSB();
     if (!supabase) return;
     await supabase.auth.signOut();
     router.replace("/(auth)");
@@ -116,6 +131,41 @@ export default function Account() {
             <Text style={{ color: C.textMuted, fontSize: 18 }}>←</Text>
           </Pressable>
         ))}
+
+        {/* CONTACT */}
+        <View style={{
+          marginTop: 8, marginBottom: 10, padding: 16, borderRadius: 16,
+          backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+        }}>
+          <Text style={{ fontWeight: "800", color: C.textMuted, fontSize: 11, marginBottom: 10, letterSpacing: 1 }}>
+            تواصل معنا
+          </Text>
+          <Pressable
+            onPress={() => Linking.openURL(`mailto:${EMAILS.info}?subject=استفسار من تطبيق حلّها`)}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 }}
+          >
+            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.primarySoft, justifyContent: "center", alignItems: "center" }}>
+              <Text style={{ fontSize: 18 }}>📧</Text>
+            </View>
+            <View>
+              <Text style={{ fontWeight: "700", color: C.text, fontSize: 14 }}>معلومات واستفسارات</Text>
+              <Text style={{ color: C.textMuted, fontSize: 12 }}>{EMAILS.info}</Text>
+            </View>
+          </Pressable>
+          <View style={{ height: 1, backgroundColor: C.border, marginVertical: 6 }} />
+          <Pressable
+            onPress={() => Linking.openURL(`mailto:${EMAILS.webmaster}?subject=طلب تسجيل شريك جديد`)}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 }}
+          >
+            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.pinkSoft, justifyContent: "center", alignItems: "center" }}>
+              <Text style={{ fontSize: 18 }}>🤝</Text>
+            </View>
+            <View>
+              <Text style={{ fontWeight: "700", color: C.text, fontSize: 14 }}>تسجيل شريك جديد</Text>
+              <Text style={{ color: C.textMuted, fontSize: 12 }}>{EMAILS.webmaster}</Text>
+            </View>
+          </Pressable>
+        </View>
 
         {/* LOGOUT */}
         <Pressable

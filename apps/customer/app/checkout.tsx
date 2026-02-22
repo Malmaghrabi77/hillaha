@@ -4,10 +4,19 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
-import { HALHA_THEME } from "@halha/ui";
-import { getSupabase } from "@halha/core";
+const C = {
+  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
+  pink: "#EC4899",       pinkSoft: "#FCE7F3",
+  bg: "#FAFAFF",         surface: "#FFFFFF",
+  border: "#E7E3FF",     text: "#1F1B2E",
+  textMuted: "#6B6480",  success: "#34D399",
+  warning: "#F59E0B",    danger: "#EF4444",
+  deepPurple: "#6D28D9",
+} as const;
 
-const C = HALHA_THEME.colors;
+function getSB() {
+  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
+}
 
 type PayMethod = "cash" | "instapay" | "vodafone" | "card";
 
@@ -42,12 +51,12 @@ export default function Checkout() {
 
   // تحميل بيانات المستخدم تلقائياً
   useEffect(() => {
-    const supabase = getSupabase();
+    const supabase = getSB();
     if (!supabase) return;
     supabase.auth.getUser().then(({ data }) => {
       const meta = data.user?.user_metadata as any;
       if (meta?.phone) setPhone(meta.phone);
-    });
+    }).catch(() => {});
   }, []);
 
   async function handleConfirm() {
@@ -56,7 +65,7 @@ export default function Checkout() {
     setLoading(true);
 
     try {
-      const supabase = getSupabase();
+      const supabase = getSB();
       if (!supabase) throw new Error("خطأ في الاتصال");
 
       const { data: { user } } = await supabase.auth.getUser();

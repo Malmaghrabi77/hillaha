@@ -1,7 +1,13 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabase } from "@halha/core";
+import { getSupabase } from "@hillaha/core";
+
+// عناوين البريد الإلكتروني لمنصة حلّها
+const EMAILS = {
+  webmaster: "webmaster@hillaha.com", // طلبات تسجيل الشركاء الجدد
+  admin: "admin1@hillaha.com",        // مدير التطبيق المفوَّض
+} as const;
 
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",
@@ -117,8 +123,16 @@ export default function LoginPage() {
 
         <p style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: C.textMuted }}>
           هل تريد الانضمام كشريك؟{" "}
-          <a href="mailto:partner@hillaha.com" style={{ color: C.primary, fontWeight: 700 }}>
-            تواصل معنا
+          <a href={`mailto:${EMAILS.webmaster}?subject=طلب تسجيل شريك جديد`}
+             style={{ color: C.primary, fontWeight: 700 }}>
+            {EMAILS.webmaster}
+          </a>
+        </p>
+        <p style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.textMuted }}>
+          للدعم الفني:{" "}
+          <a href={`mailto:${EMAILS.admin}?subject=دعم فني — لوحة الشريك`}
+             style={{ color: C.textMuted, fontWeight: 600 }}>
+            {EMAILS.admin}
           </a>
         </p>
       </div>

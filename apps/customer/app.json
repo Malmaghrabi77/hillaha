@@ -8,7 +8,7 @@
     "orientation": "portrait",
     "icon": "./assets/halha-icon-1024.png",
     "splash": {
-      "image": "./assets/halha-logo.png",
+      "image": "./assets/hillaha-logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#0F0A1E"
     },
@@ -18,21 +18,30 @@
         "expo-local-authentication",
         {}
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "يحتاج التطبيق للوصول إلى صورك لرفع إثبات التحويل"
+        }
+      ]
     ],
     "android": {
-      "package": "com.halha.customer",
+      "package": "com.hillaha.customer",
       "permissions": [
         "USE_BIOMETRIC",
         "USE_FINGERPRINT",
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE"
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.halha.customer",
+      "bundleIdentifier": "com.hillaha.customer",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "استخدم Face ID لتسجيل الدخول بشكل أسرع وأكثر أماناً"
+        "NSFaceIDUsageDescription": "استخدم Face ID لتسجيل الدخول بشكل أسرع وأكثر أماناً",
+        "NSPhotoLibraryUsageDescription": "يحتاج التطبيق للوصول إلى صورك لرفع إثبات التحويل"
       }
     },
     "newArchEnabled": false,

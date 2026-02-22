@@ -138,7 +138,7 @@ export default function LandingPage() {
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           }}>
             <span>Hillaha</span>
-            <img src="/logo.png" alt="" style={{ width: 44, height: 44, objectFit: "contain" }} />
+            <img src="/logo.png" alt="" style={{ width: 44, height: 112, objectFit: "contain" }} />
             <span>Hillaha</span>
           </p>
 

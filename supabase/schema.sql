@@ -92,8 +92,9 @@ create table if not exists public.orders (
   delivery_fee     numeric(10,2) not null default 10,
   discount         numeric(10,2) not null default 0,
   total            numeric(10,2) not null default 0,
-  payment_method   text not null default 'cash',
-  status           text not null default 'pending'
+  payment_method    text not null default 'cash',
+  payment_proof_url text,                          -- رابط صورة إثبات الدفع (InstaPay/E& إلزامي)
+  status            text not null default 'pending'
     check (status in ('pending','accepted','preparing','ready','picked_up','delivered','cancelled')),
   created_at       timestamptz default now(),
   accepted_at      timestamptz,
@@ -141,3 +142,34 @@ $$;
 drop trigger if exists on_order_delivered on public.orders;
 create trigger on_order_delivered
   after update on public.orders for each row execute procedure public.award_loyalty_points();
+
+
+-- ────────────────────────────────────────────────────────────
+-- 6. PLATFORM SETTINGS (حسابات الاستلام وإعدادات المنصة)
+-- ────────────────────────────────────────────────────────────
+create table if not exists public.platform_settings (
+  key        text primary key,
+  value      text not null default '',
+  label      text not null default '',
+  updated_at timestamptz default now()
+);
+
+insert into public.platform_settings (key, value, label) values
+  ('instapay_account', '@malmaghrabi77', 'حساب InstaPay'),
+  ('etisalat_phone',   '01107549225',    'رقم E& (اتصالات)'),
+  ('vodafone_phone',   '',               'رقم Vodafone Cash')
+on conflict (key) do nothing;
+
+alter table public.platform_settings enable row level security;
+
+create policy "anyone can read settings"
+  on public.platform_settings for select using (true);
+
+create policy "super_admin can update settings"
+  on public.platform_settings for update
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'super_admin'
+    )
+  );

@@ -25,6 +25,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [userName, setUserName] = useState("الشريك");
   const [logoUrl,  setLogoUrl]  = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading,  setLoading]  = useState(true);
 
   useEffect(() => {
@@ -34,6 +35,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!data.session) { router.replace("/login"); return; }
       const meta = data.session.user.user_metadata as any;
       setUserName(meta?.full_name ?? meta?.name ?? data.session.user.email?.split("@")[0] ?? "الشريك");
+
+      // Check super_admin role
+      const { data: profile } = await sb
+        .from("profiles")
+        .select("role")
+        .eq("id", data.session.user.id)
+        .maybeSingle();
+      if (profile?.role === "super_admin") setIsSuperAdmin(true);
 
       // Load partner logo from partners table
       const { data: partner } = await sb
@@ -144,6 +153,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </a>
             );
           })}
+
+          {/* Super Admin nav item — مرئي لحساب السوبر أدمن فقط */}
+          {isSuperAdmin && (() => {
+            const active = pathname.startsWith("/dashboard/admin");
+            return (
+              <a
+                href="/dashboard/admin"
+                style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "11px 14px", borderRadius: 12, marginTop: 8,
+                  background: active ? "#6D28D9" : "#EDE9FE",
+                  color: active ? "white" : "#6D28D9",
+                  fontWeight: 900, fontSize: 14,
+                  textDecoration: "none",
+                  border: "1.5px solid #C4B5FD",
+                }}
+              >
+                <span style={{ fontSize: 18 }}>👑</span>
+                السوبر أدمن
+              </a>
+            );
+          })()}
         </nav>
 
         {/* LOGOUT */}

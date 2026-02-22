@@ -18,13 +18,22 @@ function getSB() {
   try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
 }
 
-type PayMethod = "cash" | "instapay" | "vodafone" | "card";
+type PayMethod = "cash" | "instapay" | "etisalat" | "vodafone" | "card";
 
-const METHODS: { id: PayMethod; label: string; desc: string; icon: string }[] = [
-  { id: "cash",     label: "كاش عند الاستلام", desc: "ادفع نقداً للمندوب",               icon: "💵" },
-  { id: "instapay", label: "InstaPay",           desc: "تحويل لحظي عبر تطبيق InstaPay",   icon: "📲" },
-  { id: "vodafone", label: "Vodafone Cash",      desc: "تحويل عبر خطك Vodafone",           icon: "📱" },
-  { id: "card",     label: "بطاقة بنكية",        desc: "فيزا / ماستر كارد (قريباً)",       icon: "💳" },
+// ── حسابات الدفع الرسمية لمنصة حلّها ─────────────────────────────────────────
+// لتحديث أي حساب: عدّل هذا الكائن فقط
+const PAYMENT_ACCOUNTS = {
+  instapay:  { account: "@malmaghrabi77",  instructions: "افتح تطبيق InstaPay وحوّل المبلغ إلى الحساب التالي" },
+  etisalat:  { phone:   "01107549225",     instructions: "حوّل المبلغ عبر خدمة E& (اتصالات) إلى الرقم التالي" },
+  vodafone:  { phone:   null,              instructions: "سيتم الإعلان عن رقم محفظة Vodafone Cash قريباً" },
+} as const;
+
+const METHODS: { id: PayMethod; label: string; desc: string; icon: string; soon?: boolean }[] = [
+  { id: "cash",      label: "كاش عند الاستلام", desc: "ادفع نقداً للمندوب",                   icon: "💵" },
+  { id: "instapay",  label: "InstaPay",           desc: `تحويل لحظي — حساب: ${PAYMENT_ACCOUNTS.instapay.account}`, icon: "📲" },
+  { id: "etisalat",  label: "E& (اتصالات)",       desc: `تحويل رصيد — ${PAYMENT_ACCOUNTS.etisalat.phone}`,        icon: "📡" },
+  { id: "vodafone",  label: "Vodafone Cash",       desc: "الحساب قيد التحديد — قريباً",          icon: "📱", soon: true },
+  { id: "card",      label: "بطاقة بنكية",         desc: "فيزا / ماستر كارد (قريباً)",           icon: "💳", soon: true },
 ];
 
 // بيانات الطلب — ستأتي من global cart state لاحقاً
@@ -91,7 +100,10 @@ export default function Checkout() {
           delivery_fee:     DEMO_CART.deliveryFee,
           discount:         DEMO_CART.discount,
           total:            DEMO_CART.total,
-          payment_method:   method,
+          // map UI method → DB enum (instapay/etisalat/vodafone → wallet_transfer)
+          payment_method: (method === "cash" || method === "card")
+            ? method
+            : "wallet_transfer",
           status:           "pending",
         })
         .select("id")
@@ -200,14 +212,14 @@ export default function Checkout() {
         {METHODS.map(m => (
           <Pressable
             key={m.id}
-            onPress={() => m.id !== "card" && setMethod(m.id)}
+            onPress={() => !m.soon && setMethod(m.id)}
             style={{
               flexDirection: "row", alignItems: "center", gap: 14,
               padding: 16, borderRadius: 16, marginBottom: 10,
               backgroundColor: method === m.id ? C.primarySoft : C.surface,
               borderWidth: 2,
               borderColor: method === m.id ? C.primary : C.border,
-              opacity: m.id === "card" ? 0.5 : 1,
+              opacity: m.soon ? 0.5 : 1,
             }}
           >
             <View style={{
@@ -225,13 +237,49 @@ export default function Checkout() {
               <Text style={{ fontWeight: "900", color: C.text, fontSize: 14 }}>{m.label}</Text>
               <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{m.desc}</Text>
             </View>
-            {m.id === "card" && (
+            {m.soon && (
               <View style={{ backgroundColor: C.warning, paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8 }}>
                 <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>قريباً</Text>
               </View>
             )}
           </Pressable>
         ))}
+
+        {/* TRANSFER INSTRUCTIONS — يظهر عند اختيار InstaPay أو E& */}
+        {(method === "instapay" || method === "etisalat") && (() => {
+          const acct = PAYMENT_ACCOUNTS[method];
+          const value = method === "instapay"
+            ? (acct as typeof PAYMENT_ACCOUNTS.instapay).account
+            : (acct as typeof PAYMENT_ACCOUNTS.etisalat).phone;
+          return (
+            <View style={{
+              padding: 16, borderRadius: 16, marginBottom: 12,
+              backgroundColor: "#F0FDF4", borderWidth: 1.5, borderColor: "#86EFAC",
+            }}>
+              <Text style={{ fontWeight: "900", color: "#15803D", fontSize: 13, marginBottom: 6 }}>
+                📋 تعليمات التحويل
+              </Text>
+              <Text style={{ color: "#166534", fontSize: 13, marginBottom: 10, lineHeight: 20 }}>
+                {acct.instructions}
+              </Text>
+              {/* Account/phone — highlighted for easy copy */}
+              <View style={{
+                backgroundColor: "#DCFCE7", borderRadius: 10,
+                paddingVertical: 10, paddingHorizontal: 14, alignItems: "center",
+              }}>
+                <Text style={{
+                  color: "#14532D", fontWeight: "900", fontSize: 20, letterSpacing: 1,
+                  textAlign: "center",
+                }}>
+                  {value}
+                </Text>
+              </View>
+              <Text style={{ color: "#6B7280", fontSize: 11, marginTop: 8, textAlign: "center" }}>
+                يُرجى التحويل بالمبلغ الدقيق ثم تأكيد الطلب
+              </Text>
+            </View>
+          );
+        })()}
 
         {/* LOYALTY */}
         <View style={{

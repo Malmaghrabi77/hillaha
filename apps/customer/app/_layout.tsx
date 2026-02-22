@@ -1,11 +1,5 @@
 import React, { useEffect } from "react";
 import { Stack, router } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-
-// ── حل مشكلة الـ splash المجمّد ──────────────────────────────────────────────
-// يُستدعى على مستوى الـ module — قبل أي تصيير لـ React تمامًا.
-// هذا هو أبكر نقطة ممكنة في دورة حياة JS، لذا لن يُجمَّد الـ splash أبداً.
-SplashScreen.hideAsync().catch(() => {});
 
 // ── Inline colors only — zero workspace-package imports at module level ──────
 const PURPLE = "#8B5CF6";
@@ -25,6 +19,9 @@ export default function RootLayout() {
       if (sb) {
         const { data: { subscription } } = sb.auth.onAuthStateChange(
           (event: string, session: any) => {
+            // INITIAL_SESSION يُعالَج فقط في index.tsx (شاشة الترحيب)
+            // هنا نستجيب فقط لتغييرات الحالة التي تحدث أثناء استخدام التطبيق
+            if (event === "INITIAL_SESSION") return;
             if (event === "SIGNED_IN"  && session) router.replace("/(tabs)/home");
             if (event === "SIGNED_OUT")              router.replace("/(auth)");
           }

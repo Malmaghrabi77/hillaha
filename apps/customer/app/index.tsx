@@ -1,44 +1,67 @@
 /**
- * app/index.tsx — نقطة الدخول
+ * app/index.tsx — نقطة الدخول الوحيدة لتطبيق الزبون
  *
- * الـ splash يُخفى من _layout.tsx على مستوى الـ module.
- * هذا الملف يتحقق من session المستخدم ثم يوجّهه للشاشة الصحيحة.
+ * التدفق:
+ *   1. يُخفى الـ native splash فوراً (module level)
+ *   2. يظهر اللوجو + السلوجان العربي + السلوجان الإنجليزي
+ *   3. في الخلفية: يفحص الجلسة + ينتظر 3 ثوانٍ على الأقل
+ *   4. بعد 3 ثوانٍ: يوجّه لصفحة الدخول أو قائمة المتاجر
  */
-import React, { useEffect } from "react";
-import { View, Image, Text, ActivityIndicator, StyleSheet } from "react-native";
-import { router } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Image,
+  Text,
+  ActivityIndicator,
+  StyleSheet,
+} from "react-native";
+import { Redirect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
+
+// أخفِ الـ native splash فوراً — قبل أي render لـ React
+SplashScreen.hideAsync().catch(() => {});
 
 export default function AppEntry() {
+  const [destination, setDestination] = useState<string | null>(null);
+
   useEffect(() => {
     let mounted = true;
 
-    (async () => {
-      let destination = "/(auth)";
-
+    // شغّل فحص الجلسة و3 ثوانٍ بالتوازي — انتظر الاثنين
+    const sessionCheck = async (): Promise<"/(tabs)/home" | "/(auth)"> => {
       try {
         const core = require("@hillaha/core") as any;
-        const sb   = core?.getSupabase?.();
+        const sb = core?.getSupabase?.();
         if (sb) {
           const result = await Promise.race([
             sb.auth.getSession(),
-            new Promise<{ data: null }>(r => setTimeout(() => r({ data: null }), 3000)),
+            new Promise<{ data: null }>((r) =>
+              setTimeout(() => r({ data: null }), 5000)
+            ),
           ]);
-          if (result?.data?.session) destination = "/(tabs)/home";
+          if (result?.data?.session) return "/(tabs)/home";
         }
-      } catch { /* defaults to /(auth) */ }
+      } catch { /* defaults to auth */ }
+      return "/(auth)";
+    };
 
-      if (mounted) router.replace(destination as any);
-    })();
+    const timer = new Promise<void>((r) => setTimeout(r, 3000));
+
+    Promise.all([sessionCheck(), timer]).then(([dest]) => {
+      if (mounted) setDestination(dest);
+    });
 
     return () => { mounted = false; };
   }, []);
+
+  if (destination) return <Redirect href={destination as any} />;
 
   return (
     <View style={s.wrap}>
       <StatusBar style="light" backgroundColor="#0F0A1E" />
 
-      {/* Logo — visible immediately, no fade-in animation */}
+      {/* اللوجو */}
       <View style={s.logoWrap}>
         <View style={s.ring} />
         <Image
@@ -49,14 +72,17 @@ export default function AppEntry() {
         />
       </View>
 
-      <Text style={s.name}>حلّها</Text>
-      <Text style={s.sub}>كل اللي تحتاجه في مكان واحد</Text>
+      {/* السلوجان العربي */}
+      <Text style={s.nameAr}>حلّها</Text>
 
-      {/* Loading indicator — reassures user the app is working */}
+      {/* السلوجان الإنجليزي */}
+      <Text style={s.nameEn}>Hillaha</Text>
+
+      {/* مؤشر التحميل */}
       <ActivityIndicator
         size="small"
         color="rgba(139,92,246,0.6)"
-        style={{ marginTop: 32 }}
+        style={{ marginTop: 24 }}
       />
     </View>
   );
@@ -68,7 +94,7 @@ const s = StyleSheet.create({
     backgroundColor: "#0F0A1E",
     justifyContent: "center",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
   },
   logoWrap: {
     width: 140,
@@ -79,7 +105,7 @@ const s = StyleSheet.create({
     borderColor: "rgba(139,92,246,0.3)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 12,
   },
   ring: {
     position: "absolute",
@@ -89,17 +115,19 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(139,92,246,0.12)",
   },
-  logo:  { width: 96, height: 96 },
-  name: {
-    color: "white",
+  logo: { width: 96, height: 96 },
+  nameAr: {
+    color: "#FFFFFF",
     fontSize: 42,
     fontWeight: "900",
     textAlign: "center",
     letterSpacing: -1,
   },
-  sub: {
-    color: "rgba(255,255,255,0.45)",
-    fontSize: 14,
+  nameEn: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 18,
+    fontWeight: "600",
     textAlign: "center",
+    letterSpacing: 2,
   },
 });

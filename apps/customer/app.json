@@ -6,7 +6,7 @@
     "scheme": "customer",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/halha-icon-1024.png",
+    "icon": "./assets/hillaha-icon-1024.png",
     "splash": {
       "image": "./assets/hillaha-logo.png",
       "resizeMode": "contain",

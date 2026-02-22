@@ -56,7 +56,7 @@ export default function ConsentScreen() {
         alignItems: "center",
       }}>
         <Image
-          source={require("../../assets/halha-logo.png")}
+          source={require("../../assets/hillaha-logo.png")}
           style={{ width: 60, height: 60, resizeMode: "contain", marginBottom: 10 }}
         />
         <Text style={{ fontSize: 20, fontWeight: "900", color: C.text }}>الشروط والأحكام</Text>

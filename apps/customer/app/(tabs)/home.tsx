@@ -162,7 +162,7 @@ export default function Home() {
               }} />
             </Pressable>
             <Image
-              source={require("../../assets/halha-logo.png")}
+              source={require("../../assets/hillaha-logo.png")}
               style={{ width: 38, height: 38, resizeMode: "contain" }}
             />
           </View>

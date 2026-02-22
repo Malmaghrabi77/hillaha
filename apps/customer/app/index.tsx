@@ -42,7 +42,7 @@ export default function AppEntry() {
       <View style={s.logoWrap}>
         <View style={s.ring} />
         <Image
-          source={require("../assets/halha-logo.png")}
+          source={require("../assets/hillaha-logo.png")}
           style={s.logo}
           resizeMode="contain"
           fadeDuration={0}

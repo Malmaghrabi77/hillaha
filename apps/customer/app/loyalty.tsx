@@ -104,7 +104,7 @@ export default function Loyalty() {
             {/* Logo + level badge */}
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
               <Image
-                source={require("../assets/halha-logo.png")}
+                source={require("../assets/hillaha-logo.png")}
                 style={{ width: 44, height: 44, resizeMode: "contain", tintColor: "white" }}
               />
               <View style={{

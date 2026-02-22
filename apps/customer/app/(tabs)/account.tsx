@@ -65,7 +65,7 @@ export default function Account() {
       }}>
         <View style={{ alignItems: "center", marginBottom: 16 }}>
           <Image
-            source={require("../../assets/halha-logo.png")}
+            source={require("../../assets/hillaha-logo.png")}
             style={{ width: 40, height: 40, resizeMode: "contain" }}
           />
         </View>

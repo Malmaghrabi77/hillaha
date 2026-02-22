@@ -137,7 +137,7 @@ export default function Login() {
         {/* LOGO */}
         <View style={{ alignItems: "center", marginBottom: 32 }}>
           <Image
-            source={require("../../assets/halha-logo.png")}
+            source={require("../../assets/hillaha-logo.png")}
             style={{ width: 80, height: 80, resizeMode: "contain", marginBottom: 12 }}
           />
           <Text style={{ fontSize: 24, fontWeight: "900", color: C.text }}>تسجيل الدخول</Text>

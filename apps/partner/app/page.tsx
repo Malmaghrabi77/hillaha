@@ -137,9 +137,9 @@ export default function LandingPage() {
             direction: "ltr",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           }}>
-            <span>7illaha</span>
-            <img src="/logo.png" alt="" style={{ width: 22, height: 22, objectFit: "contain" }} />
-            <span>7illaha</span>
+            <span>Hillaha</span>
+            <img src="/logo.png" alt="" style={{ width: 44, height: 44, objectFit: "contain" }} />
+            <span>Hillaha</span>
           </p>
 
           <p style={{

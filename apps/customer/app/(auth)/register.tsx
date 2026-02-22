@@ -130,7 +130,7 @@ export default function Register() {
         {/* HEADER */}
         <View style={{ alignItems: "center", marginBottom: 28 }}>
           <Image
-            source={require("../../assets/halha-logo.png")}
+            source={require("../../assets/hillaha-logo.png")}
             style={{ width: 64, height: 64, resizeMode: "contain", marginBottom: 10 }}
           />
           <Text style={{ fontSize: 22, fontWeight: "900", color: C.text }}>إنشاء حساب جديد</Text>

@@ -52,7 +52,7 @@ export default function AuthIndex() {
               borderWidth: 1, borderColor: "rgba(139,92,246,0.15)",
             }} />
             <Image
-              source={require("../../assets/halha-logo.png")}
+              source={require("../../assets/hillaha-logo.png")}
               style={{ width: 100, height: 100, resizeMode: "contain" }}
             />
           </View>

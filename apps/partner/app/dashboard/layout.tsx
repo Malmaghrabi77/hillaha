@@ -42,7 +42,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .select("role")
         .eq("id", data.session.user.id)
         .maybeSingle();
-      if (profile?.role === "super_admin") setIsSuperAdmin(true);
+      const profileRole = (profile as { role: string } | null)?.role;
+      if (profileRole === "super_admin") setIsSuperAdmin(true);
 
       // Load partner logo from partners table
       const { data: partner } = await sb
@@ -50,7 +51,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .select("logo_url")
         .eq("user_id", data.session.user.id)
         .maybeSingle();
-      if (partner?.logo_url) setLogoUrl(partner.logo_url);
+      const partnerLogoUrl = (partner as { logo_url: string } | null)?.logo_url;
+      if (partnerLogoUrl) setLogoUrl(partnerLogoUrl);
 
       setLoading(false);
     });

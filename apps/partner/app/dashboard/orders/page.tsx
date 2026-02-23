@@ -147,7 +147,7 @@ export default function OrdersPage() {
       delivered: "delivered_at", cancelled: "cancelled_at",
     };
     const extra = tsField[next] ? { [tsField[next]!]: new Date().toISOString() } : {};
-    await supabase.from("orders").update({ status: next, ...extra }).eq("id", uuid);
+    await (supabase as any).from("orders").update({ status: next, ...extra }).eq("id", uuid);
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: next } : o));
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, status: next } : null);
   }
@@ -155,7 +155,7 @@ export default function OrdersPage() {
   async function cancel(id: string) {
     const order = orders.find(o => o.id === id);
     const uuid  = (order as any)?._uuid ?? id;
-    await supabase.from("orders").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", uuid);
+    await (supabase as any).from("orders").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", uuid);
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: "cancelled" } : o));
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, status: "cancelled" } : null);
   }

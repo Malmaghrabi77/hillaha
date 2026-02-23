@@ -107,7 +107,7 @@ export default function SettingsPage() {
         .getPublicUrl(filePath);
 
       // Persist to partners table
-      await sb
+      await (sb as any)
         .from("partners")
         .update({ logo_url: publicUrl })
         .eq("user_id", userId);

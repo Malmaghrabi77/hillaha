@@ -46,7 +46,8 @@ export default function SuperAdminPage() {
         .select("role")
         .eq("id", uid)
         .maybeSingle();
-      const isAdmin = profile?.role === "super_admin";
+      const role = (profile as { role: string } | null)?.role;
+      const isAdmin = role === "super_admin";
       setIsSuperAdmin(isAdmin);
 
       if (!isAdmin) return;
@@ -76,7 +77,7 @@ export default function SuperAdminPage() {
     if (!sb) return;
     setSavingKey(key);
     setSaveMsg(null);
-    const { error } = await sb
+    const { error } = await (sb as any)
       .from("platform_settings")
       .update({ value, updated_at: new Date().toISOString() })
       .eq("key", key);

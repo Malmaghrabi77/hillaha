@@ -2,6 +2,9 @@ import React, { useEffect } from "react";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 
+// ── أخذ تحكم كامل في الـ splash بغض النظر عن سلوك expo-router ─────────────
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 // ── Inline colors only — zero workspace-package imports at module level ──────
 const PURPLE = "#8B5CF6";
 const WHITE  = "#FFFFFF";
@@ -9,12 +12,10 @@ const DARK   = "#1F1B2E";
 
 export default function RootLayout() {
   useEffect(() => {
-    // يُستدعى بعد أن يُنهي expo-router تهيئته (preventAutoHideAsync)
-    // هذا هو المكان الصحيح الوحيد في expo-router v6 لإخفاء الـ native splash
+    // نُخفي الـ native splash بعد أن يُركَّب الـ layout
     SplashScreen.hideAsync().catch(() => {});
   }, []);
-  // Uses require() inside try/catch so a module error here never
-  // blocks the layout from rendering or showing screens.
+
   useEffect(() => {
     let unsub: (() => void) | null = null;
     try {
@@ -24,8 +25,6 @@ export default function RootLayout() {
       if (sb) {
         const { data: { subscription } } = sb.auth.onAuthStateChange(
           (event: string, session: any) => {
-            // INITIAL_SESSION يُعالَج فقط في index.tsx (شاشة الترحيب)
-            // هنا نستجيب فقط لتغييرات الحالة التي تحدث أثناء استخدام التطبيق
             if (event === "INITIAL_SESSION") return;
             if (event === "SIGNED_IN"  && session) router.replace("/(tabs)/home");
             if (event === "SIGNED_OUT")              router.replace("/(auth)");
@@ -33,7 +32,7 @@ export default function RootLayout() {
         );
         unsub = () => subscription.unsubscribe();
       }
-    } catch { /* auth unavailable — app stays on current screen */ }
+    } catch { /* auth unavailable */ }
     return () => unsub?.();
   }, []);
 
@@ -46,16 +45,9 @@ export default function RootLayout() {
         headerShadowVisible: false,
       }}
     >
-      {/* Initialization screen — our custom JS splash */}
       <Stack.Screen name="index"               options={{ headerShown: false }} />
-
-      {/* Auth group */}
       <Stack.Screen name="(auth)"              options={{ headerShown: false }} />
-
-      {/* Main tabs */}
       <Stack.Screen name="(tabs)"              options={{ headerShown: false }} />
-
-      {/* Other screens */}
       <Stack.Screen name="legal/consent"       options={{ headerShown: false }} />
       <Stack.Screen name="restaurant/[id]"     options={{ title: "تفاصيل المتجر" }} />
       <Stack.Screen name="cart"                options={{ title: "🛒 السلة" }} />

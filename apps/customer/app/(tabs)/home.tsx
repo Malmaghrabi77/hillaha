@@ -45,43 +45,60 @@ const BANNERS = [
 ];
 
 const CATEGORIES = [
-  { id: "all",      label: "الكل",     icon: "🏠",  color: "#7C3AED" },
-  { id: "food",     label: "مطاعم",    icon: "🍔",  color: "#EF4444" },
-  { id: "cafe",     label: "كافيهات",  icon: "☕",  color: "#92400E" },
-  { id: "pharmacy", label: "صيدلية",   icon: "💊",  color: "#059669" },
-  { id: "medical",  label: "طبيب",     icon: "🏥",  color: "#2563EB" },
+  { id: "all",      label: "الكل",           icon: "🏠",  color: "#7C3AED" },
+  { id: "egyptian", label: "كشري ومصري",      icon: "🥘",  color: "#92400E" },
+  { id: "shawarma", label: "شاورما",          icon: "🌯",  color: "#D97706" },
+  { id: "burger",   label: "برجر",            icon: "🍔",  color: "#EF4444" },
+  { id: "pizza",    label: "بيتزا",           icon: "🍕",  color: "#F97316" },
+  { id: "chicken",  label: "فراخ",            icon: "🍗",  color: "#EAB308" },
+  { id: "cafe",     label: "قهوة وحلويات",    icon: "☕",  color: "#7C3AED" },
+  { id: "pharmacy", label: "صيدلية",          icon: "💊",  color: "#059669" },
+  { id: "medical",  label: "طبيب",            icon: "🏥",  color: "#2563EB" },
 ];
 
+// IDs match seed.sql UUIDs (10000000-0000-0000-0000-00000000000x)
 const PARTNERS = [
   {
-    id: "1", name: "مطعم الشيف",   type: "مطاعم",
+    id: "10000000-0000-0000-0000-000000000001",
+    name: "الشرقاوي",     type: "egyptian",
+    coverImage: "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=700&q=85",
+    time: "20-30 د", fee: "10 جنيه", rating: "4.8",
+    reviewCount: "1850+", tag: "الأكثر طلباً", tagColor: "#7C3AED", discount: "",
+  },
+  {
+    id: "10000000-0000-0000-0000-000000000002",
+    name: "شاورما الريم", type: "shawarma",
+    coverImage: "https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=700&q=85",
+    time: "25-35 د", fee: "12 جنيه", rating: "4.6",
+    reviewCount: "1200+", tag: "", tagColor: "", discount: "",
+  },
+  {
+    id: "10000000-0000-0000-0000-000000000003",
+    name: "برجر هاوس",   type: "burger",
     coverImage: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=700&q=85",
-    time: "25-35 د", fee: "15 جنيه", rating: "4.8",
-    reviewCount: "340+", tag: "الأكثر طلباً", tagColor: "#7C3AED", discount: "20%",
+    time: "30-40 د", fee: "15 جنيه", rating: "4.5",
+    reviewCount: "780+", tag: "", tagColor: "", discount: "15%",
   },
   {
-    id: "2", name: "بيتزا ستار",   type: "مطاعم",
+    id: "10000000-0000-0000-0000-000000000004",
+    name: "بيتزا بلانيت", type: "pizza",
     coverImage: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=700&q=85",
-    time: "30-40 د", fee: "15 جنيه", rating: "4.6",
-    reviewCount: "210+", tag: "", tagColor: "", discount: "",
+    time: "30-45 د", fee: "15 جنيه", rating: "4.4",
+    reviewCount: "560+", tag: "", tagColor: "", discount: "",
   },
   {
-    id: "3", name: "صيدلية النور", type: "صيدليات",
-    coverImage: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=700&q=85",
-    time: "20-30 د", fee: "10 جنيه", rating: "4.9",
-    reviewCount: "520+", tag: "متاح الآن", tagColor: "#059669", discount: "",
+    id: "10000000-0000-0000-0000-000000000005",
+    name: "تشيكن ماستر", type: "chicken",
+    coverImage: "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=700&q=85",
+    time: "25-35 د", fee: "12 جنيه", rating: "4.7",
+    reviewCount: "920+", tag: "جديد", tagColor: "#2563EB", discount: "",
   },
   {
-    id: "4", name: "كافيه ريلاكس", type: "كافيهات",
+    id: "10000000-0000-0000-0000-000000000006",
+    name: "كافيه النيل",  type: "cafe",
     coverImage: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=700&q=85",
-    time: "15-25 د", fee: "12 جنيه", rating: "4.7",
-    reviewCount: "180+", tag: "جديد", tagColor: "#2563EB", discount: "10%",
-  },
-  {
-    id: "5", name: "عيادة الأمل",  type: "طبيب",
-    coverImage: "https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=700&q=85",
-    time: "بحجز مسبق", fee: "50 جنيه", rating: "4.8",
-    reviewCount: "95+", tag: "حجز سريع", tagColor: "#2563EB", discount: "",
+    time: "15-25 د", fee: "12 جنيه", rating: "4.9",
+    reviewCount: "1100+", tag: "مميز", tagColor: "#7C3AED", discount: "",
   },
 ];
 
@@ -119,11 +136,7 @@ export default function Home() {
   }, []);
 
   const filtered = PARTNERS.filter(p =>
-    activeCategory === "all" ||
-    (activeCategory === "food"     && p.type === "مطاعم")   ||
-    (activeCategory === "cafe"     && p.type === "كافيهات") ||
-    (activeCategory === "pharmacy" && p.type === "صيدليات") ||
-    (activeCategory === "medical"  && p.type === "طبيب")
+    activeCategory === "all" || p.type === activeCategory
   );
 
   const featured = PARTNERS.filter(p => p.discount || p.tag);

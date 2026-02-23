@@ -1,6 +1,8 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, ScrollView, TextInput } from "react-native";
+import { View, Text, Pressable, ScrollView, TextInput, Image } from "react-native";
 import { router } from "expo-router";
+import { useCart } from "../lib/cartStore";
+
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
   pink: "#EC4899",       pinkSoft: "#FCE7F3",
@@ -11,28 +13,16 @@ const C = {
   deepPurple: "#6D28D9",
 } as const;
 
-const DEMO_ITEMS = [
-  { name: "برجر كلاسيك", price: 85, qty: 2, icon: "🍔" },
-  { name: "كوكاكولا",    price: 20, qty: 1, icon: "🥤" },
-];
-
 export default function Cart() {
-  const [items, setItems]   = useState(DEMO_ITEMS);
-  const [promo, setPromo]   = useState("");
+  const cart = useCart();
+  const [promo, setPromo]     = useState("");
   const [promoOn, setPromoOn] = useState(false);
   const [discount, setDiscount] = useState(0);
 
-  const subtotal    = items.reduce((s, i) => s + i.price * i.qty, 0);
-  const deliveryFee = 15;
+  const subtotal    = cart.subtotal;
+  const deliveryFee = cart.deliveryFee;
   const total       = subtotal + deliveryFee - discount;
-  const loyaltyEarn = Math.floor(subtotal / 10);
-
-  function changeQty(name: string, delta: number) {
-    setItems(prev =>
-      prev.map(i => i.name === name ? { ...i, qty: i.qty + delta } : i)
-          .filter(i => i.qty > 0)
-    );
-  }
+  const loyaltyEarn = cart.loyaltyEarn;
 
   function applyPromo() {
     if (promo.trim().toUpperCase() === "HILLAHA1") {
@@ -41,7 +31,7 @@ export default function Cart() {
     }
   }
 
-  if (items.length === 0) {
+  if (cart.totalItems === 0) {
     return (
       <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: "center", alignItems: "center", padding: 28 }}>
         <View style={{
@@ -84,18 +74,20 @@ export default function Cart() {
         }}>
           <View style={{
             width: 44, height: 44, borderRadius: 12,
-            backgroundColor: "#FEF3C7",
+            backgroundColor: "#EDE9FE",
             justifyContent: "center", alignItems: "center",
           }}>
-            <Text style={{ fontSize: 24 }}>🍔</Text>
+            <Text style={{ fontSize: 24 }}>🏪</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: "900", color: "#111827", fontSize: 15 }}>مطعم الشيف</Text>
+            <Text style={{ fontWeight: "900", color: "#111827", fontSize: 15 }}>
+              {cart.partnerName ?? "المتجر"}
+            </Text>
             <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>
-              🕐 25-35 دقيقة  •  🛵 15 جنيه توصيل
+              🛵 {deliveryFee} جنيه توصيل
             </Text>
           </View>
-          <Pressable onPress={() => router.push("/restaurant/1")}>
+          <Pressable onPress={() => router.back()}>
             <Text style={{ color: C.primary, fontWeight: "700", fontSize: 13 }}>إضافة</Text>
           </Pressable>
         </View>
@@ -109,25 +101,29 @@ export default function Cart() {
         }}>
           <View style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: "#F3F4F6" }}>
             <Text style={{ fontWeight: "900", color: "#111827", fontSize: 15 }}>
-              المنتجات ({items.reduce((s, i) => s + i.qty, 0)})
+              المنتجات ({cart.totalItems})
             </Text>
           </View>
-          {items.map((item, idx) => (
-            <View key={idx} style={{
+          {cart.itemList.map((item, idx) => (
+            <View key={item.id} style={{
               flexDirection: "row", alignItems: "center",
               padding: 14, gap: 12,
-              borderBottomWidth: idx < items.length - 1 ? 1 : 0,
+              borderBottomWidth: idx < cart.itemList.length - 1 ? 1 : 0,
               borderBottomColor: "#F9FAFB",
             }}>
               <View style={{
                 width: 50, height: 50, borderRadius: 13,
                 backgroundColor: "#F9FAFB",
+                overflow: "hidden",
                 justifyContent: "center", alignItems: "center",
               }}>
-                <Text style={{ fontSize: 26 }}>{item.icon}</Text>
+                {item.image
+                  ? <Image source={{ uri: item.image }} style={{ width: 50, height: 50, resizeMode: "cover" }} />
+                  : <Text style={{ fontSize: 26 }}>🍽️</Text>
+                }
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: "800", color: "#111827", fontSize: 14 }}>{item.name}</Text>
+                <Text style={{ fontWeight: "800", color: "#111827", fontSize: 14 }}>{item.nameAr}</Text>
                 <Text style={{ color: C.primary, fontWeight: "900", marginTop: 4, fontSize: 14 }}>
                   {item.price * item.qty} جنيه
                 </Text>
@@ -137,7 +133,7 @@ export default function Cart() {
                 backgroundColor: "#F3F0FF", borderRadius: 12, padding: 4, gap: 6,
               }}>
                 <Pressable
-                  onPress={() => changeQty(item.name, -1)}
+                  onPress={() => cart.removeItem(item.id)}
                   style={{
                     width: 30, height: 30, borderRadius: 9,
                     backgroundColor: "white",
@@ -152,7 +148,11 @@ export default function Cart() {
                   {item.qty}
                 </Text>
                 <Pressable
-                  onPress={() => changeQty(item.name, 1)}
+                  onPress={() => cart.addItem({
+                    id: item.id, name: item.name, nameAr: item.nameAr,
+                    price: item.price, image: item.image,
+                    partnerId: cart.partnerId!, partnerName: cart.partnerName!,
+                  })}
                   style={{
                     width: 30, height: 30, borderRadius: 9,
                     backgroundColor: C.primary,
@@ -287,7 +287,7 @@ export default function Cart() {
             {[
               { label: "المجموع الجزئي", value: `${subtotal} جنيه`, bold: false },
               { label: "رسوم التوصيل",   value: `+ ${deliveryFee} جنيه`, bold: false },
-              ...(discount > 0 ? [{ label: "خصم الكود",  value: `- ${discount} جنيه`, bold: false, green: true }] : []),
+              ...(discount > 0 ? [{ label: "خصم الكود", value: `- ${discount} جنيه`, bold: false, green: true }] : []),
             ].map((row: any, i) => (
               <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <Text style={{ color: "#6B7280", fontSize: 14 }}>{row.label}</Text>
@@ -326,7 +326,7 @@ export default function Cart() {
             paddingVertical: 4, paddingHorizontal: 10, borderRadius: 10,
           }}>
             <Text style={{ color: "white", fontWeight: "900", fontSize: 13 }}>
-              {items.reduce((s, i) => s + i.qty, 0)} منتج
+              {cart.totalItems} منتج
             </Text>
           </View>
           <Text style={{ color: "white", fontWeight: "900", fontSize: 17 }}>إتمام الطلب</Text>

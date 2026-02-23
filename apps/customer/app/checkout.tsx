@@ -4,6 +4,7 @@ import {
   ActivityIndicator, Image,
 } from "react-native";
 import { router } from "expo-router";
+import { useCart } from "../lib/cartStore";
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -38,20 +39,8 @@ const METHODS: { id: PayMethod; label: string; desc: string; icon: string; soon?
   { id: "card",      label: "بطاقة بنكية",         desc: "فيزا / ماستر كارد (قريباً)",                 icon: "💳", soon: true },
 ];
 
-// بيانات الطلب — ستأتي من global cart state لاحقاً
-const DEMO_CART = {
-  items: [
-    { name: "برجر كلاسيك", qty: 2, price: 85 },
-    { name: "كوكاكولا",    qty: 2, price: 20 },
-  ],
-  subtotal: 210,
-  deliveryFee: 15,
-  discount: 20,
-  total: 205,
-  partnerName: "برجر لاند 🍔",
-};
-
 export default function Checkout() {
+  const cart = useCart();
   const [method, setMethod]             = useState<PayMethod>("cash");
   const [address, setAddress]           = useState("");
   const [note, setNote]                 = useState("");
@@ -165,26 +154,19 @@ export default function Checkout() {
         }
       }
 
-      // جلب أول شريك من قاعدة البيانات كـ demo
-      const { data: partners } = await supabase
-        .from("partners")
-        .select("id")
-        .limit(1)
-        .maybeSingle();
-
       const { data: order, error: insertError } = await supabase
         .from("orders")
         .insert({
           customer_id:       user.id,
-          partner_id:        partners?.id ?? null,
+          partner_id:        cart.partnerId,
           delivery_address:  address.trim(),
           customer_phone:    phone.trim() || null,
           customer_note:     note.trim()  || null,
-          items:             DEMO_CART.items,
-          subtotal:          DEMO_CART.subtotal,
-          delivery_fee:      DEMO_CART.deliveryFee,
-          discount:          DEMO_CART.discount,
-          total:             DEMO_CART.total,
+          items:             cart.itemList.map(i => ({ name: i.nameAr, qty: i.qty, price: i.price })),
+          subtotal:          cart.subtotal,
+          delivery_fee:      cart.deliveryFee,
+          discount:          0,
+          total:             cart.total,
           // map UI method → DB enum (instapay/etisalat/vodafone → wallet_transfer)
           payment_method:    (method === "cash" || method === "card")
             ? method
@@ -197,6 +179,7 @@ export default function Checkout() {
 
       if (insertError) throw insertError;
 
+      cart.clearCart();
       router.replace(`/tracking/${order.id}`);
     } catch (e: any) {
       setError(e?.message ?? "حدث خطأ، حاول مرة أخرى");
@@ -205,7 +188,7 @@ export default function Checkout() {
     }
   }
 
-  const loyaltyPoints = Math.floor(DEMO_CART.total / 10);
+  const loyaltyPoints = cart.loyaltyEarn;
 
   // حسابات الاستلام النشطة (live أو fallback)
   const accounts = liveAccounts
@@ -225,19 +208,18 @@ export default function Checkout() {
           backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
         }}>
           <Text style={{ fontWeight: "900", color: C.text, fontSize: 15, marginBottom: 12 }}>
-            ملخص الطلب — {DEMO_CART.partnerName}
+            ملخص الطلب — {cart.partnerName ?? "المتجر"}
           </Text>
-          {DEMO_CART.items.map((item, i) => (
-            <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-              <Text style={{ color: C.textMuted, fontSize: 13 }}>{item.name} × {item.qty}</Text>
+          {cart.itemList.map((item, i) => (
+            <View key={item.id} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+              <Text style={{ color: C.textMuted, fontSize: 13 }}>{item.nameAr} × {item.qty}</Text>
               <Text style={{ fontWeight: "700", color: C.text, fontSize: 13 }}>{item.price * item.qty} ج</Text>
             </View>
           ))}
           <View style={{ height: 1, backgroundColor: C.border, marginVertical: 8 }} />
           {[
-            { label: "المجموع الجزئي", value: `${DEMO_CART.subtotal} ج` },
-            { label: "رسوم التوصيل",   value: `${DEMO_CART.deliveryFee} ج` },
-            { label: "خصم",            value: `- ${DEMO_CART.discount} ج` },
+            { label: "المجموع الجزئي", value: `${cart.subtotal} ج` },
+            { label: "رسوم التوصيل",   value: `${cart.deliveryFee} ج` },
           ].map((row, i) => (
             <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
               <Text style={{ color: C.textMuted, fontSize: 13 }}>{row.label}</Text>
@@ -247,7 +229,7 @@ export default function Checkout() {
           <View style={{ height: 1, backgroundColor: C.border, marginVertical: 8 }} />
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <Text style={{ fontWeight: "900", color: C.text, fontSize: 15 }}>الإجمالي</Text>
-            <Text style={{ fontWeight: "900", color: C.primary, fontSize: 18 }}>{DEMO_CART.total} ج</Text>
+            <Text style={{ fontWeight: "900", color: C.primary, fontSize: 18 }}>{cart.total} ج</Text>
           </View>
         </View>
 
@@ -498,7 +480,7 @@ export default function Checkout() {
                 color: (needsProof && !proofUri) ? C.textMuted : "white",
                 fontWeight: "900", fontSize: 16,
               }}>
-                تأكيد الطلب — {DEMO_CART.total} ج
+                تأكيد الطلب — {cart.total} ج
               </Text>
           }
         </Pressable>

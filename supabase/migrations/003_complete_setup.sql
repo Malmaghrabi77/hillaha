@@ -234,6 +234,22 @@ DO $$ BEGIN
     WHERE table_schema='public' AND table_name='orders' AND column_name='city_id') THEN
     ALTER TABLE public.orders ALTER COLUMN city_id DROP NOT NULL;
   END IF;
+  -- Convert enum status → text so app values (ready, picked_up) are accepted
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='orders'
+      AND column_name='status' AND data_type='USER-DEFINED'
+  ) THEN
+    ALTER TABLE public.orders ALTER COLUMN status TYPE text;
+  END IF;
+  -- Also convert payment_method enum → text if needed
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='orders'
+      AND column_name='payment_method' AND data_type='USER-DEFINED'
+  ) THEN
+    ALTER TABLE public.orders ALTER COLUMN payment_method TYPE text;
+  END IF;
 END $$;
 
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;

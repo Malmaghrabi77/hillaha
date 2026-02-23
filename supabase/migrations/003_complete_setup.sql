@@ -96,6 +96,23 @@ ALTER TABLE public.partners
 
 UPDATE public.partners SET name_ar = name WHERE name_ar IS NULL;
 
+-- Handle full_migration.sql schema where partner_type and city_id are NOT NULL
+-- Make them nullable so our seed INSERT works without providing them
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='partners' AND column_name='partner_type'
+  ) THEN
+    ALTER TABLE public.partners ALTER COLUMN partner_type DROP NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='partners' AND column_name='city_id'
+  ) THEN
+    ALTER TABLE public.partners ALTER COLUMN city_id DROP NOT NULL;
+  END IF;
+END $$;
+
 ALTER TABLE public.partners ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
@@ -190,13 +207,34 @@ CREATE TABLE IF NOT EXISTS public.orders (
 );
 
 ALTER TABLE public.orders
+  ADD COLUMN IF NOT EXISTS customer_id       uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS driver_id         uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS delivery_address  text,
+  ADD COLUMN IF NOT EXISTS delivery_city     text DEFAULT 'قنا',
+  ADD COLUMN IF NOT EXISTS customer_phone    text,
+  ADD COLUMN IF NOT EXISTS customer_note     text,
+  ADD COLUMN IF NOT EXISTS items             jsonb NOT NULL DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS subtotal          numeric(10,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS delivery_fee      numeric(10,2) NOT NULL DEFAULT 10,
+  ADD COLUMN IF NOT EXISTS discount          numeric(10,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS total             numeric(10,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS payment_proof_url text,
   ADD COLUMN IF NOT EXISTS driver_lat        numeric,
   ADD COLUMN IF NOT EXISTS driver_lng        numeric,
   ADD COLUMN IF NOT EXISTS driver_heading    numeric,
-  ADD COLUMN IF NOT EXISTS payment_proof_url text,
-  ADD COLUMN IF NOT EXISTS customer_phone    text,
-  ADD COLUMN IF NOT EXISTS customer_note     text,
-  ADD COLUMN IF NOT EXISTS discount          numeric(10,2) NOT NULL DEFAULT 0;
+  ADD COLUMN IF NOT EXISTS cancel_reason     text;
+
+-- If orders was from full_migration.sql: drop NOT NULL on incompatible columns
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='orders' AND column_name='user_id') THEN
+    ALTER TABLE public.orders ALTER COLUMN user_id DROP NOT NULL;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='orders' AND column_name='city_id') THEN
+    ALTER TABLE public.orders ALTER COLUMN city_id DROP NOT NULL;
+  END IF;
+END $$;
 
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 

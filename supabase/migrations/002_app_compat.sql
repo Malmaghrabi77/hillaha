@@ -51,8 +51,16 @@ CREATE TABLE IF NOT EXISTS public.platform_settings (
 );
 
 ALTER TABLE public.platform_settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "public read settings" ON public.platform_settings
-  FOR SELECT USING (true);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'platform_settings'
+      AND policyname = 'public read settings'
+  ) THEN
+    CREATE POLICY "public read settings" ON public.platform_settings
+      FOR SELECT USING (true);
+  END IF;
+END $$;
 
 INSERT INTO public.platform_settings (key, value) VALUES
   ('instapay_account',   '@malmaghrabi77'),

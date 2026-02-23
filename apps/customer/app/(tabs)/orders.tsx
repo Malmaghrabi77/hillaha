@@ -18,16 +18,18 @@ function getSB() {
 
 // ── Status config ────────────────────────────────────────────────────────────
 
+// Keys match the DB check constraint: pending|accepted|preparing|ready|picked_up|delivered|cancelled
 const STATUS: Record<string, { label: string; bg: string; color: string }> = {
-  pending:    { label: "⏳ في الانتظار", bg: "#FEF3C7", color: "#92400E" },
-  confirmed:  { label: "✅ مؤكد",        bg: "#D1FAE5", color: "#065F46" },
-  preparing:  { label: "👨‍🍳 يُحضَّر",  bg: "#EDE9FE", color: "#5B21B6" },
-  delivering: { label: "🛵 في الطريق",   bg: "#DBEAFE", color: "#1E40AF" },
-  done:       { label: "✅ تم التسليم",  bg: "#D1FAE5", color: "#065F46" },
-  cancelled:  { label: "❌ ملغي",         bg: "#FEE2E2", color: "#991B1B" },
+  pending:      { label: "⏳ في الانتظار",        bg: "#FEF3C7", color: "#92400E" },
+  accepted:     { label: "✅ مؤكد",               bg: "#D1FAE5", color: "#065F46" },
+  preparing:    { label: "👨‍🍳 يُحضَّر",         bg: "#EDE9FE", color: "#5B21B6" },
+  ready:        { label: "🔔 جاهز للتوصيل",      bg: "#FEF9C3", color: "#713F12" },
+  picked_up:    { label: "🛵 في الطريق",          bg: "#DBEAFE", color: "#1E40AF" },
+  delivered:    { label: "✅ تم التسليم",         bg: "#D1FAE5", color: "#065F46" },
+  cancelled:    { label: "❌ ملغي",               bg: "#FEE2E2", color: "#991B1B" },
 };
 
-const ACTIVE_STATUSES = ["pending", "confirmed", "preparing", "delivering"];
+const ACTIVE_STATUSES = ["pending", "accepted", "preparing", "ready", "picked_up"];
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -233,7 +235,7 @@ function OrderCard({ order, active }: { order: OrderRow; active: boolean }) {
             <Text style={{ color: C.primary, fontSize: 12 }}>←</Text>
           </View>
         )}
-        {!active && order.status === "done" && (
+        {!active && order.status === "delivered" && (
           <Pressable
             onPress={() => router.push("/(tabs)/home")}
             style={{

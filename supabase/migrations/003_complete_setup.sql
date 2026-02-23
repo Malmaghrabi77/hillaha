@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS public.partners (
 
 -- Add missing columns in case table already existed without them
 ALTER TABLE public.partners
+  ADD COLUMN IF NOT EXISTS user_id         uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   ADD COLUMN IF NOT EXISTS name_ar         text,
   ADD COLUMN IF NOT EXISTS description_ar  text,
   ADD COLUMN IF NOT EXISTS cover_image     text,

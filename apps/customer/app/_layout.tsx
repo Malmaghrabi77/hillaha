@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { Stack, router } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 
 // ── Inline colors only — zero workspace-package imports at module level ──────
 const PURPLE = "#8B5CF6";
@@ -7,7 +8,11 @@ const WHITE  = "#FFFFFF";
 const DARK   = "#1F1B2E";
 
 export default function RootLayout() {
-  // Auth-state listener — runs for the entire app lifetime.
+  useEffect(() => {
+    // يُستدعى بعد أن يُنهي expo-router تهيئته (preventAutoHideAsync)
+    // هذا هو المكان الصحيح الوحيد في expo-router v6 لإخفاء الـ native splash
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
   // Uses require() inside try/catch so a module error here never
   // blocks the layout from rendering or showing screens.
   useEffect(() => {

@@ -15,10 +15,6 @@ import {
 } from "react-native";
 import { Redirect, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import * as SplashScreen from "expo-splash-screen";
-
-// أخفِ الـ native splash فوراً — قبل أي render لـ React
-SplashScreen.hideAsync().catch(() => {});
 
 const { height: SCREEN_H } = Dimensions.get("window");
 

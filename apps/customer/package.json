@@ -13,7 +13,6 @@
     "@expo/metro-runtime": "~6.1.2",
     "@hillaha/core": "workspace:*",
     "@hillaha/ui": "workspace:*",
-    "@types/react": "~19.1.17",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",
     "expo-image-picker": "~17.0.10",
@@ -31,6 +30,7 @@
     "react-native-web": "^0.21.0"
   },
   "devDependencies": {
+    "@types/react": "~19.1.17",
     "typescript": "^5.5.4"
   }
 }

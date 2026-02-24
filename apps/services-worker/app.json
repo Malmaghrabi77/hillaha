@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "حلّها — عامل خدمات",
+    "slug": "hillaha-services-worker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#7C3AED"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.hillaha.servicesworker"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#7C3AED"
+      },
+      "package": "com.hillaha.servicesworker"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "السماح لتطبيق حلّها باستخدام Face ID"
+        }
+      ]
+    ],
+    "scheme": "hillaha-services-worker",
+    "extra": {
+      "eas": {
+        "projectId": "services-worker-placeholder"
+      }
+    }
+  }
+}

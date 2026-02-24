@@ -6,6 +6,10 @@ import {
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
+function getSB() {
+  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
+}
+
 const C = {
   bg: "#FAF5FF",   surface: "#FFFFFF",
   primary: "#7C3AED", primarySoft: "#F3E8FF",
@@ -38,13 +42,31 @@ export default function P2PDeliveryScreen() {
   const generateTracking = () =>
     "HLH-" + Math.random().toString(36).substring(2, 7).toUpperCase();
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!size || !fromAddress.trim() || !toAddress.trim() ||
         !senderPhone.trim() || !receiverPhone.trim()) {
       Alert.alert("تنبيه", "يرجى ملء جميع البيانات الأساسية (الحجم، العناوين، أرقام الهاتف)");
       return;
     }
-    setTrackingCode(generateTracking());
+    const code = generateTracking();
+    setTrackingCode(code);
+    const supabase = getSB();
+    if (supabase) {
+      const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+      await supabase.from("delivery_requests").insert({
+        sender_id:      user?.id ?? null,
+        package_size:   size,
+        from_address:   fromAddress,
+        to_address:     toAddress,
+        sender_name:    senderName || null,
+        sender_phone:   senderPhone,
+        receiver_name:  receiverName || null,
+        receiver_phone: receiverPhone,
+        delivery_fee:   fee ?? 25,
+        notes:          notes || null,
+        tracking_code:  code,
+      }).catch(() => {});
+    }
     setShowModal(true);
   };
 

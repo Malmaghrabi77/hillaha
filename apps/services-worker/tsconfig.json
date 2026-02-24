@@ -1,0 +1,11 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@/*": ["./*"],
+      "@hillaha/ui": ["../../packages/ui/src"],
+      "@hillaha/core": ["../../packages/core/src"]
+    }
+  }
+}

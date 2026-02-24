@@ -6,6 +6,10 @@ import {
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
+function getSB() {
+  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
+}
+
 const C = {
   bg: "#F0FDFF",   surface: "#FFFFFF",
   primary: "#0891B2", primarySoft: "#E0F7FA",
@@ -33,10 +37,23 @@ export default function CleaningScreen() {
 
   const svc = SERVICES.find(s => s.id === selectedService);
 
-  const handleBook = () => {
+  const handleBook = async () => {
     if (!selectedService || !selectedTime || !address.trim()) {
       Alert.alert("تنبيه", "يرجى اختيار الخدمة والوقت وإدخال العنوان");
       return;
+    }
+    const supabase = getSB();
+    if (supabase) {
+      const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+      await supabase.from("service_bookings").insert({
+        customer_id:    user?.id ?? null,
+        service_type:   "cleaning",
+        service_name:   svc?.label ?? selectedService,
+        price:          svc?.price ?? 0,
+        address,
+        scheduled_time: selectedTime,
+        notes:          notes || null,
+      }).catch(() => {});
     }
     setShowModal(true);
   };

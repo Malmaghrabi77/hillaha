@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { View, Text, ScrollView, Pressable, Image } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, ScrollView, Pressable, Image, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -10,6 +10,10 @@ const C = {
   warning: "#F59E0B",    danger: "#EF4444",
   deepPurple: "#6D28D9",
 } as const;
+
+function getSB() {
+  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
+}
 
 // 20 نقاط = 20 جنيه | الحد الأدنى للاستبدال 20 نقطة | 1 نقطة لكل 250 جنيه مشتريات
 const POINTS_PER_EGP   = 250;
@@ -35,15 +39,8 @@ const REWARDS = [
   },
 ];
 
-const HISTORY = [
-  { text: "طلب من مطعم الشيف",     points: "+2",  egp: "500 جنيه",  date: "أمس",           credit: true },
-  { text: "طلب من كافيه ريلاكس",   points: "+1",  egp: "300 جنيه",  date: "منذ 3 أيام",    credit: true },
-  { text: "استبدال خصم 20 جنيه",   points: "-20", egp: "",          date: "منذ أسبوع",      credit: false },
-  { text: "طلب من صيدلية النور",   points: "+1",  egp: "250 جنيه",  date: "منذ أسبوعين",   credit: true },
-  { text: "تقييم المطعم",          points: "+2",  egp: "",          date: "منذ أسبوعين",   credit: true },
-];
-
-const MY_POINTS      = 47;
+const HISTORY_STATIC: never[] = [];   // replaced by Supabase data
+const MY_POINTS_STATIC = 0;           // replaced by Supabase data
 const LEVEL_THRESHOLD = 100;
 
 const LEVELS = [
@@ -53,29 +50,75 @@ const LEVELS = [
   { name: "بلاتيني", min: 200, max: Infinity, color: "#7C3AED", bg: "#EDE9FE" },
 ];
 
-function getCurrentLevel() {
-  return LEVELS.find(l => MY_POINTS >= l.min && MY_POINTS < l.max) ?? LEVELS[0];
+function getCurrentLevel(pts: number) {
+  return LEVELS.find(l => pts >= l.min && pts < l.max) ?? LEVELS[0];
 }
-function getNextLevel() {
-  const idx = LEVELS.findIndex(l => MY_POINTS >= l.min && MY_POINTS < l.max);
+function getNextLevel(pts: number) {
+  const idx = LEVELS.findIndex(l => pts >= l.min && pts < l.max);
   return LEVELS[idx + 1] ?? null;
 }
 
 export default function Loyalty() {
-  const [redeemTried, setRedeemTried] = useState<string | null>(null);
+  const [redeemTried, setRedeemTried]   = useState<string | null>(null);
+  const [myPoints,    setMyPoints]      = useState(0);
+  const [history,     setHistory]       = useState<{ text: string; points: string; egp: string; date: string; credit: boolean }[]>([]);
+  const [loadingData, setLoadingData]   = useState(true);
 
-  const level     = getCurrentLevel();
-  const nextLevel = getNextLevel();
-  const progress  = nextLevel
-    ? (MY_POINTS - level.min) / (nextLevel.min - level.min)
+  useEffect(() => {
+    const supabase = getSB();
+    if (!supabase) { setLoadingData(false); return; }
+
+    supabase.auth.getUser().then(async ({ data }: any) => {
+      const userId = data.user?.id;
+      if (!userId) { setLoadingData(false); return; }
+
+      const { data: rows } = await supabase
+        .from("loyalty_points")
+        .select("points, description, created_at")
+        .eq("customer_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (rows) {
+        const total = rows.reduce((sum: number, r: any) => sum + (r.points ?? 0), 0);
+        setMyPoints(total);
+        setHistory(rows.map((r: any) => {
+          const d = new Date(r.created_at);
+          const dateStr = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+          const pts = r.points ?? 0;
+          return {
+            text:   r.description ?? "نقاط ولاء",
+            points: pts >= 0 ? `+${pts}` : `${pts}`,
+            egp:    "",
+            date:   dateStr,
+            credit: pts >= 0,
+          };
+        }));
+      }
+      setLoadingData(false);
+    }).catch(() => setLoadingData(false));
+  }, []);
+
+  const level        = getCurrentLevel(myPoints);
+  const nextLevel    = getNextLevel(myPoints);
+  const progress     = nextLevel
+    ? (myPoints - level.min) / (nextLevel.min - level.min)
     : 1;
-  const pointsToNext = nextLevel ? nextLevel.min - MY_POINTS : 0;
+  const pointsToNext = nextLevel ? nextLevel.min - myPoints : 0;
 
   function handleRedeem(reward: typeof REWARDS[0]) {
     if (!reward.available) return;
-    if (MY_POINTS < reward.points) return;
+    if (myPoints < reward.points) return;
     setRedeemTried(reward.id);
     setTimeout(() => setRedeemTried(null), 2000);
+  }
+
+  if (loadingData) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={C.primary} />
+      </View>
+    );
   }
 
   return (
@@ -123,7 +166,7 @@ export default function Loyalty() {
             </Text>
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, marginTop: 4 }}>
               <Text style={{ color: "white", fontSize: 56, fontWeight: "900", lineHeight: 62 }}>
-                {MY_POINTS}
+                {myPoints}
               </Text>
               <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 16, fontWeight: "700", marginBottom: 8 }}>
                 نقطة
@@ -140,7 +183,7 @@ export default function Loyalty() {
                 paddingVertical: 4, paddingHorizontal: 10, borderRadius: 20,
               }}>
                 <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: "700" }}>
-                  💳 {MY_POINTS} جنيه خصم متاح
+                  💳 {myPoints} جنيه خصم متاح
                 </Text>
               </View>
               <View style={{
@@ -161,7 +204,7 @@ export default function Loyalty() {
                     {level.name} ← {nextLevel.name}
                   </Text>
                   <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 12 }}>
-                    {MY_POINTS} / {nextLevel.min}
+                    {myPoints} / {nextLevel.min}
                   </Text>
                 </View>
                 <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.15)" }}>
@@ -245,7 +288,7 @@ export default function Loyalty() {
           </Text>
 
           {REWARDS.map(r => {
-            const canRedeem = r.available && MY_POINTS >= r.points;
+            const canRedeem = r.available && myPoints >= r.points;
             const isRedeemed = redeemTried === r.id;
 
             return (
@@ -342,7 +385,7 @@ export default function Loyalty() {
           <Text style={{ fontSize: 16, fontWeight: "900", color: C.text, marginBottom: 12 }}>
             سجل النقاط
           </Text>
-          {HISTORY.map((h, i) => (
+          {history.map((h, i) => (
             <View key={i} style={{
               flexDirection: "row", alignItems: "center",
               padding: 14, borderRadius: 16, marginBottom: 8,

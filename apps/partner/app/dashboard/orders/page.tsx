@@ -13,7 +13,7 @@ const C = {
   warning: "#F59E0B", danger: "#EF4444",
 };
 
-type Status = "pending" | "preparing" | "ready" | "delivered" | "cancelled";
+type Status = "pending" | "accepted" | "preparing" | "ready" | "picked_up" | "delivered" | "cancelled";
 
 interface Order {
   id: string;
@@ -63,9 +63,11 @@ const INITIAL_ORDERS: Order[] = [
 ];
 
 const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string; next?: Status; nextLabel?: string; nextColor?: string }> = {
-  pending:   { label: "بانتظار القبول", color: C.warning,  bg: "#FEF3C7", next: "preparing", nextLabel: "قبول الطلب", nextColor: C.primary },
-  preparing: { label: "قيد التجهيز",    color: C.primary,  bg: C.primarySoft, next: "ready", nextLabel: "جاهز للتسليم", nextColor: "#059669" },
-  ready:     { label: "جاهز",           color: "#059669",  bg: "#D1FAE5", next: "delivered", nextLabel: "تم التسليم", nextColor: "#059669" },
+  pending:   { label: "بانتظار القبول", color: C.warning,  bg: "#FEF3C7", next: "accepted", nextLabel: "قبول الطلب", nextColor: C.primary },
+  accepted:  { label: "مقبول",          color: C.primary,  bg: C.primarySoft, next: "preparing", nextLabel: "بدء التجهيز", nextColor: C.primary },
+  preparing: { label: "قيد التجهيز",    color: C.primary,  bg: C.primarySoft, next: "ready", nextLabel: "جاهز للاستلام", nextColor: "#059669" },
+  ready:     { label: "جاهز",           color: "#059669",  bg: "#D1FAE5", next: "picked_up", nextLabel: "تم الاستلام", nextColor: "#059669" },
+  picked_up: { label: "تم الاستلام",    color: "#059669",  bg: "#D1FAE5", next: "delivered", nextLabel: "تم التسليم", nextColor: "#059669" },
   delivered: { label: "مُسلَّم",         color: "#059669",  bg: "#D1FAE5" },
   cancelled: { label: "ملغي",           color: C.danger,   bg: "#FEF2F2" },
 };
@@ -73,8 +75,10 @@ const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string; 
 const FILTERS: { key: Status | "all"; label: string }[] = [
   { key: "all",       label: "الكل" },
   { key: "pending",   label: "بانتظار القبول" },
+  { key: "accepted",  label: "مقبول" },
   { key: "preparing", label: "قيد التجهيز" },
   { key: "ready",     label: "جاهز" },
+  { key: "picked_up", label: "تم الاستلام" },
   { key: "delivered", label: "مُسلَّم" },
   { key: "cancelled", label: "ملغي" },
 ];
@@ -143,8 +147,12 @@ export default function OrdersPage() {
     const order = orders.find(o => o.id === id);
     const uuid  = (order as any)?._uuid ?? id;
     const tsField: Partial<Record<Status, string>> = {
-      preparing: "accepted_at", ready: "ready_at",
-      delivered: "delivered_at", cancelled: "cancelled_at",
+      accepted:  "accepted_at",
+      preparing: "preparing_at",
+      ready:     "ready_at",
+      picked_up: "picked_up_at",
+      delivered: "delivered_at",
+      cancelled: "cancelled_at",
     };
     const extra = tsField[next] ? { [tsField[next]!]: new Date().toISOString() } : {};
     await (supabase as any).from("orders").update({ status: next, ...extra }).eq("id", uuid);

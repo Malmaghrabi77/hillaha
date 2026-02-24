@@ -24,7 +24,6 @@ interface Partner {
   delivery_time: string | null;
   delivery_fee: number | null;
   cover_image: string | null;
-  is_open: boolean | null;
 }
 
 const POPULAR_TAGS = ["مطاعم", "شاورما", "برجر", "صيدلية", "قهوة وحلويات", "طبيب"];
@@ -47,7 +46,7 @@ export default function Search() {
       try {
         const { data } = await supabase
           .from("partners")
-          .select("id, name_ar, category, rating, delivery_time, delivery_fee, cover_image, is_open")
+          .select("id, name_ar, category, rating, delivery_time, delivery_fee, cover_image")
           .or(`name_ar.ilike.%${query}%,name.ilike.%${query}%,category.ilike.%${query}%`)
           .order("rating", { ascending: false })
           .limit(20);
@@ -148,14 +147,7 @@ export default function Search() {
               )}
             </View>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={{ fontWeight: "900", color: C.text, fontSize: 15 }}>{p.name_ar}</Text>
-                {p.is_open === false && (
-                  <View style={{ backgroundColor: "#FEE2E2", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                    <Text style={{ color: "#EF4444", fontSize: 9, fontWeight: "700" }}>مغلق</Text>
-                  </View>
-                )}
-              </View>
+              <Text style={{ fontWeight: "900", color: C.text, fontSize: 15 }}>{p.name_ar}</Text>
               <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{p.category}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
                 {p.rating != null && (

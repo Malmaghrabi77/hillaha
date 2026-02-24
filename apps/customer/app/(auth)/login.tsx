@@ -21,7 +21,8 @@ function getSB() {
 }
 
 const STORE_EMAIL = "hillaha_customer_email";
-const STORE_PASS  = "hillaha_customer_pass";
+const STORE_ACCESS_TOKEN = "hillaha_access_token";
+const STORE_REFRESH_TOKEN = "hillaha_refresh_token";
 
 export default function Login() {
   const [email, setEmail]           = useState("");
@@ -55,15 +56,20 @@ export default function Login() {
     try {
       const supabase = getSB();
       if (!supabase) throw new Error("خطأ في الاتصال");
-      const { error: err } = await supabase.auth.signInWithPassword({
+      const { data, error: err } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       });
       if (err) throw err;
 
-      // Save credentials for future biometric login
+      // Save email and tokens for future biometric login (never store password)
       await SecureStore.setItemAsync(STORE_EMAIL, email.trim().toLowerCase());
-      await SecureStore.setItemAsync(STORE_PASS,  password);
+      if (data.session?.access_token) {
+        await SecureStore.setItemAsync(STORE_ACCESS_TOKEN, data.session.access_token);
+      }
+      if (data.session?.refresh_token) {
+        await SecureStore.setItemAsync(STORE_REFRESH_TOKEN, data.session.refresh_token);
+      }
       setBioReady(true);
 
       router.replace("/(tabs)/home");
@@ -100,8 +106,10 @@ export default function Login() {
       }
 
       const savedEmail = await SecureStore.getItemAsync(STORE_EMAIL);
-      const savedPass  = await SecureStore.getItemAsync(STORE_PASS);
-      if (!savedEmail || !savedPass) {
+      const accessToken = await SecureStore.getItemAsync(STORE_ACCESS_TOKEN);
+      const refreshToken = await SecureStore.getItemAsync(STORE_REFRESH_TOKEN);
+
+      if (!savedEmail || !accessToken) {
         setError("يرجى تسجيل الدخول بالبريد والكلمة مرة واحدة أولاً");
         setBioLoading(false);
         return;
@@ -109,11 +117,22 @@ export default function Login() {
 
       const supabase = getSB();
       if (!supabase) throw new Error("خطأ في الاتصال");
-      const { error: err } = await supabase.auth.signInWithPassword({
-        email: savedEmail,
-        password: savedPass,
+
+      // Set the session using the stored tokens
+      const { error: err } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || "",
       });
-      if (err) throw err;
+
+      if (err) {
+        // Token expired, need to login again
+        await SecureStore.deleteItemAsync(STORE_ACCESS_TOKEN);
+        await SecureStore.deleteItemAsync(STORE_REFRESH_TOKEN);
+        setError("انتهت صلاحية جلستك، يرجى تسجيل الدخول مرة أخرى");
+        setBioLoading(false);
+        return;
+      }
+
       router.replace("/(tabs)/home");
     } catch (e: any) {
       setError("فشل تسجيل الدخول، يرجى استخدام البريد وكلمة المرور");

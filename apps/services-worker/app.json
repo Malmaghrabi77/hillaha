@@ -4,11 +4,11 @@
     "slug": "hillaha-services-worker",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "../driver/assets/halha-icon-1024.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "../driver/assets/halha-logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#7C3AED"
     },
@@ -18,7 +18,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "../driver/assets/halha-icon-1024.png",
         "backgroundColor": "#7C3AED"
       },
       "package": "com.hillaha.servicesworker"

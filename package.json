@@ -6,6 +6,7 @@
   "scripts": {
     "dev:customer": "pnpm -C apps/customer start",
     "dev:driver": "pnpm -C apps/driver start",
+    "dev:services-worker": "pnpm -C apps/services-worker start",
     "dev:partner": "pnpm -C apps/partner dev",
     "dev:web": "pnpm -C apps/web dev",
     "lint": "pnpm -r lint || true",

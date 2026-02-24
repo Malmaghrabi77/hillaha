@@ -9,7 +9,14 @@
     "dev:services-worker": "pnpm -C apps/services-worker start",
     "dev:partner": "pnpm -C apps/partner dev",
     "dev:web": "pnpm -C apps/web dev",
-    "lint": "pnpm -r lint || true",
+    "lint": "pnpm -r lint",
+    "lint:fix": "pnpm -r lint -- --fix",
+    "format": "prettier --write '**/*.{ts,tsx,js,jsx,json,md}'",
+    "format:check": "prettier --check '**/*.{ts,tsx,js,jsx,json,md}'",
     "install:all": "pnpm install"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0"
   }
 }

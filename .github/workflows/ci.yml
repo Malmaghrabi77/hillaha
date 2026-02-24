@@ -28,7 +28,7 @@ jobs:
         run: pnpm lint
 
       - name: Build partner dashboard
-        run: pnpm --filter halha-partner build
+        run: pnpm --filter hillaha-partner build
 
       - name: Build web marketing site
-        run: pnpm --filter halha-web build
+        run: pnpm --filter hillaha-web build

@@ -7,6 +7,9 @@ node_modules/
 .next/
 out/
 build/
+apps/*/.next/
+apps/*/out/
+apps/*/build/
 
 # Expo
 .expo/
@@ -14,6 +17,7 @@ dist/
 apps/*/android/
 apps/*/ios/
 apps/*/secrets/
+apps/*/.expo/
 
 # Environment variables
 .env

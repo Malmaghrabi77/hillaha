@@ -81,10 +81,11 @@ export type Order = {
   driverId?: string;
   status:
     | "pending"
-    | "confirmed"
+    | "accepted"
     | "preparing"
-    | "delivering"
-    | "done"
+    | "ready"
+    | "picked_up"
+    | "delivered"
     | "cancelled";
   items: CartLineItem[];
   subtotal: number;

@@ -45,15 +45,54 @@ const BANNERS = [
 ];
 
 const CATEGORIES = [
-  { id: "all",      label: "الكل",           icon: "🏠",  color: "#7C3AED" },
-  { id: "egyptian", label: "كشري ومصري",      icon: "🥘",  color: "#92400E" },
-  { id: "shawarma", label: "شاورما",          icon: "🌯",  color: "#D97706" },
-  { id: "burger",   label: "برجر",            icon: "🍔",  color: "#EF4444" },
-  { id: "pizza",    label: "بيتزا",           icon: "🍕",  color: "#F97316" },
-  { id: "chicken",  label: "فراخ",            icon: "🍗",  color: "#EAB308" },
-  { id: "cafe",     label: "قهوة وحلويات",    icon: "☕",  color: "#7C3AED" },
-  { id: "pharmacy", label: "صيدلية",          icon: "💊",  color: "#059669" },
-  { id: "medical",  label: "طبيب",            icon: "🏥",  color: "#2563EB" },
+  { id: "all",       label: "الكل",           icon: "🏠",  color: "#7C3AED", route: null },
+  { id: "egyptian",  label: "كشري ومصري",      icon: "🥘",  color: "#92400E", route: null },
+  { id: "shawarma",  label: "شاورما",          icon: "🌯",  color: "#D97706", route: null },
+  { id: "burger",    label: "برجر",            icon: "🍔",  color: "#EF4444", route: null },
+  { id: "pizza",     label: "بيتزا",           icon: "🍕",  color: "#F97316", route: null },
+  { id: "chicken",   label: "فراخ",            icon: "🍗",  color: "#EAB308", route: null },
+  { id: "cafe",      label: "قهوة وحلويات",    icon: "☕",  color: "#7C3AED", route: null },
+  { id: "pharmacy",  label: "صيدلية",          icon: "💊",  color: "#059669", route: null },
+  { id: "medical",   label: "طبيب",            icon: "🏥",  color: "#2563EB", route: null },
+  { id: "cleaning",  label: "تنظيف",           icon: "🧹",  color: "#0891B2", route: "/services/cleaning" },
+  { id: "electrical",label: "كهرباء وصيانة",   icon: "⚡",  color: "#D97706", route: "/services/electrical" },
+  { id: "p2p",       label: "توصيل أغراض",     icon: "📦",  color: "#7C3AED", route: "/services/delivery" },
+];
+
+const SERVICES = [
+  {
+    id: "cleaning",
+    title: "تنظيف المنزل",
+    subtitle: "تنظيف شامل، ترتيب، غسيل ستائر",
+    icon: "🧹",
+    color: "#0891B2",
+    bgColor: "#E0F7FA",
+    route: "/services/cleaning",
+    badge: "احجز الآن",
+    badgeBg: "#0891B2",
+  },
+  {
+    id: "electrical",
+    title: "كهرباء وصيانة AC",
+    subtitle: "إصلاح مكيفات، أعمال كهربائية",
+    icon: "⚡",
+    color: "#D97706",
+    bgColor: "#FEF3C7",
+    route: "/services/electrical",
+    badge: "متاح الآن",
+    badgeBg: "#D97706",
+  },
+  {
+    id: "p2p",
+    title: "توصيل من عميل لعميل",
+    subtitle: "أرسل أو استلم أي غرض بسهولة",
+    icon: "📦",
+    color: "#7C3AED",
+    bgColor: "#F3E8FF",
+    route: "/services/delivery",
+    badge: "سريع",
+    badgeBg: "#7C3AED",
+  },
 ];
 
 // IDs match seed.sql UUIDs (10000000-0000-0000-0000-00000000000x)
@@ -310,7 +349,10 @@ export default function Home() {
             return (
               <Pressable
                 key={cat.id}
-                onPress={() => setActiveCategory(cat.id)}
+                onPress={() => {
+                  if (cat.route) { router.push(cat.route as any); return; }
+                  setActiveCategory(cat.id);
+                }}
                 style={{ alignItems: "center", gap: 6, minWidth: 64 }}
               >
                 <View style={{
@@ -375,6 +417,57 @@ export default function Home() {
             </View>
           </Pressable>
         </Animated.View>
+
+        {/* ── HOME SERVICES ──────────────────────────────────── */}
+        <View style={{ marginTop: 24 }}>
+          <View style={{
+            flexDirection: "row", justifyContent: "space-between",
+            alignItems: "center", paddingHorizontal: 16, marginBottom: 14,
+          }}>
+            <Text style={{ fontSize: 17, fontWeight: "900", color: C.text }}>🏠 خدمات المنزل والتوصيل</Text>
+          </View>
+          <ScrollView
+            horizontal showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
+          >
+            {SERVICES.map(srv => (
+              <Pressable
+                key={srv.id}
+                onPress={() => router.push(srv.route as any)}
+                style={{
+                  width: 175, borderRadius: 20, overflow: "hidden",
+                  backgroundColor: srv.bgColor,
+                  borderWidth: 1.5, borderColor: `${srv.color}30`,
+                  padding: 16, gap: 8,
+                  shadowColor: srv.color,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.18, shadowRadius: 10, elevation: 3,
+                }}
+              >
+                <View style={{
+                  width: 52, height: 52, borderRadius: 16,
+                  backgroundColor: "rgba(255,255,255,0.7)",
+                  justifyContent: "center", alignItems: "center",
+                }}>
+                  <Text style={{ fontSize: 28 }}>{srv.icon}</Text>
+                </View>
+                <Text style={{ fontSize: 14, fontWeight: "900", color: srv.color, lineHeight: 20 }}>
+                  {srv.title}
+                </Text>
+                <Text style={{ fontSize: 11, color: "#6B7280", lineHeight: 16 }}>
+                  {srv.subtitle}
+                </Text>
+                <View style={{
+                  alignSelf: "flex-start",
+                  backgroundColor: srv.badgeBg,
+                  paddingVertical: 4, paddingHorizontal: 10, borderRadius: 10, marginTop: 4,
+                }}>
+                  <Text style={{ color: "white", fontSize: 11, fontWeight: "800" }}>{srv.badge}</Text>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
 
         {/* ── FEATURED (horizontal scroll) ───────────────────── */}
         {activeCategory === "all" && (

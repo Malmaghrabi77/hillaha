@@ -83,6 +83,9 @@ export default function RootLayout() {
           <Stack.Screen name="medical/prescription" options={{ headerShown: true,  title: "رفع روشتة" }} />
           <Stack.Screen name="profile/edit"         options={{ headerShown: true,  title: "تعديل البيانات" }} />
           <Stack.Screen name="loyalty"              options={{ headerShown: true,  title: "نقاط الولاء" }} />
+          <Stack.Screen name="services/cleaning"    options={{ headerShown: false }} />
+          <Stack.Screen name="services/electrical"  options={{ headerShown: false }} />
+          <Stack.Screen name="services/delivery"    options={{ headerShown: false }} />
         </Stack>
       </CartProvider>
     </LocaleProvider>

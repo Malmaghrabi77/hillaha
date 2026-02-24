@@ -450,6 +450,87 @@ INSERT INTO public.menu_items (partner_id, name, name_ar, description, price, im
   ('10000000-0000-0000-0000-000000000006','Basbousa','بسبوسة','بسبوسة بالقشطة والقطر',30,'https://images.unsplash.com/photo-1575853121743-60c24f0a7502?w=300&q=80','الحلويات',true,false)
 ON CONFLICT DO NOTHING;
 
+-- ─── 10. Service Bookings (تنظيف + كهرباء) ──────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS public.service_bookings (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id    uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  service_type   text NOT NULL,               -- 'cleaning' | 'electrical'
+  service_name   text NOT NULL,
+  price          numeric(8,2) NOT NULL DEFAULT 0,
+  address        text NOT NULL DEFAULT '',
+  scheduled_time text,
+  notes          text,
+  status         text NOT NULL DEFAULT 'pending',
+  created_at     timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.service_bookings ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='service_bookings' AND policyname='customer sees own bookings') THEN
+    CREATE POLICY "customer sees own bookings" ON public.service_bookings
+      FOR SELECT USING (auth.uid() = customer_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='service_bookings' AND policyname='customer creates bookings') THEN
+    CREATE POLICY "customer creates bookings" ON public.service_bookings
+      FOR INSERT WITH CHECK (auth.uid() = customer_id);
+  END IF;
+END $$;
+
+
+-- ─── 11. Delivery Requests (P2P) ──────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS public.delivery_requests (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sender_id       uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  driver_id       uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  package_size    text NOT NULL DEFAULT 'small',  -- 'small' | 'medium' | 'large'
+  from_address    text NOT NULL DEFAULT '',
+  to_address      text NOT NULL DEFAULT '',
+  sender_name     text,
+  sender_phone    text NOT NULL DEFAULT '',
+  receiver_name   text,
+  receiver_phone  text NOT NULL DEFAULT '',
+  delivery_fee    numeric(6,2) NOT NULL DEFAULT 25,
+  status          text NOT NULL DEFAULT 'pending',
+  tracking_code   text,
+  notes           text,
+  created_at      timestamptz DEFAULT now(),
+  picked_up_at    timestamptz,
+  delivered_at    timestamptz
+);
+
+ALTER TABLE public.delivery_requests ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='delivery_requests' AND policyname='sender sees own requests') THEN
+    CREATE POLICY "sender sees own requests" ON public.delivery_requests
+      FOR SELECT USING (auth.uid() = sender_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='delivery_requests' AND policyname='sender creates requests') THEN
+    CREATE POLICY "sender creates requests" ON public.delivery_requests
+      FOR INSERT WITH CHECK (auth.uid() = sender_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='delivery_requests' AND policyname='driver sees available requests') THEN
+    CREATE POLICY "driver sees available requests" ON public.delivery_requests
+      FOR SELECT USING (status = 'pending' OR auth.uid() = driver_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='delivery_requests' AND policyname='driver updates assigned requests') THEN
+    CREATE POLICY "driver updates assigned requests" ON public.delivery_requests
+      FOR UPDATE USING (auth.uid() = driver_id OR status = 'pending');
+  END IF;
+END $$;
+
+
 -- ============================================================
 -- Done ✓ — كل الجداول والبيانات جاهزة
 -- ============================================================

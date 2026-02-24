@@ -1,0 +1,7 @@
+{
+  "buildCommand": "pnpm --filter hillaha-partner build",
+  "outputDirectory": "apps/partner/.next",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "devCommand": "pnpm --filter hillaha-partner dev",
+  "framework": "nextjs"
+}

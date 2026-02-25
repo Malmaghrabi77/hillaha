@@ -4,6 +4,9 @@
     "slug": "driver",
     "scheme": "driver",
     "version": "1.0.0",
+    "cli": {
+      "appVersionSource": "dynamic"
+    },
     "orientation": "portrait",
     "icon": "./assets/halha-icon-1024.png",
     "splash": {

@@ -1,5 +1,10 @@
 {
   "android": {
     "package": "com.malmaghrabi77.hillaha"
+  },
+  "extra": {
+    "eas": {
+      "projectId": "c253a6e4-31d5-483f-a12d-66bf192c87b2"
+    }
   }
 }

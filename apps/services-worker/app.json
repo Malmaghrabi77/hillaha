@@ -3,10 +3,6 @@
     "name": "حلّها — عامل خدمات",
     "slug": "hillaha-services-worker",
     "version": "1.0.0",
-    "runtimeVersion": "1.0.0",
-    "cli": {
-      "appVersionSource": "appVersion"
-    },
     "orientation": "portrait",
     "icon": "../driver/assets/halha-icon-1024.png",
     "userInterfaceStyle": "light",

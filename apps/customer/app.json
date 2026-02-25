@@ -5,10 +5,6 @@
     "owner": "malmaghrabi77",
     "scheme": "customer",
     "version": "1.0.0",
-    "runtimeVersion": "1.0.0",
-    "cli": {
-      "appVersionSource": "appVersion"
-    },
     "orientation": "portrait",
     "icon": "./assets/hillaha-icon-1024.png",
     "splash": {

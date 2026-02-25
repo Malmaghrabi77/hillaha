@@ -3,9 +3,7 @@
     "name": "حلّها — عامل خدمات",
     "slug": "hillaha-services-worker",
     "version": "1.0.0",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "cli": {
       "appVersionSource": "appVersion"
     },

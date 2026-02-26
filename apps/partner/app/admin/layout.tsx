@@ -34,6 +34,8 @@ const navItems: NavItem[] = [
   { href: "/admin/partners", label: "الشركاء", icon: "🏪" },
   { href: "/admin/payments", label: "المدفوعات", icon: "💳" },
   { href: "/admin/payments-config", label: "إعدادات الدفع", icon: "⚙️" },
+  { href: "/admin/promotions", label: "العروض", icon: "🎁" },
+  { href: "/admin/approve-offers", label: "اعتماد العروض", icon: "✅" },
   { href: "/admin/orders", label: "الطلبات", icon: "📦" },
   { href: "/admin/users", label: "المستخدمون", icon: "👥" },
   { href: "/admin/analytics", label: "التحليلات", icon: "📈" },

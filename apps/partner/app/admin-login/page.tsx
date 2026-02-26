@@ -29,7 +29,7 @@ export default function AdminLoginPage() {
     setLoading(true);
     try {
       const sb = getSupabase();
-      if (!sb) throw new Error("لا يوجد اتصال");
+      if (!sb) throw new Error("خطأ في تكوين قاعدة البيانات. يرجى التحقق من متغيرات البيئة");
 
       // Sign in with Supabase
       const { error: authError, data } = await sb.auth.signInWithPassword({

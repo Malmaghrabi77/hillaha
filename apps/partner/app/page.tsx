@@ -82,17 +82,30 @@ export default function LandingPage() {
           <img src="/logo.png" alt="حلّها" style={{ width: 34, height: 34, objectFit: "contain" }} />
           <span style={{ fontWeight: 900, fontSize: 18, color: C.text }}>حلّها</span>
         </div>
-        <a
-          href="/login"
-          style={{
-            padding: "8px 18px", borderRadius: 10,
-            border: `1.5px solid ${C.primary}`,
-            color: C.primary, fontWeight: 700, fontSize: 13,
-            transition: "all 0.15s",
-          }}
-        >
-          شريك؟ سجّل الدخول
-        </a>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <a
+            href="/admin-login"
+            style={{
+              padding: "8px 18px", borderRadius: 10,
+              border: `1.5px solid ${C.primary}`,
+              color: C.primary, fontWeight: 700, fontSize: 13,
+              transition: "all 0.15s",
+            }}
+          >
+            👑 ادمن
+          </a>
+          <a
+            href="/login"
+            style={{
+              padding: "8px 18px", borderRadius: 10,
+              border: `1.5px solid ${C.primary}`,
+              color: "white", background: C.primary, fontWeight: 700, fontSize: 13,
+              transition: "all 0.15s",
+            }}
+          >
+            شريك؟ سجّل الدخول
+          </a>
+        </div>
       </header>
 
       {/* ── BG BLOBS ────────────────────────────────────────── */}

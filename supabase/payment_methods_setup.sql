@@ -59,15 +59,15 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='payment_methods' AND policyname='public can read enabled payment methods') THEN
     CREATE POLICY "public can read enabled payment methods" ON public.payment_methods FOR SELECT USING (is_enabled = true);
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='payment_methods' AND policyname='super_admin can manage payment methods') THEN
-    CREATE POLICY "super_admin can manage payment methods" ON public.payment_methods
-      USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'))
-      WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'));
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='payment_methods' AND policyname='admin can manage payment methods') THEN
+    CREATE POLICY "admin can manage payment methods" ON public.payment_methods
+      USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')))
+      WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='payment_method_configs' AND policyname='super_admin can manage payment configs') THEN
-    CREATE POLICY "super_admin can manage payment configs" ON public.payment_method_configs
-      USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'))
-      WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'));
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='payment_method_configs' AND policyname='admin can manage payment configs') THEN
+    CREATE POLICY "admin can manage payment configs" ON public.payment_method_configs
+      USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')))
+      WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
   END IF;
 END $$;
 

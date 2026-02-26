@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
   { href: "/admin", label: "لوحة القيادة", icon: "📊", requiredPermission: "viewDashboard" },
   { href: "/admin/partners", label: "الشركاء", icon: "🏪" },
   { href: "/admin/payments", label: "المدفوعات", icon: "💳" },
-  { href: "/admin/payments-config", label: "إعدادات الدفع", icon: "⚙️", superAdminOnly: true },
+  { href: "/admin/payments-config", label: "إعدادات الدفع", icon: "⚙️" },
   { href: "/admin/orders", label: "الطلبات", icon: "📦" },
   { href: "/admin/users", label: "المستخدمون", icon: "👥" },
   { href: "/admin/analytics", label: "التحليلات", icon: "📈" },

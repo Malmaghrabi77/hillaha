@@ -50,9 +50,9 @@ export default function PaymentMethodsPage() {
   });
 
   useEffect(() => {
-    if (!auth.user || !auth.isSuperAdmin) return;
+    if (!auth.user || (!auth.isSuperAdmin && auth.role !== 'admin')) return;
     loadPaymentMethods();
-  }, [auth.user, auth.isSuperAdmin]);
+  }, [auth.user, auth.isSuperAdmin, auth.role]);
 
   const loadPaymentMethods = async () => {
     try {
@@ -145,11 +145,11 @@ export default function PaymentMethodsPage() {
     }
   };
 
-  if (!auth.isSuperAdmin) {
+  if (!auth.isSuperAdmin && auth.role !== 'admin') {
     return (
       <div style={{ padding: "24px", textAlign: "center" }}>
         <p style={{ color: C.danger, fontWeight: 700 }}>
-          ⛔ هذه الصفحة متاحة فقط للسوبر أدمن
+          ⛔ هذه الصفحة متاحة فقط للسوبر أدمن والفريد أدمن
         </p>
       </div>
     );

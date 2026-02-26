@@ -31,32 +31,61 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     const sb = getSupabase();
     if (!sb) { setLoading(false); return; }
+
     sb.auth.getSession().then(async ({ data }) => {
-      if (!data.session) { router.replace("/login"); return; }
-      const meta = data.session.user.user_metadata as any;
-      setUserName(meta?.full_name ?? meta?.name ?? data.session.user.email?.split("@")[0] ?? "الشريك");
+      try {
+        if (!data.session) {
+          router.replace("/login");
+          return;
+        }
 
-      // Check super_admin role
-      const { data: profile } = await sb
-        .from("profiles")
-        .select("role")
-        .eq("id", data.session.user.id)
-        .maybeSingle();
-      const profileRole = (profile as { role: string } | null)?.role;
-      if (profileRole === "super_admin") setIsSuperAdmin(true);
+        const userId = data.session.user.id;
+        const meta = data.session.user.user_metadata as any;
+        setUserName(meta?.full_name ?? meta?.name ?? data.session.user.email?.split("@")[0] ?? "الشريك");
 
-      // Load partner logo from partners table
-      const { data: partner } = await sb
-        .from("partners")
-        .select("logo_url")
-        .eq("user_id", data.session.user.id)
-        .maybeSingle();
-      const partnerLogoUrl = (partner as { logo_url: string } | null)?.logo_url;
-      if (partnerLogoUrl) setLogoUrl(partnerLogoUrl);
+        // Check super_admin role
+        try {
+          const { data: profile, error: profileError } = await sb
+            .from("profiles")
+            .select("role")
+            .eq("id", userId)
+            .maybeSingle();
 
-      setLoading(false);
+          if (profileError) {
+            console.error("Error fetching profile:", profileError);
+          } else if (profile) {
+            const profileRole = (profile as { role: string | null } | null)?.role;
+            if (profileRole === "super_admin") {
+              setIsSuperAdmin(true);
+            }
+          }
+        } catch (err) {
+          console.error("Error checking super admin:", err);
+        }
+
+        // Load partner logo from partners table
+        try {
+          const { data: partner, error: partnerError } = await sb
+            .from("partners")
+            .select("logo_url")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          if (!partnerError && partner) {
+            const partnerLogoUrl = (partner as { logo_url: string | null } | null)?.logo_url;
+            if (partnerLogoUrl) setLogoUrl(partnerLogoUrl);
+          }
+        } catch (err) {
+          console.error("Error loading partner logo:", err);
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Error in dashboard layout:", err);
+        setLoading(false);
+      }
     });
-  }, []);
+  }, [router]);
 
   async function handleLogout() {
     const sb = getSupabase();
@@ -158,27 +187,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
 
-        {/* Super Admin nav item — مرئي لحساب السوبر أدمن فقط */}
-          {isSuperAdmin && (() => {
-            const active = pathname.startsWith("/admin");
-            return (
-              <a
-                href="/admin"
-                style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  padding: "11px 14px", borderRadius: 12, marginTop: 8,
-                  background: active ? "#6D28D9" : "#EDE9FE",
-                  color: active ? "white" : "#6D28D9",
-                  fontWeight: 900, fontSize: 14,
-                  textDecoration: "none",
-                  border: "1.5px solid #C4B5FD",
-                }}
-              >
-                <span style={{ fontSize: 18 }}>👑</span>
-                لوحة الإدارة
-              </a>
-            );
-          })()}
+          {/* Super Admin nav item — مرئي لحساب السوبر أدمن فقط */}
+          {isSuperAdmin && (
+            <a
+              href="/admin"
+              style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "11px 14px", borderRadius: 12, marginTop: 8,
+                background: pathname.startsWith("/admin") ? "#6D28D9" : "#EDE9FE",
+                color: pathname.startsWith("/admin") ? "white" : "#6D28D9",
+                fontWeight: 900, fontSize: 14,
+                textDecoration: "none",
+                border: "1.5px solid #C4B5FD",
+              }}
+            >
+              <span style={{ fontSize: 18 }}>👑</span>
+              لوحة الإدارة
+            </a>
+          )}
         </nav>
 
         {/* LOGOUT */}

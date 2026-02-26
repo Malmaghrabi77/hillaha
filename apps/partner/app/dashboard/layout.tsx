@@ -95,9 +95,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           borderBottom: `1px solid ${C.border}`,
           display: "flex", alignItems: "center", gap: 10,
         }}>
-          <img src="/logo.png" alt="حلّها" style={{ width: 36, height: 36, objectFit: "contain" }} />
+          <img src="/logo.png" alt="حلها يحلها" style={{ width: 36, height: 36, objectFit: "contain" }} />
           <div>
-            <div style={{ fontWeight: 900, fontSize: 15, color: C.text }}>حلّها</div>
+            <div style={{ fontWeight: 900, fontSize: 13, color: C.text }}>
+              حلها<br/>يحلها
+            </div>
             <div style={{ fontSize: 11, color: C.textMuted }}>لوحة الشريك</div>
           </div>
         </div>
@@ -156,12 +158,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
 
-          {/* Super Admin nav item — مرئي لحساب السوبر أدمن فقط */}
+        {/* Super Admin nav item — مرئي لحساب السوبر أدمن فقط */}
           {isSuperAdmin && (() => {
-            const active = pathname.startsWith("/dashboard/admin");
+            const active = pathname.startsWith("/admin");
             return (
               <a
-                href="/dashboard/admin"
+                href="/admin"
                 style={{
                   display: "flex", alignItems: "center", gap: 12,
                   padding: "11px 14px", borderRadius: 12, marginTop: 8,
@@ -173,7 +175,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 }}
               >
                 <span style={{ fontSize: 18 }}>👑</span>
-                السوبر أدمن
+                لوحة الإدارة
               </a>
             );
           })()}

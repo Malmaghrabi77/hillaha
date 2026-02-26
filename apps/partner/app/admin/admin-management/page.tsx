@@ -58,6 +58,20 @@ export default function AdminManagementPage() {
       color: "#34D399",
     },
     {
+      href: "/admin/admin-management/permissions",
+      title: "إدارة صلاحيات الادمنة",
+      description: "منح أو سحب صلاحيات محددة للمديرين والشركاء",
+      icon: "🔐",
+      color: "#6366F1",
+    },
+    {
+      href: "/admin/admin-management/restrictions",
+      title: "تجميد الحسابات والوظائف",
+      description: "تجميد مؤقت أو دائم للمديرين والشركاء",
+      icon: "🔒",
+      color: "#EF4444",
+    },
+    {
       href: "/admin/admin-management/logs",
       title: "سجل التدقيق",
       description: "عرض جميع الإجراءات والتعديلات",

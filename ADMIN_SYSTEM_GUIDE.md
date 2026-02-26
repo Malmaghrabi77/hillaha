@@ -37,11 +37,17 @@ File: c:\hillaha-platform\supabase\payment_methods_setup.sql
 File: c:\hillaha-platform\supabase\offers_setup.sql
 ```
 
+**ثالثاً - جداول إدارة الادمنة والقيود:**
+```
+File: c:\hillaha-platform\supabase\admin_management_setup.sql
+```
+
 **خطوات التشغيل:**
 1. اذهب إلى **Supabase Dashboard** → Your Project
 2. اضغط **SQL Editor** → **New Query**
 3. انسخ محتوى الملف
 4. اضغط **Run**
+5. كرر الخطوات لكل الملفات الثلاثة (بالترتيب أعلاه)
 
 ---
 
@@ -58,7 +64,12 @@ File: c:\hillaha-platform\supabase\offers_setup.sql
 - و 3 صفحات إدارة أخرى
 
 #### للسوبر أدمن فقط:
-- `⚙️ /admin/admin-management` - إدارة النظام
+- `⚙️ /admin/admin-management` - مركز إدارة النظام (قائمة المميزات):
+  - `🔐 /admin/admin-management/permissions` - إدارة صلاحيات الادمنة
+  - `🔒 /admin/admin-management/restrictions` - تجميد الحسابات والوظائف
+  - `✅ /admin/admin-management/approve-admins` - موافقة طلبات المديرين
+  - `📨 /admin/admin-management/invite-frid` - دعوة مديري الفرائد
+  - `📋 /admin/admin-management/logs` - سجل التدقيق
 
 ---
 
@@ -77,6 +88,28 @@ File: c:\hillaha-platform\supabase\offers_setup.sql
 - ✅ نظام موافقات متقدم
 - ✅ سجل تدقيق كامل
 - ✅ أسباب الرفض مع تعليقات
+
+#### نظام إدارة الصلاحيات والقيود (نظام جديد):
+- ✅ **إدارة الصلاحيات**: 7 أنواع صلاحيات يمكن منحها/سحبها لكل مدير:
+  - عرض لوحة القيادة
+  - إدارة طرق الدفع
+  - إدارة العروض
+  - اعتماد عروض الشركاء
+  - إدارة الشركاء
+  - إدارة المستخدمين
+  - عرض التحليلات
+
+- ✅ **تجميد الحسابات والوظائف**: تجميد مؤقت أو دائم مع:
+  - اختيار الوظائف المراد تجميدها (7 أنواع)
+  - إدخال سبب التجميد
+  - تحديد تاريخ انتهاء الصلاحي (اختياري) للقيود المؤقتة
+  - تسجيل تلقائي في سجل التدقيق
+
+- ✅ **سجل التدقيق الشامل**: تتبع جميع الإجراءات
+  - من غيّر الصلاحيات
+  - متى تم التغيير
+  - ما هي الصلاحيات التي تغيرت
+  - متى تنتهي القيود المؤقتة
 
 ---
 
@@ -111,6 +144,7 @@ File: c:\hillaha-platform\supabase\offers_setup.sql
 - ✅ العروض: Admin يقدر يقرأ/يكتب
 - ✅ الموافقات: Super Admin و Frid Admin
 - ✅ سجلات الموافقات: Admin يقدر يقرأ
+- ✅ الصلاحيات والقيود: Super Admin فقط (مع تسجيل سجل التدقيق)
 
 ---
 
@@ -140,11 +174,22 @@ File: c:\hillaha-platform\supabase\offers_setup.sql
 ## 📞 للدعم:
 
 أي مشاكل أو استفسارات حول النظام، تأكد من:
-1. تشغيل SQL Scripts في Supabase
-2. مسح الـ Browser Cache
-3. تسجيل الدخول مرة أخرى
+
+### قبل البدء - أهم شيء:
+```
+⚠️ CRITICAL: تشغيل SQL Scripts بالترتيب التالي:
+1. payment_methods_setup.sql      (طرق الدفع)
+2. offers_setup.sql                (العروض)
+3. admin_management_setup.sql      (إدارة الصلاحيات والقيود) ← جديد
+```
+
+### خطوات الفحص:
+1. تشغيل SQL Scripts في Supabase (بالترتيب أعلاه)
+2. مسح الـ Browser Cache (Ctrl+Shift+Delete)
+3. تسجيل الدخول مرة أخرى من الحساب الذي يمتلك صلاحية Super Admin
+4. التأكد من ظهور جميع الصفحات في القائمة الجانبية
 
 ---
 
 **آخر تحديث:** 27 فبراير 2025
-**الإصدار:** 1.0.0
+**الإصدار:** 1.1.0 (إضافة نظام إدارة الصلاحيات والقيود)

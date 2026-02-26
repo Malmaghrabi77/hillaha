@@ -86,8 +86,7 @@ export default function ApproveAdminsPage() {
       const supabase = getSupabase();
       if (!supabase) return;
 
-      const { error: err } = await supabase
-        .from("admin_invitations")
+      const { error: err } = await (supabase.from("admin_invitations") as any)
         .update({
           super_admin_approval: actionType === "approve" ? "approved" : "rejected",
           approved_by_super_admin: auth.user?.id,
@@ -99,7 +98,7 @@ export default function ApproveAdminsPage() {
       if (err) throw err;
 
       // Log action
-      await supabase.from("admin_logs").insert({
+      await (supabase.from("admin_logs") as any).insert({
         admin_id: auth.user?.id,
         action: `${actionType}_admin_invitation`,
         entity_type: "partner",

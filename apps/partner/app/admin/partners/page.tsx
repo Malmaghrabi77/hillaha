@@ -104,8 +104,8 @@ export default function PartnerApprovalsPage() {
       const supabase = getSupabase();
       if (!supabase) return;
 
-      const { error } = await supabase
-        .from("partner_approvals")
+      const { error } = await (supabase
+        .from("partner_approvals") as any)
         .update({
           status: actionType === "approve" ? "approved" : "rejected",
           reviewed_at: new Date().toISOString(),
@@ -117,7 +117,7 @@ export default function PartnerApprovalsPage() {
       if (error) throw error;
 
       // Log the action
-      await supabase.from("admin_logs").insert({
+      await (supabase.from("admin_logs") as any).insert({
         admin_id: auth.user?.id,
         action: `${actionType}_partner`,
         entity_type: "partner",

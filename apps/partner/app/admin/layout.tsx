@@ -14,8 +14,11 @@ const C = {
   text: "#1F1B2E",
   textMuted: "#6B6480",
   success: "#34D399",
+  successSoft: "#D1FAE5",
   warning: "#F59E0B",
+  warningSoft: "#FEF3C7",
   danger: "#EF4444",
+  dangerSoft: "#FEE2E2",
 };
 
 interface NavItem {

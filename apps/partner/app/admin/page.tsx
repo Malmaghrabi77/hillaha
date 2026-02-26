@@ -66,12 +66,12 @@ export default function AdminDashboard() {
         .eq("status", "pending");
 
       // Load total revenue (sum of order totals)
-      const { data: revenueData } = await supabase
-        .from("orders")
+      const { data: revenueData } = await (supabase
+        .from("orders") as any)
         .select("total")
         .eq("status", "delivered");
 
-      const totalRevenue = (revenueData || []).reduce(
+      const totalRevenue = ((revenueData as any[]) || []).reduce(
         (sum, order) => sum + (order.total || 0),
         0
       );

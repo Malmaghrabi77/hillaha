@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { getSupabase } from "@hillaha/core";
-import { useAdminAuth } from "../../hooks/useAdminAuth";
+import { useAdminAuth } from "../hooks/useAdminAuth";
 import type { AdminInvitation } from "@hillaha/core";
 
 const C = {
@@ -89,8 +89,7 @@ export default function InviteRegularAdminPage() {
       const supabase = getSupabase();
       if (!supabase) return;
 
-      const { data, error: err } = await supabase
-        .from("admin_invitations")
+      const { data, error: err } = await (supabase.from("admin_invitations") as any)
         .insert({
           name: formData.name,
           email: formData.email,
@@ -105,7 +104,7 @@ export default function InviteRegularAdminPage() {
       if (err) throw err;
 
       // Log action
-      await supabase.from("admin_logs").insert({
+      await (supabase.from("admin_logs") as any).insert({
         admin_id: auth.user?.id,
         action: "invite_regular_admin",
         entity_type: "partner",

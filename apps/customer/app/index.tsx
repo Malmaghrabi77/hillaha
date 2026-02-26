@@ -74,9 +74,16 @@ export default function AppEntry() {
               resizeMode="contain"
             />
           </Animated.View>
-          <Text style={styles.splashArabic}>حلّها</Text>
-          <Text style={styles.splashEnglish}>Hillaha</Text>
-          <Text style={styles.splashTagline}>كل احتياجاتك في مكان واحد</Text>
+          <Text style={styles.splashArabic}>حلها يحلها</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+            <Text style={styles.splashEnglish}>7illaha</Text>
+            <Image
+              source={require("../assets/hillaha-logo.png")}
+              style={{ width: 28, height: 28 }}
+              resizeMode="contain"
+            />
+            <Text style={styles.splashEnglish}>7illaha</Text>
+          </View>
         </Animated.View>
       )}
 
@@ -94,8 +101,16 @@ export default function AppEntry() {
             style={styles.authLogo}
             resizeMode="contain"
           />
-          <Text style={styles.authBrand}>حلّها</Text>
-          <Text style={styles.authTagline}>كل احتياجاتك في مكان واحد</Text>
+          <Text style={styles.authBrand}>حلها يحلها</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 }}>
+            <Text style={styles.authTagline}>7illaha</Text>
+            <Image
+              source={require("../assets/hillaha-logo.png")}
+              style={{ width: 18, height: 18 }}
+              resizeMode="contain"
+            />
+            <Text style={styles.authTagline}>7illaha</Text>
+          </View>
         </View>
 
         <View style={styles.chips}>

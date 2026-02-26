@@ -65,12 +65,12 @@ export default function PaymentsPage() {
 
       // If not super admin, only show assigned partners
       if (!auth.isSuperAdmin) {
-        const { data: assignments } = await supabase
-          .from("admin_assignments")
+        const { data: assignments } = await (supabase
+          .from("admin_assignments") as any)
           .select("partner_id")
           .eq("admin_id", auth.user.id);
 
-        const partnerIds = assignments?.map(a => a.partner_id) || [];
+        const partnerIds = ((assignments as any[]) || []).map(a => a.partner_id) || [];
         if (partnerIds.length > 0) {
           query = query.in("partner_id", partnerIds);
         } else {
@@ -84,7 +84,7 @@ export default function PaymentsPage() {
 
       if (error) throw error;
 
-      const mappedData = (data || []).map((commission: any) => ({
+      const mappedData = ((data as any[]) || []).map((commission: any) => ({
         ...commission,
         partner_name: commission.partner?.name,
         partner_email: commission.partner?.email,
@@ -111,8 +111,8 @@ export default function PaymentsPage() {
       const supabase = getSupabase();
       if (!supabase) return;
 
-      const { error } = await supabase
-        .from("admin_commissions")
+      const { error } = await (supabase
+        .from("admin_commissions") as any)
         .update({
           settled_date: new Date().toISOString(),
           settled_by: auth.user?.id,
@@ -123,7 +123,7 @@ export default function PaymentsPage() {
       if (error) throw error;
 
       // Log the action
-      await supabase.from("admin_logs").insert({
+      await (supabase.from("admin_logs") as any).insert({
         admin_id: auth.user?.id,
         action: "settle_payment",
         entity_type: "payment",

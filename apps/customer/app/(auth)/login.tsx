@@ -6,6 +6,7 @@ import {
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
+import { getSupabase } from "@hillaha/core";
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
   pink: "#EC4899",       pinkSoft: "#FCE7F3",
@@ -15,10 +16,6 @@ const C = {
   warning: "#F59E0B",    danger: "#EF4444",
   deepPurple: "#6D28D9",
 } as const;
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
 
 const STORE_EMAIL = "hillaha_customer_email";
 const STORE_ACCESS_TOKEN = "hillaha_access_token";
@@ -54,8 +51,8 @@ export default function Login() {
     }
     setLoading(true);
     try {
-      const supabase = getSB();
-      if (!supabase) throw new Error("خطأ في الاتصال");
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("خطأ في الاتصال — تأكد من استقرار الإنترنت");
       const { data, error: err } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
@@ -115,8 +112,8 @@ export default function Login() {
         return;
       }
 
-      const supabase = getSB();
-      if (!supabase) throw new Error("خطأ في الاتصال");
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("خطأ في الاتصال — تأكد من استقرار الإنترنت");
 
       // Set the session using the stored tokens
       const { error: err } = await supabase.auth.setSession({
@@ -159,6 +156,17 @@ export default function Login() {
             source={require("../../assets/hillaha-logo.png")}
             style={{ width: 80, height: 80, resizeMode: "contain", marginBottom: 12 }}
           />
+          <View style={{ alignItems: "center", marginBottom: 12 }}>
+            <Text style={{ fontSize: 20, color: C.text, fontWeight: "900", marginBottom: 8 }}>حلها يحلها</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={{ fontSize: 16, color: C.primary, fontWeight: "900" }}>7illaha</Text>
+              <Image
+                source={require("../../assets/hillaha-logo.png")}
+                style={{ width: 20, height: 20, resizeMode: "contain" }}
+              />
+              <Text style={{ fontSize: 16, color: C.primary, fontWeight: "900" }}>7illaha</Text>
+            </View>
+          </View>
           <Text style={{ fontSize: 24, fontWeight: "900", color: C.text }}>تسجيل الدخول</Text>
           <Text style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>أهلاً بعودتك لحلّها</Text>
         </View>

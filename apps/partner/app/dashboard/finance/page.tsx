@@ -66,7 +66,7 @@ export default function FinancePage() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
         {[
           { label: "إجمالي المبيعات",   value: `${current.sales.toLocaleString()} ج`, icon: "💰", color: C.green,   bg: C.greenSoft  },
-          { label: "عمولة حلّها (15%)", value: `${current.commission.toLocaleString()} ج`, icon: "📊", color: C.danger,  bg: "#FEF2F2"    },
+          { label: "عمولة حلّها (10%-8%)", value: `${current.commission.toLocaleString()} ج`, icon: "📊", color: C.danger,  bg: "#FEF2F2"    },
           { label: "صافي أرباحك",       value: `${current.net.toLocaleString()} ج`, icon: "✅", color: C.primary, bg: C.primarySoft },
           { label: "عدد الطلبات",        value: `${current.orders}`, icon: "📦", color: C.warning, bg: "#FEF3C7"   },
         ].map((s, i) => (
@@ -139,8 +139,8 @@ export default function FinancePage() {
             background: C.primarySoft, borderRadius: 14, padding: 16, marginBottom: 16,
           }}>
             <div style={{ fontSize: 12, color: C.primary, fontWeight: 700, marginBottom: 4 }}>نسبة عمولة حلّها</div>
-            <div style={{ fontSize: 28, fontWeight: 900, color: C.primary }}>15%</div>
-            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>يشمل: الخدمة اللوجستية، التسويق، الدعم</div>
+            <div style={{ fontSize: 28, fontWeight: 900, color: C.primary }}>10% - 8%</div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>10% للـ 1000 طلب الأول، 8% للإضافية | شامل: الخدمة واللوجستية والتسويق والدعم</div>
           </div>
 
           {[

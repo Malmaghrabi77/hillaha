@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@hillaha/core";
-import { useAdminAuth } from "../../../hooks/useAdminAuth";
+import { useAdminAuth } from "../../hooks/useAdminAuth";
 import type { AdminLog } from "@hillaha/core";
 
 const C = {

@@ -213,10 +213,23 @@ export default function Home() {
                 borderWidth: 1.5, borderColor: "#4C1D95",
               }} />
             </Pressable>
-            <Image
-              source={require("../../assets/hillaha-logo.png")}
-              style={{ width: 38, height: 38, resizeMode: "contain" }}
-            />
+            <View style={{ alignItems: "center", gap: 2 }}>
+              <Image
+                source={require("../../assets/hillaha-logo.png")}
+                style={{ width: 38, height: 38, resizeMode: "contain" }}
+              />
+              <View style={{ alignItems: "center", gap: 1 }}>
+                <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.95)", fontWeight: "800" }}>حلها يحلها</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                  <Text style={{ fontSize: 7, color: "rgba(255,255,255,0.85)", fontWeight: "700" }}>7illaha</Text>
+                  <Image
+                    source={require("../../assets/hillaha-logo.png")}
+                    style={{ width: 10, height: 10 }}
+                  />
+                  <Text style={{ fontSize: 7, color: "rgba(255,255,255,0.85)", fontWeight: "700" }}>7illaha</Text>
+                </View>
+              </View>
+            </View>
           </View>
         </View>
 

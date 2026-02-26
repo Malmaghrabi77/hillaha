@@ -58,19 +58,19 @@ export default function AuthIndex() {
           </View>
         </View>
 
-        <View style={{ alignItems: "center", marginTop: 8 }}>
-          <Text style={{
-            fontSize: 42, fontWeight: "900", letterSpacing: -1,
-            color: "white",
-          }}>
-            حلّها
-          </Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
-            <View style={{ width: 20, height: 2, borderRadius: 1, backgroundColor: "rgba(139,92,246,0.5)" }} />
-            <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: "600" }}>
-              كل اللي تحتاجه في مكان واحد
+        <View style={{ alignItems: "center", marginTop: 20 }}>
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ fontSize: 24, color: "rgba(255,255,255,0.95)", fontWeight: "900", marginBottom: 8 }}>
+              حلها يحلها
             </Text>
-            <View style={{ width: 20, height: 2, borderRadius: 1, backgroundColor: "rgba(236,72,153,0.5)" }} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={{ fontSize: 20, color: "#8B5CF6", fontWeight: "900" }}>7illaha</Text>
+              <Image
+                source={require("../../assets/hillaha-logo.png")}
+                style={{ width: 24, height: 24, resizeMode: "contain" }}
+              />
+              <Text style={{ fontSize: 20, color: "#8B5CF6", fontWeight: "900" }}>7illaha</Text>
+            </View>
           </View>
         </View>
       </View>

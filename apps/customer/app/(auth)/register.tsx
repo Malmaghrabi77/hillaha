@@ -4,6 +4,7 @@ import {
   ScrollView, Image, StatusBar, ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
+import { getSupabase } from "@hillaha/core";
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
   pink: "#EC4899",       pinkSoft: "#FCE7F3",
@@ -13,10 +14,6 @@ const C = {
   warning: "#F59E0B",    danger: "#EF4444",
   deepPurple: "#6D28D9",
 } as const;
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
 
 export default function Register() {
   const [name, setName]           = useState("");
@@ -41,8 +38,8 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const supabase = getSB();
-      if (!supabase) throw new Error("خطأ في الاتصال");
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("خطأ في الاتصال — تأكد من استقرار الإنترنت");
 
       const { error: err } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -59,6 +56,10 @@ export default function Register() {
       setSuccess(true);
     } catch (e: any) {
       const msg = e?.message ?? "";
+      console.error("Registration error:", {
+        message: msg,
+        fullError: JSON.stringify(e),
+      });
       if (msg.includes("already registered") || msg.includes("User already registered")) {
         setError("هذا البريد الإلكتروني مسجل بالفعل — يمكنك تسجيل الدخول");
       } else if (msg.includes("Password should be")) {
@@ -66,7 +67,7 @@ export default function Register() {
       } else if (msg.includes("invalid")) {
         setError("صيغة البريد الإلكتروني غير صحيحة");
       } else {
-        setError("حدث خطأ، يرجى المحاولة مرة أخرى");
+        setError(`خطأ: ${msg || "حدث خطأ، يرجى المحاولة مرة أخرى"}`);
       }
     } finally {
       setLoading(false);
@@ -131,8 +132,19 @@ export default function Register() {
         <View style={{ alignItems: "center", marginBottom: 28 }}>
           <Image
             source={require("../../assets/hillaha-logo.png")}
-            style={{ width: 64, height: 64, resizeMode: "contain", marginBottom: 10 }}
+            style={{ width: 80, height: 80, resizeMode: "contain", marginBottom: 16 }}
           />
+          <View style={{ alignItems: "center", marginBottom: 16 }}>
+            <Text style={{ fontSize: 20, color: C.text, fontWeight: "900", marginBottom: 8 }}>حلها يحلها</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={{ fontSize: 16, color: C.primary, fontWeight: "900" }}>7illaha</Text>
+              <Image
+                source={require("../../assets/hillaha-logo.png")}
+                style={{ width: 20, height: 20, resizeMode: "contain" }}
+              />
+              <Text style={{ fontSize: 16, color: C.primary, fontWeight: "900" }}>7illaha</Text>
+            </View>
+          </View>
           <Text style={{ fontSize: 22, fontWeight: "900", color: C.text }}>إنشاء حساب جديد</Text>
           <Text style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>انضم لحلّها دلوقتي</Text>
         </View>

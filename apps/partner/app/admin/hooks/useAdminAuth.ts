@@ -54,7 +54,7 @@ export function useAdminAuth(): AdminAuthContext {
         .eq("id", userId)
         .single();
 
-      const role = profile?.role as AdminRole | null;
+      const role = (profile as { role: string } | null)?.role as AdminRole | null;
       const isAdmin = role === "admin" || role === "super_admin";
 
       if (!isAdmin) {

@@ -7,6 +7,12 @@ alter table public.order_items enable row level security;
 create policy "profiles_read_own" on public.profiles
 for select using (id = auth.uid());
 
+create policy "profiles_insert_self" on public.profiles
+for insert with check (id = auth.uid());
+
+create policy "profiles_update_own" on public.profiles
+for update using (id = auth.uid());
+
 create policy "addresses_owner_all" on public.addresses
 for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 

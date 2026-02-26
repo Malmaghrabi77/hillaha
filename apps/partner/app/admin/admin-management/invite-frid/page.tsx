@@ -111,8 +111,7 @@ export default function InviteFridAdminPage() {
       const supabase = getSupabase();
       if (!supabase) return;
 
-      const { data, error: err } = await supabase
-        .from("admin_invitations")
+      const { data, error: err } = await (supabase.from("admin_invitations") as any)
         .insert({
           name: formData.name,
           email: formData.email,
@@ -129,7 +128,7 @@ export default function InviteFridAdminPage() {
       if (err) throw err;
 
       // Log action
-      await supabase.from("admin_logs").insert({
+      await (supabase.from("admin_logs") as any).insert({
         admin_id: auth.user?.id,
         action: "invite_frid_admin",
         entity_type: "partner",

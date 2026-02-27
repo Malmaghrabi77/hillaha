@@ -38,7 +38,23 @@ create table if not exists public.delivery_bands (
   sort int not null default 0
 );
 
-create type public.user_role as enum ('customer','driver','partner','super_admin');
+-- Create types safely (drop if exists to avoid conflicts)
+DO $$ BEGIN
+  -- Drop existing types if they exist (CASCADE to drop dependent objects)
+  DROP TYPE IF EXISTS public.user_role CASCADE;
+  DROP TYPE IF EXISTS public.partner_type CASCADE;
+  DROP TYPE IF EXISTS public.partner_role CASCADE;
+  DROP TYPE IF EXISTS public.consent_type CASCADE;
+  DROP TYPE IF EXISTS public.order_status CASCADE;
+  DROP TYPE IF EXISTS public.delivery_type CASCADE;
+  DROP TYPE IF EXISTS public.payment_method CASCADE;
+EXCEPTION WHEN OTHERS THEN
+  -- If there's an error, continue anyway
+  NULL;
+END $$;
+
+-- Now create the types
+create type public.user_role as enum ('customer','driver','partner','super_admin','admin','frid_admin');
 create type public.partner_type as enum ('restaurant','store','pharmacy','clinic');
 create type public.partner_role as enum ('owner','manager','cashier','kitchen','support');
 create type public.consent_type as enum ('customer_terms','partner_terms','driver_terms','medical_terms');

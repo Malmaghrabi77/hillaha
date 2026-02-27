@@ -165,6 +165,17 @@ create table if not exists public.partner_monthly_stats (
 );
 
 -- Policies (RLS)
+-- Safely drop existing policies first
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "profiles_read_own" ON public.profiles;
+  DROP POLICY IF EXISTS "addresses_owner_all" ON public.addresses;
+  DROP POLICY IF EXISTS "consents_owner_read" ON public.user_consents;
+  DROP POLICY IF EXISTS "consents_owner_insert" ON public.user_consents;
+  DROP POLICY IF EXISTS "orders_customer_read" ON public.orders;
+  DROP POLICY IF EXISTS "orders_customer_insert" ON public.orders;
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
 
 alter table public.profiles enable row level security;
 alter table public.addresses enable row level security;

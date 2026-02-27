@@ -31,6 +31,7 @@ export function useAdminAuth(): AdminAuthContext {
     try {
       const supabase = getSupabase();
       if (!supabase) {
+        console.error("Supabase client not initialized");
         setAuth(prev => ({ ...prev, loading: false }));
         router.push("/login");
         return;
@@ -39,6 +40,7 @@ export function useAdminAuth(): AdminAuthContext {
       // Get current session
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session?.user) {
+        console.log("No active session");
         setAuth(prev => ({ ...prev, loading: false }));
         router.push("/login");
         return;
@@ -48,24 +50,49 @@ export function useAdminAuth(): AdminAuthContext {
       const email = sessionData.session.user.email || "";
 
       // Get user role
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", userId)
         .single();
 
-      const role = (profile as { role: string } | null)?.role as AdminRole | null;
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
+        setAuth(prev => ({ ...prev, loading: false }));
+        router.push("/login");
+        return;
+      }
+
+      if (!profile) {
+        console.error("Profile not found for user:", userId);
+        setAuth(prev => ({ ...prev, loading: false }));
+        router.push("/login");
+        return;
+      }
+
+      const role = (profile as any)?.role as string;
+
+      if (!role) {
+        console.error("Role not found in profile");
+        setAuth(prev => ({ ...prev, loading: false }));
+        router.push("/login");
+        return;
+      }
+
       const isAdmin = role === "admin" || role === "super_admin";
 
       if (!isAdmin) {
+        console.warn("User does not have admin role. Role:", role);
         setAuth(prev => ({ ...prev, loading: false }));
         router.push("/dashboard");
         return;
       }
 
+      console.log("Admin auth successful. User:", userId, "Role:", role);
+
       setAuth({
         user: { id: userId, email },
-        role,
+        role: role as any,
         isAdmin: true,
         isSuperAdmin: role === "super_admin",
         loading: false,

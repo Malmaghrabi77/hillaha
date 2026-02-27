@@ -91,26 +91,38 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- الصلاحيات الافتراضية كل ادمن جديد يحصل عليها
+-- الصلاحيات الافتراضية - إدراج جميع الصلاحيات لكل admin موجود
 INSERT INTO public.admin_permissions (admin_id, permission_code, permission_name, permission_name_ar, description, is_granted)
 SELECT
-  au.id, 'view_dashboard', 'View Dashboard', 'عرض لوحة القيادة', 'Can view admin dashboard', true
+  au.id,
+  permission_codes.code,
+  permission_codes.name,
+  permission_codes.name_ar,
+  permission_codes.desc,
+  true
 FROM auth.users au
+CROSS JOIN (
+  SELECT 'view_dashboard' as code, 'View Dashboard' as name, 'عرض لوحة القيادة' as name_ar, 'Can view admin dashboard' as desc
+  UNION ALL
+  SELECT 'manage_payments', 'Manage Payment Methods', 'إدارة طرق الدفع', 'Can enable/disable payment methods'
+  UNION ALL
+  SELECT 'manage_promotions', 'Manage Promotions', 'إدارة العروض', 'Can create and manage promotions'
+  UNION ALL
+  SELECT 'approve_offers', 'Approve Partner Offers', 'اعتماد عروض الشركاء', 'Can approve/reject partner offers'
+  UNION ALL
+  SELECT 'manage_partners', 'Manage Partners', 'إدارة الشركاء', 'Can manage partner accounts'
+  UNION ALL
+  SELECT 'manage_users', 'Manage Users', 'إدارة المستخدمين', 'Can manage customer accounts'
+  UNION ALL
+  SELECT 'view_analytics', 'View Analytics', 'عرض التحليلات', 'Can view analytics and reports'
+  UNION ALL
+  SELECT 'manage_admins', 'Manage Admins', 'إدارة الادمنة', 'Can invite and manage admin accounts'
+) as permission_codes
 WHERE au.id IN (
   SELECT id FROM public.profiles WHERE role IN ('admin', 'super_admin')
 )
 AND NOT EXISTS (
-  SELECT 1 FROM public.admin_permissions WHERE admin_id = au.id AND permission_code = 'view_dashboard'
-);
-
--- إدراج قائمة الصلاحيات المتاحة
-INSERT INTO public.admin_permissions (admin_id, permission_code, permission_name, permission_name_ar, description, is_granted)
-VALUES
-  ('00000000-0000-0000-0000-000000000000', 'manage_payments', 'Manage Payment Methods', 'إدارة طرق الدفع', 'Can enable/disable payment methods', false),
-  ('00000000-0000-0000-0000-000000000000', 'manage_promotions', 'Manage Promotions', 'إدارة العروض', 'Can create and manage promotions', false),
-  ('00000000-0000-0000-0000-000000000000', 'approve_offers', 'Approve Partner Offers', 'اعتماد عروض الشركاء', 'Can approve/reject partner offers', false),
-  ('00000000-0000-0000-0000-000000000000', 'manage_partners', 'Manage Partners', 'إدارة الشركاء', 'Can manage partner accounts', false),
-  ('00000000-0000-0000-0000-000000000000', 'manage_users', 'Manage Users', 'إدارة المستخدمين', 'Can manage customer accounts', false),
-  ('00000000-0000-0000-0000-000000000000', 'view_analytics', 'View Analytics', 'عرض التحليلات', 'Can view analytics and reports', false),
-  ('00000000-0000-0000-0000-000000000000', 'manage_admins', 'Manage Admins', 'إدارة الادمنة', 'Can invite and manage admin accounts', false)
+  SELECT 1 FROM public.admin_permissions
+  WHERE admin_id = au.id AND permission_code = permission_codes.code
+)
 ON CONFLICT DO NOTHING;

@@ -2,7 +2,55 @@
 -- HILLAHA COMPLETE SETUP
 -- ملف تثبيت شامل - جميع الجداول والسياسات والبيانات الافتراضية
 -- تشغيل ملف واحد لإعداد النظام بالكامل
+--
+-- ⚠️ تنبيه: هذا الملف يحذف جميع الجداول القديمة ويعيد إنشاء كل شيء من الصفر
 -- ============================================================
+
+-- ============================================================
+-- PHASE 0: Clean up existing objects
+-- ============================================================
+
+-- Drop all policies first (safely)
+DO $$ DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN (SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public')
+  LOOP
+    EXECUTE 'DROP POLICY IF EXISTS "' || r.policyname || '" ON public.' || r.tablename;
+  END LOOP;
+END $$;
+
+-- Drop all tables (in reverse dependency order)
+DROP TABLE IF EXISTS public.permission_audit_logs;
+DROP TABLE IF EXISTS public.admin_restrictions;
+DROP TABLE IF EXISTS public.partner_restrictions;
+DROP TABLE IF EXISTS public.admin_permissions;
+DROP TABLE IF EXISTS public.offer_approval_logs;
+DROP TABLE IF EXISTS public.partner_offers;
+DROP TABLE IF EXISTS public.promotions;
+DROP TABLE IF EXISTS public.payment_method_logs;
+DROP TABLE IF EXISTS public.payment_method_configs;
+DROP TABLE IF EXISTS public.payment_methods;
+DROP TABLE IF EXISTS public.order_items;
+DROP TABLE IF EXISTS public.orders;
+DROP TABLE IF EXISTS public.driver_profiles;
+DROP TABLE IF EXISTS public.partner_users;
+DROP TABLE IF EXISTS public.partners;
+DROP TABLE IF EXISTS public.user_consents;
+DROP TABLE IF EXISTS public.profiles;
+DROP TABLE IF EXISTS public.delivery_bands;
+DROP TABLE IF EXISTS public.zones;
+DROP TABLE IF EXISTS public.cities;
+DROP TABLE IF EXISTS public.countries;
+
+-- Drop all types (in order)
+DROP TYPE IF EXISTS public.user_role CASCADE;
+DROP TYPE IF EXISTS public.partner_type CASCADE;
+DROP TYPE IF EXISTS public.partner_role CASCADE;
+DROP TYPE IF EXISTS public.consent_type CASCADE;
+DROP TYPE IF EXISTS public.order_status CASCADE;
+DROP TYPE IF EXISTS public.delivery_type CASCADE;
+DROP TYPE IF EXISTS public.payment_method CASCADE;
 
 -- ============================================================
 -- PHASE 1: Foundation Tables & Types
@@ -46,41 +94,14 @@ create table if not exists public.delivery_bands (
   sort int not null default 0
 );
 
--- Create types safely (CREATE TYPE IF NOT EXISTS doesn't exist, so use DO block)
-DO $$ BEGIN
-  CREATE TYPE public.user_role AS ENUM ('customer','driver','partner','super_admin','admin','frid_admin');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE TYPE public.partner_type AS ENUM ('restaurant','store','pharmacy','clinic');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE TYPE public.partner_role AS ENUM ('owner','manager','cashier','kitchen','support');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE TYPE public.consent_type AS ENUM ('customer_terms','partner_terms','driver_terms','medical_terms');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE TYPE public.order_status AS ENUM ('pending','accepted','preparing','out_for_delivery','delivered','cancelled');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE TYPE public.delivery_type AS ENUM ('platform','self');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE TYPE public.payment_method AS ENUM ('cash','wallet_transfer','card');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
+-- Create types (these should not exist after drop above)
+create type public.user_role as enum ('customer','driver','partner','super_admin','admin','frid_admin');
+create type public.partner_type as enum ('restaurant','store','pharmacy','clinic');
+create type public.partner_role as enum ('owner','manager','cashier','kitchen','support');
+create type public.consent_type as enum ('customer_terms','partner_terms','driver_terms','medical_terms');
+create type public.order_status as enum ('pending','accepted','preparing','out_for_delivery','delivered','cancelled');
+create type public.delivery_type as enum ('platform','self');
+create type public.payment_method as enum ('cash','wallet_transfer','card');
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -188,18 +209,6 @@ create table if not exists public.partner_monthly_stats (
 -- PHASE 2: RLS Policies for Foundation Tables
 -- ============================================================
 
--- Safely drop existing policies first
-DO $$ BEGIN
-  DROP POLICY IF EXISTS "profiles_read_own" ON public.profiles;
-  DROP POLICY IF EXISTS "addresses_owner_all" ON public.addresses;
-  DROP POLICY IF EXISTS "consents_owner_read" ON public.user_consents;
-  DROP POLICY IF EXISTS "consents_owner_insert" ON public.user_consents;
-  DROP POLICY IF EXISTS "orders_customer_read" ON public.orders;
-  DROP POLICY IF EXISTS "orders_customer_insert" ON public.orders;
-EXCEPTION WHEN OTHERS THEN
-  NULL;
-END $$;
-
 alter table public.profiles enable row level security;
 alter table public.addresses enable row level security;
 alter table public.user_consents enable row level security;
@@ -275,21 +284,13 @@ ALTER TABLE public.payment_methods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_method_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_method_logs ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='payment_methods' AND policyname='public can read enabled payment methods') THEN
-    CREATE POLICY "public can read enabled payment methods" ON public.payment_methods FOR SELECT USING (is_enabled = true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='payment_methods' AND policyname='admin can manage payment methods') THEN
-    CREATE POLICY "admin can manage payment methods" ON public.payment_methods
-      USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')))
-      WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='payment_method_configs' AND policyname='admin can manage payment configs') THEN
-    CREATE POLICY "admin can manage payment configs" ON public.payment_method_configs
-      USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')))
-      WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
-  END IF;
-END $$;
+CREATE POLICY "public can read enabled payment methods" ON public.payment_methods FOR SELECT USING (is_enabled = true);
+CREATE POLICY "admin can manage payment methods" ON public.payment_methods
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
+CREATE POLICY "admin can manage payment configs" ON public.payment_method_configs
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
 
 INSERT INTO public.payment_methods (name, name_ar, code, icon, description, description_ar, category, commission_rate, is_enabled, config_fields)
 VALUES
@@ -371,34 +372,18 @@ ALTER TABLE public.promotions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.partner_offers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.offer_approval_logs ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='promotions' AND policyname='public read active promotions') THEN
-    CREATE POLICY "public read active promotions" ON public.promotions FOR SELECT USING (is_active = true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='promotions' AND policyname='admin manage promotions') THEN
-    CREATE POLICY "admin manage promotions" ON public.promotions
-      USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')))
-      WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='partner_offers' AND policyname='partners read own offers') THEN
-    CREATE POLICY "partners read own offers" ON public.partner_offers FOR SELECT
-      USING (partner_id IN (SELECT id FROM public.partners WHERE user_id = auth.uid()));
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='partner_offers' AND policyname='partners create own offers') THEN
-    CREATE POLICY "partners create own offers" ON public.partner_offers FOR INSERT
-      WITH CHECK (partner_id IN (SELECT id FROM public.partners WHERE user_id = auth.uid()));
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='partner_offers' AND policyname='admin manage partner offers') THEN
-    CREATE POLICY "admin manage partner offers" ON public.partner_offers FOR SELECT
-      USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='offer_approval_logs' AND policyname='admin read approval logs') THEN
-    CREATE POLICY "admin read approval logs" ON public.offer_approval_logs FOR SELECT
-      USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
-  END IF;
-END $$;
+CREATE POLICY "public read active promotions" ON public.promotions FOR SELECT USING (is_active = true);
+CREATE POLICY "admin manage promotions" ON public.promotions
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
+CREATE POLICY "partners read own offers" ON public.partner_offers FOR SELECT
+  USING (partner_id IN (SELECT id FROM public.partners WHERE user_id = auth.uid()));
+CREATE POLICY "partners create own offers" ON public.partner_offers FOR INSERT
+  WITH CHECK (partner_id IN (SELECT id FROM public.partners WHERE user_id = auth.uid()));
+CREATE POLICY "admin manage partner offers" ON public.partner_offers FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
+CREATE POLICY "admin read approval logs" ON public.offer_approval_logs FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
 
 INSERT INTO public.promotions (title, title_ar, description, description_ar, promotion_type, discount_percentage, code, start_date, end_date, is_active, usage_limit, min_order_amount, applicable_to, created_by)
 SELECT
@@ -463,30 +448,17 @@ ALTER TABLE public.admin_restrictions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.partner_restrictions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.permission_audit_logs ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='admin_permissions' AND policyname='super_admin manage permissions') THEN
-    CREATE POLICY "super_admin manage permissions" ON public.admin_permissions
-      USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'))
-      WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'));
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='admin_restrictions' AND policyname='super_admin manage restrictions') THEN
-    CREATE POLICY "super_admin manage restrictions" ON public.admin_restrictions
-      USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'))
-      WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'));
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='partner_restrictions' AND policyname='admin manage partner restrictions') THEN
-    CREATE POLICY "admin manage partner restrictions" ON public.partner_restrictions
-      USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')))
-      WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='permission_audit_logs' AND policyname='super_admin read audit logs') THEN
-    CREATE POLICY "super_admin read audit logs" ON public.permission_audit_logs FOR SELECT
-      USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'));
-  END IF;
-END $$;
+CREATE POLICY "super_admin manage permissions" ON public.admin_permissions
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'));
+CREATE POLICY "super_admin manage restrictions" ON public.admin_restrictions
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'));
+CREATE POLICY "admin manage partner restrictions" ON public.partner_restrictions
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
+CREATE POLICY "super_admin read audit logs" ON public.permission_audit_logs FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'));
 
 INSERT INTO public.admin_permissions (admin_id, permission_code, permission_name, permission_name_ar, description, is_granted)
 SELECT

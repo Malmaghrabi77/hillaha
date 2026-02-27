@@ -3,6 +3,21 @@
 import React, { useEffect, useState } from "react";
 import { getSupabase } from "@hillaha/core";
 import { useAdminAuth } from "./hooks/useAdminAuth";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 const C = {
   primary: "#8B5CF6",
@@ -22,27 +37,39 @@ const C = {
 };
 
 interface DashboardStats {
-  totalUsers: number;
-  totalPartners: number;
-  totalOrders: number;
-  totalRevenue: number;
-  pendingApprovals: number;
-  pendingPayments: number;
-  activePartners: number;
-  completedOrders: number;
+  totalRevenue30Days: number;
+  revenueChangePercent: number;
+  completedOrdersCount: number;
+  activeDriversCount: number;
+  orderCompletionRate: number;
+  activePartnersCount: number;
+  pendingPartnersCount: number;
+  regionalManagersCount: number;
+  pendingPaymentsAmount: number;
+  platformRating: number;
+  monthlyRevenueData: { month: string; revenue: number }[];
+  managerPerformanceData: { name: string; revenue: number; partners: number }[];
+  orderDistributionData: { name: string; value: number }[];
+  recentAdminActions: { id: string; admin: string; action: string; entity: string; timestamp: string }[];
 }
 
 export default function AdminDashboard() {
   const auth = useAdminAuth();
   const [stats, setStats] = useState<DashboardStats>({
-    totalUsers: 0,
-    totalPartners: 0,
-    totalOrders: 0,
-    totalRevenue: 0,
-    pendingApprovals: 0,
-    pendingPayments: 0,
-    activePartners: 0,
-    completedOrders: 0,
+    totalRevenue30Days: 0,
+    revenueChangePercent: 0,
+    completedOrdersCount: 0,
+    activeDriversCount: 0,
+    orderCompletionRate: 0,
+    activePartnersCount: 0,
+    pendingPartnersCount: 0,
+    regionalManagersCount: 0,
+    pendingPaymentsAmount: 0,
+    platformRating: 0,
+    monthlyRevenueData: [],
+    managerPerformanceData: [],
+    orderDistributionData: [],
+    recentAdminActions: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -56,59 +83,262 @@ export default function AdminDashboard() {
       const supabase = getSupabase();
       if (!supabase) return;
 
-      // Load total users
-      const { count: usersCount } = await supabase
-        .from("profiles")
-        .select("id", { count: "exact", head: true });
+      // Get assigned partners for Regional Manager
+      let assignedPartnerIds: string[] = [];
+      if (!auth.isSuperAdmin && auth.user) {
+        const { data: assignments } = await (supabase
+          .from("admin_assignments") as any)
+          .select("partner_id")
+          .eq("admin_id", auth.user.id)
+          .eq("status", "active");
 
-      // Load total partners
-      const { count: partnersCount } = await supabase
-        .from("partners")
-        .select("id", { count: "exact", head: true });
+        assignedPartnerIds = ((assignments as any[]) || []).map(a => a.partner_id);
+      }
 
-      // Load active partners
-      const { count: activePartnersCount } = await supabase
-        .from("partners")
-        .select("id", { count: "exact", head: true })
-        .eq("is_open", true);
+      // Revenue for last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      // Load total orders
-      const { count: ordersCount } = await supabase
-        .from("orders")
-        .select("id", { count: "exact", head: true });
-
-      // Load completed orders
-      const { count: completedOrdersCount } = await supabase
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "delivered");
-
-      // Load pending approvals
-      const { count: pendingApprovalsCount } = await supabase
-        .from("partner_approvals")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending");
-
-      // Load total revenue (sum of order totals)
-      const { data: revenueData } = await (supabase
+      let revenueQuery = (supabase
         .from("orders") as any)
-        .select("total")
-        .eq("status", "delivered");
+        .select("total, created_at")
+        .eq("status", "delivered")
+        .gte("created_at", thirtyDaysAgo.toISOString());
 
-      const totalRevenue = ((revenueData as any[]) || []).reduce(
+      // Filter by assigned partners if Regional Manager
+      if (!auth.isSuperAdmin && assignedPartnerIds.length > 0) {
+        revenueQuery = revenueQuery.in("partner_id", assignedPartnerIds);
+      }
+
+      const { data: last30DaysOrders } = await revenueQuery;
+
+      const totalRevenue30 = ((last30DaysOrders as any[]) || []).reduce(
         (sum, order) => sum + (order.total || 0),
         0
       );
 
+      // Revenue for 30 days before that
+      const sixtyDaysAgo = new Date();
+      sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+      let prevRevenueQuery = (supabase
+        .from("orders") as any)
+        .select("total")
+        .eq("status", "delivered")
+        .gte("created_at", sixtyDaysAgo.toISOString())
+        .lt("created_at", thirtyDaysAgo.toISOString());
+
+      if (!auth.isSuperAdmin && assignedPartnerIds.length > 0) {
+        prevRevenueQuery = prevRevenueQuery.in("partner_id", assignedPartnerIds);
+      }
+
+      const { data: prev30DaysOrders } = await prevRevenueQuery;
+
+      const prevRevenue30 = ((prev30DaysOrders as any[]) || []).reduce(
+        (sum, order) => sum + (order.total || 0),
+        0
+      );
+
+      const revenueChange = prevRevenue30 > 0
+        ? ((totalRevenue30 - prevRevenue30) / prevRevenue30) * 100
+        : 0;
+
+      // Completed orders count
+      let completedQuery = supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "delivered");
+
+      if (!auth.isSuperAdmin && assignedPartnerIds.length > 0) {
+        completedQuery = completedQuery.in("partner_id", assignedPartnerIds);
+      }
+
+      const { count: completedCount } = await completedQuery;
+
+      // Total orders count
+      let totalOrdersQuery = supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true });
+
+      if (!auth.isSuperAdmin && assignedPartnerIds.length > 0) {
+        totalOrdersQuery = totalOrdersQuery.in("partner_id", assignedPartnerIds);
+      }
+
+      const { count: totalOrdersCount } = await totalOrdersQuery;
+
+      const completionRate = totalOrdersCount && totalOrdersCount > 0
+        ? ((completedCount || 0) / totalOrdersCount) * 100
+        : 0;
+
+      // Active drivers count (only for Super Admin)
+      let activeDrivers = 0;
+      if (auth.isSuperAdmin) {
+        const { count } = await supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("role", "driver")
+          .eq("is_active", true);
+        activeDrivers = count || 0;
+      }
+
+      // Active and pending partners (only for Super Admin)
+      let activePartners = 0;
+      let pendingPartners = 0;
+      if (auth.isSuperAdmin) {
+        const { count: ap } = await supabase
+          .from("partners")
+          .select("id", { count: "exact", head: true })
+          .eq("is_open", true);
+
+        const { count: pp } = await supabase
+          .from("partners")
+          .select("id", { count: "exact", head: true })
+          .eq("is_open", false);
+
+        activePartners = ap || 0;
+        pendingPartners = pp || 0;
+      } else {
+        // For Regional Manager, count only assigned partners
+        if (assignedPartnerIds.length > 0) {
+          const { data: assignedPartnersData } = await (supabase
+            .from("partners") as any)
+            .select("id, is_open")
+            .in("id", assignedPartnerIds);
+
+          activePartners = ((assignedPartnersData as any[]) || []).filter(p => p.is_open).length;
+          pendingPartners = ((assignedPartnersData as any[]) || []).filter(p => !p.is_open).length;
+        }
+      }
+
+      // Regional managers count
+      const { count: managers } = await supabase
+        .from("admin_invitations")
+        .select("id", { count: "exact", head: true })
+        .eq("admin_type", "regional_manager")
+        .eq("status", "accepted");
+
+      // Pending payments
+      const { data: pendingPaymentsData } = await (supabase
+        .from("admin_commissions") as any)
+        .select("earned_amount")
+        .is("settled_date", null);
+
+      const pendingPayments = ((pendingPaymentsData as any[]) || []).reduce(
+        (sum, payment) => sum + (payment.earned_amount || 0),
+        0
+      );
+
+      // Platform rating (average of partner ratings)
+      const { data: ratingsData } = await (supabase
+        .from("partners") as any)
+        .select("rating");
+
+      const avgRating = ((ratingsData as any[]) || []).length > 0
+        ? (ratingsData as any[]).reduce((sum: number, p: any) => sum + (p.rating || 0), 0) / (ratingsData as any[]).length
+        : 0;
+
+      // Monthly revenue data (last 6 months)
+      const monthlyData: { month: string; revenue: number }[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+        const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+        let monthQuery = (supabase
+          .from("orders") as any)
+          .select("total")
+          .eq("status", "delivered")
+          .gte("created_at", monthStart.toISOString())
+          .lte("created_at", monthEnd.toISOString());
+
+        if (!auth.isSuperAdmin && assignedPartnerIds.length > 0) {
+          monthQuery = monthQuery.in("partner_id", assignedPartnerIds);
+        }
+
+        const { data: monthOrders } = await monthQuery;
+
+        const monthRevenue = ((monthOrders as any[]) || []).reduce(
+          (sum, order) => sum + (order.total || 0),
+          0
+        );
+
+        monthlyData.push({
+          month: monthStart.toLocaleDateString("ar-EG", { month: "short", year: "2-digit" }),
+          revenue: Math.round(monthRevenue),
+        });
+      }
+
+      // Order distribution
+      let orderStatsQuery = (supabase
+        .from("orders") as any)
+        .select("status");
+
+      if (!auth.isSuperAdmin && assignedPartnerIds.length > 0) {
+        orderStatsQuery = orderStatsQuery.in("partner_id", assignedPartnerIds);
+      }
+
+      const { data: orderStats } = await orderStatsQuery;
+
+      const statusCounts = {
+        pending: 0,
+        completed: 0,
+        cancelled: 0,
+      };
+
+      ((orderStats as any[]) || []).forEach((order: any) => {
+        if (order.status === "pending") statusCounts.pending++;
+        else if (order.status === "delivered") statusCounts.completed++;
+        else if (order.status === "cancelled") statusCounts.cancelled++;
+      });
+
+      const orderDistribution = [
+        { name: "قيد الانتظار", value: statusCounts.pending },
+        { name: "مكتملة", value: statusCounts.completed },
+        { name: "ملغاة", value: statusCounts.cancelled },
+      ].filter(item => item.value > 0);
+
+      // Recent admin actions (only for Super Admin)
+      let actionsWithNames: any[] = [];
+      if (auth.isSuperAdmin) {
+        const { data: adminActions } = await (supabase
+          .from("admin_logs") as any)
+          .select("id, admin_id, action, entity_type, created_at")
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        actionsWithNames = await Promise.all(((adminActions as any[]) || []).map(async (action: any) => {
+          const { data: admin } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", action.admin_id)
+            .single();
+
+          return {
+            id: action.id,
+            admin: (admin as any)?.full_name || "غير معروف",
+            action: action.action,
+            entity: action.entity_type,
+            timestamp: new Date(action.created_at).toLocaleDateString("ar-EG"),
+          };
+        }));
+      }
+
       setStats({
-        totalUsers: usersCount || 0,
-        totalPartners: partnersCount || 0,
-        totalOrders: ordersCount || 0,
-        totalRevenue,
-        pendingApprovals: pendingApprovalsCount || 0,
-        pendingPayments: 0,
-        activePartners: activePartnersCount || 0,
-        completedOrders: completedOrdersCount || 0,
+        totalRevenue30Days: totalRevenue30,
+        revenueChangePercent: revenueChange,
+        completedOrdersCount: completedCount || 0,
+        activeDriversCount: activeDrivers || 0,
+        orderCompletionRate: completionRate,
+        activePartnersCount: activePartners || 0,
+        pendingPartnersCount: pendingPartners || 0,
+        regionalManagersCount: managers || 0,
+        pendingPaymentsAmount: pendingPayments,
+        platformRating: parseFloat(avgRating.toFixed(1)),
+        monthlyRevenueData: monthlyData,
+        managerPerformanceData: [], // TODO: Load from admin_assignments
+        orderDistributionData: orderDistribution,
+        recentAdminActions: actionsWithNames,
       });
     } catch (error) {
       console.error("Error loading stats:", error);
@@ -203,6 +433,34 @@ export default function AdminDashboard() {
     );
   };
 
+  const ChartSection = ({
+    title,
+    children,
+  }: {
+    title: string;
+    children: React.ReactNode;
+  }) => {
+    return (
+      <div
+        style={{
+          padding: 24,
+          borderRadius: 16,
+          background: C.surface,
+          border: `1px solid ${C.border}`,
+          boxShadow: "0 1px 3px rgba(139, 92, 246, 0.1)",
+          marginBottom: 24,
+        }}
+      >
+        <h3 style={{ fontSize: 16, fontWeight: 800, color: C.text, margin: "0 0 20px 0" }}>
+          {title}
+        </h3>
+        {children}
+      </div>
+    );
+  };
+
+  const PIE_COLORS = [C.primary, C.success, C.warning, "#F97316", "#06B6D4"];
+
   if (loading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
@@ -232,10 +490,10 @@ export default function AdminDashboard() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
           <div>
             <h1 style={{ fontSize: 32, fontWeight: 900, color: C.text, margin: 0, marginBottom: 4 }}>
-              🎯 لوحة التحكم
+              🎯 لوحة التحكم - {auth.isSuperAdmin ? "السوبر أدمن" : "المدير الإقليمي"}
             </h1>
             <p style={{ color: C.textMuted, fontSize: 14, margin: 0 }}>
-              مرحباً {auth.isSuperAdmin ? "السوبر أدمن" : "المدير"} • {auth.user?.email}
+              مرحباً {auth.user?.email}
             </p>
           </div>
           <div style={{ textAlign: "center" }}>
@@ -254,76 +512,278 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Main Stats Grid */}
-      <div style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 800, color: C.text, margin: "0 0 16px 0", textTransform: "uppercase", letterSpacing: 1 }}>
-          📊 الإحصائيات الرئيسية
-        </h2>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 16,
-          }}
-        >
-          <StatCard label="إجمالي المستخدمين" value={stats.totalUsers} icon="👥" color="primary" />
-          <StatCard label="إجمالي الشركاء" value={stats.totalPartners} icon="🏪" color="success" />
-          <StatCard label="الشركاء النشطين" value={stats.activePartners} icon="✨" color="primary" />
-          <StatCard label="الطلبات الإجمالية" value={stats.totalOrders} icon="📦" color="warning" />
-          <StatCard label="الطلبات المكتملة" value={stats.completedOrders} icon="✅" color="success" />
-          <StatCard label="الإيرادات الكلية" value={`${stats.totalRevenue.toFixed(0)} ج.م`} icon="💰" color="primary" />
-        </div>
-      </div>
-
-      {/* Alerts & Pending Actions */}
-      {stats.pendingApprovals > 0 && (
+      {/* Main Stats Grid - 6 Cards for Super Admin, 5 for Regional Manager */}
+      {auth.isSuperAdmin && (
         <div style={{ marginBottom: 32 }}>
           <h2 style={{ fontSize: 16, fontWeight: 800, color: C.text, margin: "0 0 16px 0", textTransform: "uppercase", letterSpacing: 1 }}>
-            ⚠️ الإجراءات المعلقة
+            📊 الإحصائيات الرئيسية
           </h2>
           <div
             style={{
-              padding: 20,
-              borderRadius: 16,
-              background: C.warningLight,
-              border: `2px solid ${C.warning}`,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 16,
             }}
           >
-            <div>
-              <h3 style={{ fontSize: 16, fontWeight: 900, color: C.warning, margin: "0 0 4px 0" }}>
-                {stats.pendingApprovals} موافقات معلقة
-              </h3>
-              <p style={{ color: C.textMuted, fontSize: 13, margin: 0 }}>
-                تنتظر موافقتك على طلبات شركاء جدد
-              </p>
-            </div>
-            <a
-              href="/admin/partners"
-              style={{
-                padding: "10px 20px",
-                borderRadius: 10,
-                background: C.warning,
-                color: "white",
-                fontWeight: 700,
-                fontSize: 13,
-                textDecoration: "none",
-                transition: "all 0.2s",
-                whiteSpace: "nowrap",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = C.primaryDark;
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.background = C.warning;
-              }}
-            >
-              عرض التفاصيل
-            </a>
+            <StatCard
+              label="إجمالي الإيرادات (30 يوم)"
+              value={`${stats.totalRevenue30Days.toFixed(0)} ج.م`}
+              icon="💰"
+              color="primary"
+              trend={{ value: Math.round(Math.abs(stats.revenueChangePercent)), isPositive: stats.revenueChangePercent >= 0 }}
+            />
+            <StatCard
+              label="الطلبات المكتملة"
+              value={stats.completedOrdersCount}
+              icon="✅"
+              color="success"
+            />
+            <StatCard
+              label="الشركاء النشطين"
+              value={stats.activePartnersCount}
+              icon="🏪"
+              color="primary"
+            />
+            <StatCard
+              label="المديرين الإقليميين"
+              value={`${stats.regionalManagersCount}/33`}
+              icon="👨‍💼"
+              color="warning"
+            />
+            <StatCard
+              label="دفعات معلقة"
+              value={`${stats.pendingPaymentsAmount.toFixed(0)} ج.م`}
+              icon="⏳"
+              color="danger"
+            />
+            <StatCard
+              label="متوسط التقييم"
+              value={`${stats.platformRating.toFixed(1)} ⭐`}
+              icon="⭐"
+              color="success"
+            />
           </div>
         </div>
+      )}
+
+      {/* Regional Manager Stats Grid - 5 Cards */}
+      {!auth.isSuperAdmin && (
+        <div style={{ marginBottom: 32 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, color: C.text, margin: "0 0 16px 0", textTransform: "uppercase", letterSpacing: 1 }}>
+            📊 إحصائيات الشركاء المسندة
+          </h2>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 16,
+            }}
+          >
+            <StatCard
+              label="إجمالي الإيرادات (30 يوم)"
+              value={`${stats.totalRevenue30Days.toFixed(0)} ج.م`}
+              icon="💰"
+              color="primary"
+              trend={{ value: Math.round(Math.abs(stats.revenueChangePercent)), isPositive: stats.revenueChangePercent >= 0 }}
+            />
+            <StatCard
+              label="عدد الشركاء المسندة"
+              value={stats.activePartnersCount}
+              icon="🏪"
+              color="primary"
+            />
+            <StatCard
+              label="إجمالي الطلبات"
+              value={stats.completedOrdersCount}
+              icon="📦"
+              color="success"
+            />
+            <StatCard
+              label="دفعات معلقة"
+              value={`${stats.pendingPaymentsAmount.toFixed(0)} ج.م`}
+              icon="⏳"
+              color="danger"
+            />
+            <StatCard
+              label="متوسط التقييم"
+              value={`${stats.platformRating.toFixed(1)} ⭐`}
+              icon="⭐"
+              color="success"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Charts Section */}
+      {auth.isSuperAdmin && (
+        <>
+          <ChartSection title="📈 اتجاه الإيرادات (6 أشهر)">
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={stats.monthlyRevenueData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                <XAxis dataKey="month" stroke={C.textMuted} />
+                <YAxis stroke={C.textMuted} />
+                <Tooltip contentStyle={{ background: C.surface, border: `1px solid ${C.border}` }} />
+                <Line type="monotone" dataKey="revenue" stroke={C.primary} strokeWidth={2} dot={{ fill: C.primary, r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartSection>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, marginBottom: 24 }}>
+            <ChartSection title="📊 توزيع حالات الطلبات">
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={stats.orderDistributionData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {stats.orderDistributionData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartSection>
+
+            <ChartSection title="👥 معدل إتمام الطلبات">
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                    <span style={{ color: C.textMuted, fontSize: 14 }}>نسبة الإتمام</span>
+                    <span style={{ fontWeight: 700, color: C.primary }}>{stats.orderCompletionRate.toFixed(1)}%</span>
+                  </div>
+                  <div style={{ width: "100%", height: 8, background: C.border, borderRadius: 4, overflow: "hidden" }}>
+                    <div
+                      style={{
+                        height: "100%",
+                        background: C.success,
+                        width: `${Math.min(stats.orderCompletionRate, 100)}%`,
+                        transition: "width 0.3s",
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div>
+                    <p style={{ color: C.textMuted, fontSize: 12, margin: "0 0 4px 0" }}>المندوبين النشطين</p>
+                    <p style={{ fontSize: 20, fontWeight: 900, color: C.text, margin: 0 }}>{stats.activeDriversCount}</p>
+                  </div>
+                  <div>
+                    <p style={{ color: C.textMuted, fontSize: 12, margin: "0 0 4px 0" }}>الشركاء المعلقين</p>
+                    <p style={{ fontSize: 20, fontWeight: 900, color: C.text, margin: 0 }}>{stats.pendingPartnersCount}</p>
+                  </div>
+                </div>
+              </div>
+            </ChartSection>
+          </div>
+        </>
+      )}
+
+      {/* Regional Manager Charts Section */}
+      {!auth.isSuperAdmin && (
+        <>
+          <ChartSection title="📈 اتجاه الإيرادات (6 أشهر)">
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={stats.monthlyRevenueData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                <XAxis dataKey="month" stroke={C.textMuted} />
+                <YAxis stroke={C.textMuted} />
+                <Tooltip contentStyle={{ background: C.surface, border: `1px solid ${C.border}` }} />
+                <Line type="monotone" dataKey="revenue" stroke={C.primary} strokeWidth={2} dot={{ fill: C.primary, r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartSection>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, marginBottom: 24 }}>
+            <ChartSection title="📊 توزيع الإيرادات حسب الشريك">
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={stats.orderDistributionData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {stats.orderDistributionData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartSection>
+
+            <ChartSection title="📋 حالات الطلبات">
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                    <span style={{ color: C.textMuted, fontSize: 14 }}>معدل الإتمام</span>
+                    <span style={{ fontWeight: 700, color: C.primary }}>{stats.orderCompletionRate.toFixed(1)}%</span>
+                  </div>
+                  <div style={{ width: "100%", height: 8, background: C.border, borderRadius: 4, overflow: "hidden" }}>
+                    <div
+                      style={{
+                        height: "100%",
+                        background: C.success,
+                        width: `${Math.min(stats.orderCompletionRate, 100)}%`,
+                        transition: "width 0.3s",
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div>
+                    <p style={{ color: C.textMuted, fontSize: 12, margin: "0 0 4px 0" }}>الشركاء النشطة</p>
+                    <p style={{ fontSize: 20, fontWeight: 900, color: C.text, margin: 0 }}>{stats.activePartnersCount}</p>
+                  </div>
+                  <div>
+                    <p style={{ color: C.textMuted, fontSize: 12, margin: "0 0 4px 0" }}>الشركاء المعلقة</p>
+                    <p style={{ fontSize: 20, fontWeight: 900, color: C.text, margin: 0 }}>{stats.pendingPartnersCount}</p>
+                  </div>
+                </div>
+              </div>
+            </ChartSection>
+          </div>
+        </>
+      )}
+
+      {/* Activity Section */}
+      {auth.isSuperAdmin && stats.recentAdminActions.length > 0 && (
+        <ChartSection title="📋 آخر الإجراءات الإدارية">
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: `2px solid ${C.border}` }}>
+                  <th style={{ padding: 12, textAlign: "right", color: C.textMuted, fontWeight: 600, fontSize: 12 }}>المدير</th>
+                  <th style={{ padding: 12, textAlign: "right", color: C.textMuted, fontWeight: 600, fontSize: 12 }}>الإجراء</th>
+                  <th style={{ padding: 12, textAlign: "right", color: C.textMuted, fontWeight: 600, fontSize: 12 }}>نوع</th>
+                  <th style={{ padding: 12, textAlign: "right", color: C.textMuted, fontWeight: 600, fontSize: 12 }}>التاريخ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.recentAdminActions.map((action) => (
+                  <tr key={action.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <td style={{ padding: 12, color: C.text, fontSize: 13 }}>{action.admin}</td>
+                    <td style={{ padding: 12, color: C.text, fontSize: 13 }}>{action.action}</td>
+                    <td style={{ padding: 12, color: C.textMuted, fontSize: 13 }}>{action.entity}</td>
+                    <td style={{ padding: 12, color: C.textMuted, fontSize: 13 }}>{action.timestamp}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ChartSection>
       )}
 
       {/* Quick Actions */}

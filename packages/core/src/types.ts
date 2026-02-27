@@ -81,7 +81,7 @@ export type AdminInvitation = {
   email: string;
   name: string;
   phone: string;
-  admin_type: "frid_admin" | "regular_admin";
+  admin_type: "regional_manager" | "regular_admin";
   invited_by: string;
   status: "pending" | "accepted" | "rejected";
   super_admin_approval: "pending" | "approved" | "rejected";
@@ -93,7 +93,7 @@ export type AdminInvitation = {
   accepted_user_id?: string;
 };
 
-export type FridApprovalRecord = {
+export type RegionalManagerApprovalRecord = {
   admin_id: string;
   name: string;
   status: "approved" | "pending" | "rejected";
@@ -105,7 +105,7 @@ export type PartnerApprovalHistory = {
   partner_id: string;
   admin_id: string;
   admin_name: string;
-  admin_role: "frid_admin" | "super_admin";
+  admin_role: "regional_manager" | "super_admin";
   action: "approved" | "rejected";
   notes?: string;
   created_at: string;

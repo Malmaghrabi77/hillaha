@@ -20,7 +20,7 @@ END $$;
 -- ============================================================
 
 DO $$ BEGIN
-  CREATE TYPE public.user_role AS ENUM ('customer','driver','partner','super_admin','admin','frid_admin');
+  CREATE TYPE public.user_role AS ENUM ('customer','driver','partner','super_admin','admin','regional_manager');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -237,7 +237,7 @@ CREATE TABLE IF NOT EXISTS public.offer_approval_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   offer_id UUID NOT NULL REFERENCES public.partner_offers(id) ON DELETE CASCADE,
   admin_id UUID NOT NULL REFERENCES auth.users(id),
-  admin_role TEXT CHECK (admin_role IN ('super_admin', 'frid_admin')),
+  admin_role TEXT CHECK (admin_role IN ('super_admin', 'regional_manager')),
   action TEXT CHECK (action IN ('approved', 'rejected')),
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()

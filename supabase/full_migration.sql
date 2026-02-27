@@ -54,7 +54,7 @@ EXCEPTION WHEN OTHERS THEN
 END $$;
 
 -- Now create the types
-create type public.user_role as enum ('customer','driver','partner','super_admin','admin','frid_admin');
+create type public.user_role as enum ('customer','driver','partner','super_admin','admin','regional_manager');
 create type public.partner_type as enum ('restaurant','store','pharmacy','clinic');
 create type public.partner_role as enum ('owner','manager','cashier','kitchen','support');
 create type public.consent_type as enum ('customer_terms','partner_terms','driver_terms','medical_terms');

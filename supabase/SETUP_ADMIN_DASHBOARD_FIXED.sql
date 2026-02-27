@@ -56,14 +56,14 @@ CREATE TABLE IF NOT EXISTS public.partner_approvals (
 );
 
 ALTER TABLE public.partner_approvals
-ADD COLUMN IF NOT EXISTS frid_approvals JSONB DEFAULT '[]'::jsonb;
+ADD COLUMN IF NOT EXISTS regional_manager_approvals JSONB DEFAULT '[]'::jsonb;
 
 CREATE TABLE IF NOT EXISTS public.admin_invitations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
   phone TEXT NOT NULL,
-  admin_type TEXT NOT NULL CHECK (admin_type IN ('frid_admin', 'regular_admin')),
+  admin_type TEXT NOT NULL CHECK (admin_type IN ('regional_manager', 'regular_admin')),
   invited_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
   super_admin_approval TEXT DEFAULT 'pending' CHECK (super_admin_approval IN ('pending', 'approved', 'rejected')),
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS public.partner_approval_history (
   partner_id UUID NOT NULL REFERENCES public.partners(id) ON DELETE CASCADE,
   admin_id UUID NOT NULL REFERENCES auth.users(id),
   admin_name TEXT,
-  admin_role TEXT CHECK (admin_role IN ('frid_admin', 'super_admin')),
+  admin_role TEXT CHECK (admin_role IN ('regional_manager', 'super_admin')),
   action TEXT NOT NULL CHECK (action IN ('approved', 'rejected')),
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()

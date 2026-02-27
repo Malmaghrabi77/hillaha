@@ -22,7 +22,7 @@ const C = {
   warningSoft: "#FEF3C7",
 };
 
-export default function InviteFridAdminPage() {
+export default function InviteRegionalManagerPage() {
   const auth = useAdminAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -57,7 +57,7 @@ export default function InviteFridAdminPage() {
       const { data, error: err } = await supabase
         .from("admin_invitations")
         .select("*")
-        .eq("admin_type", "frid_admin")
+        .eq("admin_type", "regional_manager")
         .order("created_at", { ascending: false });
 
       if (err) throw err;
@@ -97,12 +97,12 @@ export default function InviteFridAdminPage() {
     }
 
     // Check if we've reached the 33 admin limit
-    const activeFridAdmins = invitations.filter(
-      inv => inv.admin_type === "frid_admin" && (inv.status === "accepted" || inv.status === "pending")
+    const activeRegionalManagers = invitations.filter(
+      inv => inv.admin_type === "regional_manager" && (inv.status === "accepted" || inv.status === "pending")
     ).length;
 
-    if (activeFridAdmins >= 33) {
-      setError("تم الوصول للحد الأقصى من مديري الفرائد (33)");
+    if (activeRegionalManagers >= 33) {
+      setError("تم الوصول للحد الأقصى من المديرين الإقليميين (33)");
       return;
     }
 
@@ -116,7 +116,7 @@ export default function InviteFridAdminPage() {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          admin_type: "frid_admin",
+          admin_type: "regional_manager",
           invited_by: auth.user?.id,
           status: "pending",
           super_admin_approval: "approved", // Super Admin يوافق فوراً
@@ -130,7 +130,7 @@ export default function InviteFridAdminPage() {
       // Log action
       await (supabase.from("admin_logs") as any).insert({
         admin_id: auth.user?.id,
-        action: "invite_frid_admin",
+        action: "invite_regional_manager",
         entity_type: "partner",
         entity_id: data?.[0]?.id,
         new_data: { name: formData.name, email: formData.email },
@@ -158,10 +158,10 @@ export default function InviteFridAdminPage() {
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 28, fontWeight: 900, color: C.text, margin: 0, marginBottom: 8 }}>
-          دعوة مديري الفرائد
+          دعوة المديرين الإقليميين
         </h1>
         <p style={{ color: C.textMuted, fontSize: 14, margin: 0 }}>
-          استدعِ مديري الفرائد الجدد (حد أقصى 33 مدير)
+          استدعِ المديرين الإقليميين الجدد (حد أقصى 33 مدير)
         </p>
       </div>
 

@@ -84,7 +84,7 @@ export default function ApproveOffersPage() {
       await (supabase.from("offer_approval_logs") as any).insert({
         offer_id: offerId,
         admin_id: auth.user.id,
-        admin_role: auth.isSuperAdmin ? "super_admin" : "frid_admin",
+        admin_role: auth.isSuperAdmin ? "super_admin" : "regional_manager",
         action: "approved",
       });
 
@@ -115,7 +115,7 @@ export default function ApproveOffersPage() {
       await (supabase.from("offer_approval_logs") as any).insert({
         offer_id: offerId,
         admin_id: auth.user.id,
-        admin_role: auth.isSuperAdmin ? "super_admin" : "frid_admin",
+        admin_role: auth.isSuperAdmin ? "super_admin" : "regional_manager",
         action: "rejected",
         notes: rejectionReason,
       });
@@ -132,7 +132,7 @@ export default function ApproveOffersPage() {
     return (
       <div style={{ padding: "24px", textAlign: "center" }}>
         <p style={{ color: C.danger, fontWeight: 700 }}>
-          ⛔ هذه الصفحة متاحة فقط للسوبر أدمن والفريد أدمن
+          ⛔ هذه الصفحة متاحة فقط للسوبر أدمن والمدير الإقليمي
         </p>
       </div>
     );

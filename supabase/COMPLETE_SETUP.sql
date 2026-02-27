@@ -96,7 +96,7 @@ create table if not exists public.delivery_bands (
 );
 
 -- Create types (these should not exist after drop above)
-create type public.user_role as enum ('customer','driver','partner','super_admin','admin','frid_admin');
+create type public.user_role as enum ('customer','driver','partner','super_admin','admin','regional_manager');
 create type public.partner_type as enum ('restaurant','store','pharmacy','clinic');
 create type public.partner_role as enum ('owner','manager','cashier','kitchen','support');
 create type public.consent_type as enum ('customer_terms','partner_terms','driver_terms','medical_terms');
@@ -363,7 +363,7 @@ CREATE TABLE IF NOT EXISTS public.offer_approval_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   offer_id UUID NOT NULL REFERENCES public.partner_offers(id) ON DELETE CASCADE,
   admin_id UUID NOT NULL REFERENCES auth.users(id),
-  admin_role TEXT CHECK (admin_role IN ('super_admin', 'frid_admin')),
+  admin_role TEXT CHECK (admin_role IN ('super_admin', 'regional_manager')),
   action TEXT CHECK (action IN ('approved', 'rejected')),
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()

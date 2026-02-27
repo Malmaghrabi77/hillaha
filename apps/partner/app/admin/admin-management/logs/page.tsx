@@ -66,7 +66,7 @@ export default function AuditLogsPage() {
     { value: "approve_partner", label: "موافقة شريك" },
     { value: "reject_partner", label: "رفض شريك" },
     { value: "settle_payment", label: "تسوية مدفوعات" },
-    { value: "invite_frid_admin", label: "دعوة مدير فريد" },
+    { value: "invite_regional_manager", label: "دعوة مدير إقليمي" },
     { value: "invite_regular_admin", label: "دعوة مدير عادي" },
     { value: "approve_admin_invitation", label: "موافقة دعوة مدير" },
     { value: "reject_admin_invitation", label: "رفض دعوة مدير" },

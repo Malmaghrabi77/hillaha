@@ -18,136 +18,100 @@ const C = {
   border: "#E7E3FF",
 };
 
-interface User {
+interface Driver {
   id: string;
-  email: string;
   full_name: string;
-  role: string;
+  email: string;
+  phone: string;
   is_active: boolean;
+  rating: number;
+  completed_orders: number;
+  total_earnings: number;
   created_at: string;
 }
 
-interface UserStats {
-  totalUsers: number;
-  activeCustomers: number;
-  activePartners: number;
+interface DriverStats {
   totalDrivers: number;
+  activeDrivers: number;
+  totalEarnings: number;
+  averageRating: number;
 }
 
-export default function UsersPage() {
+export default function DriversPage() {
   const auth = useAdminAuth();
-  const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [stats, setStats] = useState<UserStats>({
-    totalUsers: 0,
-    activeCustomers: 0,
-    activePartners: 0,
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [filteredDrivers, setFilteredDrivers] = useState<Driver[]>([]);
+  const [stats, setStats] = useState<DriverStats>({
     totalDrivers: 0,
+    activeDrivers: 0,
+    totalEarnings: 0,
+    averageRating: 0,
   });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const itemsPerPage = 50;
 
   useEffect(() => {
     if (!auth.user) return;
-    loadUsers();
+    loadDrivers();
   }, [auth.user]);
 
   useEffect(() => {
-    let filtered = [...users];
-
-    // Apply role filter
-    if (roleFilter !== "all") {
-      filtered = filtered.filter(user => user.role === roleFilter);
-    }
+    let filtered = [...drivers];
 
     // Apply status filter
     if (statusFilter !== "all") {
       const isActiveFilter = statusFilter === "active";
-      filtered = filtered.filter(user => user.is_active === isActiveFilter);
+      filtered = filtered.filter(driver => driver.is_active === isActiveFilter);
     }
 
     // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(user =>
-        user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(driver =>
+        driver.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        driver.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        driver.phone.includes(searchTerm)
       );
     }
 
-    setFilteredUsers(filtered);
+    setFilteredDrivers(filtered);
     setCurrentPage(1);
-  }, [users, searchTerm, roleFilter, statusFilter]);
+  }, [drivers, searchTerm, statusFilter]);
 
-  const loadUsers = async () => {
+  const loadDrivers = async () => {
     try {
       const supabase = getSupabase();
       if (!supabase) return;
 
       const { data } = await (supabase.from("profiles") as any)
         .select("*")
+        .eq("role", "driver")
         .order("created_at", { ascending: false });
 
-      const usersData = (data || []) as User[];
-      setUsers(usersData);
+      const driversData = (data || []) as Driver[];
+      setDrivers(driversData);
 
       // Calculate stats
-      const activeCustomers = usersData.filter(
-        u => u.role === "customer" && u.is_active
-      ).length;
-      const activePartners = usersData.filter(
-        u => u.role === "partner" && u.is_active
-      ).length;
-      const totalDrivers = usersData.filter(u => u.role === "driver").length;
+      const activeCount = driversData.filter(d => d.is_active).length;
+      const totalEarnings = driversData.reduce((sum, d) => sum + (d.total_earnings || 0), 0);
+      const avgRating = driversData.length > 0
+        ? driversData.reduce((sum, d) => sum + (d.rating || 0), 0) / driversData.length
+        : 0;
 
       setStats({
-        totalUsers: usersData.length,
-        activeCustomers,
-        activePartners,
-        totalDrivers,
+        totalDrivers: driversData.length,
+        activeDrivers: activeCount,
+        totalEarnings,
+        averageRating: avgRating,
       });
     } catch (error) {
-      console.error("Error loading users:", error);
+      console.error("Error loading drivers:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case "customer":
-        return "عميل";
-      case "partner":
-        return "شريك";
-      case "driver":
-        return "مندوب";
-      case "admin":
-        return "أدمن";
-      case "super_admin":
-        return "سوبر أدمن";
-      default:
-        return role;
-    }
-  };
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case "customer":
-        return C.primary;
-      case "partner":
-        return C.success;
-      case "driver":
-        return C.warning;
-      case "admin":
-      case "super_admin":
-        return C.danger;
-      default:
-        return C.textMuted;
     }
   };
 
@@ -181,8 +145,8 @@ export default function UsersPage() {
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const paginatedDrivers = filteredDrivers.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(filteredDrivers.length / itemsPerPage);
 
   if (loading) {
     return (
@@ -226,10 +190,10 @@ export default function UsersPage() {
             marginBottom: 4,
           }}
         >
-          👥 إدارة المستخدمين
+          🚗 إدارة المندوبين
         </h1>
         <p style={{ color: C.textMuted, fontSize: 14, margin: 0 }}>
-          عرض وإدارة جميع المستخدمين
+          عرض وإدارة جميع المندوبين والسائقين
         </p>
       </div>
 
@@ -242,10 +206,10 @@ export default function UsersPage() {
           marginBottom: 32,
         }}
       >
-        <StatCard label="إجمالي المستخدمين" value={stats.totalUsers} icon="👥" />
-        <StatCard label="عملاء نشطين" value={stats.activeCustomers} icon="🛍️" />
-        <StatCard label="شركاء نشطين" value={stats.activePartners} icon="🏪" />
         <StatCard label="إجمالي المندوبين" value={stats.totalDrivers} icon="🚗" />
+        <StatCard label="مندوبين نشطين" value={stats.activeDrivers} icon="✅" />
+        <StatCard label="إجمالي الأرباح" value={`${stats.totalEarnings.toFixed(0)} ج.م`} icon="💰" />
+        <StatCard label="متوسط التقييم" value={`${stats.averageRating.toFixed(1)} ⭐`} icon="⭐" />
       </div>
 
       {/* Filters */}
@@ -263,7 +227,7 @@ export default function UsersPage() {
       >
         <input
           type="text"
-          placeholder="ابحث عن الاسم أو البريد الإلكتروني..."
+          placeholder="ابحث عن الاسم أو البريد أو الهاتف..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{
@@ -274,23 +238,6 @@ export default function UsersPage() {
             fontFamily: "inherit",
           }}
         />
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          style={{
-            padding: 12,
-            borderRadius: 8,
-            border: `1px solid ${C.border}`,
-            fontSize: 13,
-            fontFamily: "inherit",
-          }}
-        >
-          <option value="all">جميع الأنواع</option>
-          <option value="customer">عميل</option>
-          <option value="partner">شريك</option>
-          <option value="driver">مندوب</option>
-          <option value="admin">أدمن</option>
-        </select>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -308,7 +255,7 @@ export default function UsersPage() {
         </select>
       </div>
 
-      {/* Users Table */}
+      {/* Drivers Table */}
       <div
         style={{
           borderRadius: 12,
@@ -353,7 +300,29 @@ export default function UsersPage() {
                     fontSize: 12,
                   }}
                 >
-                  النوع
+                  الهاتف
+                </th>
+                <th
+                  style={{
+                    padding: 16,
+                    textAlign: "right",
+                    color: C.textMuted,
+                    fontWeight: 600,
+                    fontSize: 12,
+                  }}
+                >
+                  الطلبات المكتملة
+                </th>
+                <th
+                  style={{
+                    padding: 16,
+                    textAlign: "right",
+                    color: C.textMuted,
+                    fontWeight: 600,
+                    fontSize: 12,
+                  }}
+                >
+                  التقييم
                 </th>
                 <th
                   style={{
@@ -375,31 +344,24 @@ export default function UsersPage() {
                     fontSize: 12,
                   }}
                 >
-                  تاريخ الانضمام
-                </th>
-                <th
-                  style={{
-                    padding: 16,
-                    textAlign: "right",
-                    color: C.textMuted,
-                    fontWeight: 600,
-                    fontSize: 12,
-                  }}
-                >
                   الإجراءات
                 </th>
               </tr>
             </thead>
             <tbody>
-              {paginatedUsers.map((user) => (
-                <tr key={user.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                  <td style={{ padding: 16, color: C.text, fontSize: 13 }}>
-                    {user.full_name
-                      ? user.full_name.substring(0, 30)
-                      : "غير معروف"}
+              {paginatedDrivers.map((driver) => (
+                <tr key={driver.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <td style={{ padding: 16, color: C.text, fontSize: 13, fontWeight: 600 }}>
+                    {driver.full_name}
                   </td>
                   <td style={{ padding: 16, color: C.text, fontSize: 13 }}>
-                    {user.email}
+                    {driver.email}
+                  </td>
+                  <td style={{ padding: 16, color: C.text, fontSize: 13 }}>
+                    {driver.phone}
+                  </td>
+                  <td style={{ padding: 16, color: C.text, fontSize: 13, fontWeight: 600 }}>
+                    {driver.completed_orders || 0}
                   </td>
                   <td style={{ padding: 16 }}>
                     <span
@@ -407,13 +369,13 @@ export default function UsersPage() {
                         display: "inline-block",
                         padding: "4px 12px",
                         borderRadius: 6,
-                        background: getRoleColor(user.role) + "15",
-                        color: getRoleColor(user.role),
+                        background: C.warning + "15",
+                        color: C.warning,
                         fontSize: 12,
                         fontWeight: 600,
                       }}
                     >
-                      {getRoleLabel(user.role)}
+                      {driver.rating ? driver.rating.toFixed(1) : "0.0"} ⭐
                     </span>
                   </td>
                   <td style={{ padding: 16 }}>
@@ -422,21 +384,18 @@ export default function UsersPage() {
                         display: "inline-block",
                         padding: "4px 12px",
                         borderRadius: 6,
-                        background: user.is_active ? "#D1FAE5" : "#FEE2E2",
-                        color: user.is_active ? "#10B981" : "#EF4444",
+                        background: driver.is_active ? "#D1FAE5" : "#FEE2E2",
+                        color: driver.is_active ? "#10B981" : "#EF4444",
                         fontSize: 12,
                         fontWeight: 600,
                       }}
                     >
-                      {user.is_active ? "نشط" : "غير نشط"}
+                      {driver.is_active ? "نشط" : "غير نشط"}
                     </span>
-                  </td>
-                  <td style={{ padding: 16, color: C.textMuted, fontSize: 13 }}>
-                    {new Date(user.created_at).toLocaleDateString("ar-EG")}
                   </td>
                   <td style={{ padding: 16 }}>
                     <button
-                      onClick={() => setSelectedUser(user)}
+                      onClick={() => setSelectedDriver(driver)}
                       style={{
                         padding: "6px 12px",
                         borderRadius: 6,
@@ -482,8 +441,8 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* User Details Modal */}
-      {selectedUser && (
+      {/* Driver Details Modal */}
+      {selectedDriver && (
         <div
           style={{
             position: "fixed",
@@ -497,7 +456,7 @@ export default function UsersPage() {
             justifyContent: "center",
             zIndex: 1000,
           }}
-          onClick={() => setSelectedUser(null)}
+          onClick={() => setSelectedDriver(null)}
         >
           <div
             style={{
@@ -518,7 +477,7 @@ export default function UsersPage() {
                 margin: "0 0 20px 0",
               }}
             >
-              تفاصيل المستخدم
+              تفاصيل المندوب
             </h2>
 
             <div style={{ marginBottom: 16 }}>
@@ -526,7 +485,7 @@ export default function UsersPage() {
                 الاسم
               </p>
               <p style={{ fontSize: 14, color: C.text, fontWeight: 600, margin: 0 }}>
-                {selectedUser.full_name || "غير معروف"}
+                {selectedDriver.full_name}
               </p>
             </div>
 
@@ -535,30 +494,57 @@ export default function UsersPage() {
                 البريد الإلكتروني
               </p>
               <p style={{ fontSize: 14, color: C.text, margin: 0 }}>
-                {selectedUser.email}
+                {selectedDriver.email}
               </p>
             </div>
 
             <div style={{ marginBottom: 16 }}>
               <p style={{ fontSize: 12, color: C.textMuted, margin: "0 0 4px 0" }}>
-                النوع
+                الهاتف
+              </p>
+              <p style={{ fontSize: 14, color: C.text, margin: 0 }}>
+                {selectedDriver.phone}
+              </p>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 12, color: C.textMuted, margin: "0 0 4px 0" }}>
+                الطلبات المكتملة
+              </p>
+              <p style={{ fontSize: 14, color: C.text, fontWeight: 600, margin: 0 }}>
+                {selectedDriver.completed_orders || 0} طلب
+              </p>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 12, color: C.textMuted, margin: "0 0 4px 0" }}>
+                التقييم
               </p>
               <span
                 style={{
                   display: "inline-block",
                   padding: "6px 14px",
                   borderRadius: 8,
-                  background: getRoleColor(selectedUser.role) + "15",
-                  color: getRoleColor(selectedUser.role),
+                  background: C.warning + "15",
+                  color: C.warning,
                   fontWeight: 600,
                   fontSize: 13,
                 }}
               >
-                {getRoleLabel(selectedUser.role)}
+                {selectedDriver.rating ? selectedDriver.rating.toFixed(1) : "0.0"} ⭐
               </span>
             </div>
 
             <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 12, color: C.textMuted, margin: "0 0 4px 0" }}>
+                إجمالي الأرباح
+              </p>
+              <p style={{ fontSize: 18, color: C.success, fontWeight: 900, margin: 0 }}>
+                {selectedDriver.total_earnings ? selectedDriver.total_earnings.toFixed(0) : "0"} ج.م
+              </p>
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
               <p style={{ fontSize: 12, color: C.textMuted, margin: "0 0 4px 0" }}>
                 الحالة
               </p>
@@ -567,33 +553,18 @@ export default function UsersPage() {
                   display: "inline-block",
                   padding: "6px 14px",
                   borderRadius: 8,
-                  background: selectedUser.is_active ? "#D1FAE5" : "#FEE2E2",
-                  color: selectedUser.is_active ? "#10B981" : "#EF4444",
+                  background: selectedDriver.is_active ? "#D1FAE5" : "#FEE2E2",
+                  color: selectedDriver.is_active ? "#10B981" : "#EF4444",
                   fontWeight: 600,
                   fontSize: 13,
                 }}
               >
-                {selectedUser.is_active ? "نشط" : "غير نشط"}
+                {selectedDriver.is_active ? "نشط" : "غير نشط"}
               </span>
             </div>
 
-            <div style={{ marginBottom: 24 }}>
-              <p style={{ fontSize: 12, color: C.textMuted, margin: "0 0 4px 0" }}>
-                تاريخ الانضمام
-              </p>
-              <p style={{ fontSize: 14, color: C.text, margin: 0 }}>
-                {new Date(selectedUser.created_at).toLocaleDateString("ar-EG", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
-            </div>
-
             <button
-              onClick={() => setSelectedUser(null)}
+              onClick={() => setSelectedDriver(null)}
               style={{
                 width: "100%",
                 padding: 12,

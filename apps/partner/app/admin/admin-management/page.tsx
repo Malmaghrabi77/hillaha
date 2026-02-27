@@ -44,9 +44,9 @@ export default function AdminManagementPage() {
 
   const navCards: NavigationCard[] = [
     {
-      href: "/admin/admin-management/invite-frid",
-      title: "دعوة مديري الفرائد",
-      description: "استدعِ مديري الفرائد الجدد (3-33 مدير)",
+      href: "/admin/admin-management/invite-regional-manager",
+      title: "دعوة المديرين الإقليميين",
+      description: "استدعِ المديرين الإقليميين الجدد (3-33 مدير)",
       icon: "📨",
       color: "#8B5CF6",
     },

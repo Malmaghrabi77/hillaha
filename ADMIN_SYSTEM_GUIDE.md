@@ -25,29 +25,40 @@
 
 ## 🚀 الخطوات التالية لتشغيل النظام:
 
-### 1. شغّل SQL Scripts في Supabase:
+### ⚡ الطريقة السريعة (ملف واحد):
 
-**أولاً - جداول طرق الدفع:**
+**ملف إعداد شامل:**
 ```
-File: c:\hillaha-platform\supabase\payment_methods_setup.sql
-```
-
-**ثانياً - جداول العروض:**
-```
-File: c:\hillaha-platform\supabase\offers_setup.sql
-```
-
-**ثالثاً - جداول إدارة الادمنة والقيود:**
-```
-File: c:\hillaha-platform\supabase\admin_management_setup.sql
+File: c:\hillaha-platform\supabase\COMPLETE_SETUP.sql
 ```
 
 **خطوات التشغيل:**
-1. اذهب إلى **Supabase Dashboard** → Your Project
-2. اضغط **SQL Editor** → **New Query**
-3. انسخ محتوى الملف
-4. اضغط **Run**
-5. كرر الخطوات لكل الملفات الثلاثة (بالترتيب أعلاه)
+1. اذهب إلى **[Supabase Dashboard](https://supabase.com/dashboard)**
+2. اختر مشروع **hillaha**
+3. اضغط **SQL Editor** → **New Query**
+4. انسخ **كل محتوى** `COMPLETE_SETUP.sql`
+5. اضغط **RUN** ✅
+
+**النتيجة المتوقعة:**
+```
+✅ Success - Database setup complete in one query
+```
+
+---
+
+### 📋 الطريقة اليدوية (إذا فضّلت تشغيل الملفات منفصلة):
+
+إذا كنت تفضّل تشغيل كل ملف على حدة:
+
+| الملف | الترتيب | الوصف |
+|------|--------|-------|
+| `full_migration.sql` | 1️⃣ | الجداول الأساسية والأنواع |
+| `payment_methods_setup.sql` | 2️⃣ | طرق الدفع (8 خيارات) |
+| `offers_setup.sql` | 3️⃣ | العروض الترويجية |
+| `admin_management_setup.sql` | 4️⃣ | إدارة الصلاحيات والقيود |
+| `setup_super_admin.sql` | 5️⃣ | إعداد حساب السوبر أدمن |
+
+**تنبيه:** اتبع الترتيب بدقة!
 
 ---
 
@@ -177,19 +188,24 @@ File: c:\hillaha-platform\supabase\admin_management_setup.sql
 
 ### قبل البدء - أهم شيء:
 ```
-⚠️ CRITICAL: تشغيل SQL Scripts بالترتيب التالي:
-1. payment_methods_setup.sql      (طرق الدفع)
-2. offers_setup.sql                (العروض)
-3. admin_management_setup.sql      (إدارة الصلاحيات والقيود) ← جديد
+⚠️ CRITICAL: تشغيل ملف إعداد واحد:
+👉 supabase/COMPLETE_SETUP.sql
+
+هذا الملف يحتوي على كل شيء:
+- جميع الجداول الأساسية
+- طرق الدفع (8 خيارات)
+- نظام العروض
+- إدارة الصلاحيات والقيود
+- إعدادات السوبر أدمن
 ```
 
 ### خطوات الفحص:
-1. تشغيل SQL Scripts في Supabase (بالترتيب أعلاه)
-2. مسح الـ Browser Cache (Ctrl+Shift+Delete)
-3. تسجيل الدخول مرة أخرى من الحساب الذي يمتلك صلاحية Super Admin
-4. التأكد من ظهور جميع الصفحات في القائمة الجانبية
+1. ✅ تشغيل `COMPLETE_SETUP.sql` في Supabase
+2. ✅ مسح الـ Browser Cache (Ctrl+Shift+Delete)
+3. ✅ تسجيل الدخول مرة أخرى بـ `malmaghrabi77@gmail.com`
+4. ✅ التأكد من ظهور جميع الصفحات في القائمة الجانبية
 
 ---
 
 **آخر تحديث:** 27 فبراير 2025
-**الإصدار:** 1.1.0 (إضافة نظام إدارة الصلاحيات والقيود)
+**الإصدار:** 1.2.0 (ملف إعداد شامل موحد COMPLETE_SETUP.sql)

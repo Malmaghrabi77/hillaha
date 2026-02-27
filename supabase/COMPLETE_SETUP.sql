@@ -46,27 +46,41 @@ create table if not exists public.delivery_bands (
   sort int not null default 0
 );
 
--- Create types safely (drop if exists to avoid conflicts)
+-- Create types safely (CREATE TYPE IF NOT EXISTS doesn't exist, so use DO block)
 DO $$ BEGIN
-  DROP TYPE IF EXISTS public.user_role CASCADE;
-  DROP TYPE IF EXISTS public.partner_type CASCADE;
-  DROP TYPE IF EXISTS public.partner_role CASCADE;
-  DROP TYPE IF EXISTS public.consent_type CASCADE;
-  DROP TYPE IF EXISTS public.order_status CASCADE;
-  DROP TYPE IF EXISTS public.delivery_type CASCADE;
-  DROP TYPE IF EXISTS public.payment_method CASCADE;
-EXCEPTION WHEN OTHERS THEN
-  NULL;
+  CREATE TYPE public.user_role AS ENUM ('customer','driver','partner','super_admin','admin','frid_admin');
+EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
--- Now create the types
-create type public.user_role as enum ('customer','driver','partner','super_admin','admin','frid_admin');
-create type public.partner_type as enum ('restaurant','store','pharmacy','clinic');
-create type public.partner_role as enum ('owner','manager','cashier','kitchen','support');
-create type public.consent_type as enum ('customer_terms','partner_terms','driver_terms','medical_terms');
-create type public.order_status as enum ('pending','accepted','preparing','out_for_delivery','delivered','cancelled');
-create type public.delivery_type as enum ('platform','self');
-create type public.payment_method as enum ('cash','wallet_transfer','card');
+DO $$ BEGIN
+  CREATE TYPE public.partner_type AS ENUM ('restaurant','store','pharmacy','clinic');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.partner_role AS ENUM ('owner','manager','cashier','kitchen','support');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.consent_type AS ENUM ('customer_terms','partner_terms','driver_terms','medical_terms');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.order_status AS ENUM ('pending','accepted','preparing','out_for_delivery','delivered','cancelled');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.delivery_type AS ENUM ('platform','self');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.payment_method AS ENUM ('cash','wallet_transfer','card');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,

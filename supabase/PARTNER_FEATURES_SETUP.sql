@@ -23,6 +23,49 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 -- ============================================================
+-- PHASE 1.5: Menu Items Table
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.menu_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id UUID NOT NULL REFERENCES public.partners(id) ON DELETE CASCADE,
+
+  name TEXT NOT NULL,
+  description TEXT,
+  price NUMERIC(10, 2) NOT NULL,
+  category TEXT NOT NULL,
+  emoji TEXT DEFAULT '🍔',
+  available BOOLEAN DEFAULT true,
+
+  image_url TEXT,
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  CONSTRAINT menu_items_price_positive CHECK (price > 0),
+  UNIQUE(partner_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_menu_items_partner_id ON public.menu_items(partner_id);
+CREATE INDEX IF NOT EXISTS idx_menu_items_category ON public.menu_items(category);
+CREATE INDEX IF NOT EXISTS idx_menu_items_available ON public.menu_items(available);
+
+-- RLS Policies for menu_items
+ALTER TABLE public.menu_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Partners can view their own menu items" ON public.menu_items
+  FOR SELECT USING (auth.uid() = (SELECT id FROM public.partners WHERE id = partner_id));
+
+CREATE POLICY "Partners can insert menu items" ON public.menu_items
+  FOR INSERT WITH CHECK (auth.uid() = (SELECT id FROM public.partners WHERE id = partner_id));
+
+CREATE POLICY "Partners can update their menu items" ON public.menu_items
+  FOR UPDATE USING (auth.uid() = (SELECT id FROM public.partners WHERE id = partner_id));
+
+CREATE POLICY "Partners can delete their menu items" ON public.menu_items
+  FOR DELETE USING (auth.uid() = (SELECT id FROM public.partners WHERE id = partner_id));
+
+-- ============================================================
 -- PHASE 2: Promotions Table
 -- ============================================================
 

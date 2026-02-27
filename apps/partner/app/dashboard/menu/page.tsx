@@ -1,5 +1,6 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getSupabase } from "@hillaha/core";
 
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",
@@ -20,17 +21,7 @@ interface MenuItem {
   available: boolean;
 }
 
-const INITIAL_MENU: MenuItem[] = [
-  { id: "1", name: "برجر كلاسيك",      description: "لحم بقري طازج مع خس وطماطم وصوص خاص", price: 85,  category: "برجر",    emoji: "🍔", available: true },
-  { id: "2", name: "تشيكن برجر",       description: "دجاج مقرمش مع مايونيز وخيار مخلل",      price: 65,  category: "برجر",    emoji: "🍗", available: true },
-  { id: "3", name: "برجر دبل",         description: "شريحتان من اللحم مع جبن شيدر",          price: 110, category: "برجر",    emoji: "🍔", available: true },
-  { id: "4", name: "بيتزا لحمة",       description: "عجينة إيطالية مع لحم وفلفل ألوان",      price: 120, category: "بيتزا",   emoji: "🍕", available: true },
-  { id: "5", name: "بيتزا دجاج",       description: "دجاج مشوي مع فطر وصوص بشاميل",          price: 110, category: "بيتزا",   emoji: "🍕", available: false },
-  { id: "6", name: "باستا بولونيز",    description: "معكرونة سباغيتي مع صوص اللحم الإيطالي", price: 90,  category: "باستا",   emoji: "🍝", available: true },
-  { id: "7", name: "كوكاكولا",         description: "330 مل",                                 price: 20,  category: "مشروبات", emoji: "🥤", available: true },
-  { id: "8", name: "عصير ليمون",       description: "طازج مع نعناع",                          price: 35,  category: "مشروبات", emoji: "🍋", available: true },
-  { id: "9", name: "حلا اليوم",        description: "تشيز كيك فراولة — محدود",               price: 40,  category: "حلويات",  emoji: "🍰", available: true },
-];
+// Remove local INITIAL_MENU - will fetch from Supabase
 
 const CATEGORIES = ["الكل", "برجر", "بيتزا", "باستا", "مشروبات", "حلويات"];
 
@@ -41,12 +32,45 @@ const EMPTY_ITEM: Omit<MenuItem, "id"> = {
 };
 
 export default function MenuPage() {
-  const [menu, setMenu]         = useState<MenuItem[]>(INITIAL_MENU);
+  const [menu, setMenu]         = useState<MenuItem[]>([]);
   const [filter, setFilter]     = useState("الكل");
   const [modal, setModal]       = useState<ModalMode>(null);
   const [editing, setEditing]   = useState<MenuItem | null>(null);
   const [form, setForm]         = useState<Omit<MenuItem, "id">>(EMPTY_ITEM);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
+  const [saving, setSaving]     = useState(false);
+
+  useEffect(() => {
+    loadMenuItems();
+  }, []);
+
+  const loadMenuItems = async () => {
+    try {
+      const supabase = getSupabase();
+      if (!supabase) {
+        setError("خطأ في الاتصال");
+        setLoading(false);
+        return;
+      }
+
+      const { data, error: fetchError } = await (supabase
+        .from("menu_items") as any)
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      setMenu(data || []);
+      setError(null);
+    } catch (err: any) {
+      console.error("Menu load error:", err);
+      setError(err.message || "فشل تحميل القائمة");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = filter === "الكل" ? menu : menu.filter(m => m.category === filter);
 
@@ -64,22 +88,101 @@ export default function MenuPage() {
 
   function saveItem() {
     if (!form.name.trim() || !form.price) return;
-    if (modal === "add") {
-      setMenu(prev => [...prev, { ...form, id: Date.now().toString() }]);
-    } else if (editing) {
-      setMenu(prev => prev.map(m => m.id === editing.id ? { ...form, id: editing.id } : m));
-    }
-    setModal(null);
+
+    setSaving(true);
+    const saveToSupabase = async () => {
+      try {
+        const supabase = getSupabase();
+        if (!supabase) {
+          setError("خطأ في الاتصال");
+          return;
+        }
+
+        if (modal === "add") {
+          const { error: insertError } = await (supabase
+            .from("menu_items") as any)
+            .insert([form]);
+          if (insertError) throw insertError;
+        } else if (editing) {
+          const { error: updateError } = await (supabase
+            .from("menu_items") as any)
+            .update(form)
+            .eq("id", editing.id);
+          if (updateError) throw updateError;
+        }
+
+        setModal(null);
+        setError(null);
+        await loadMenuItems();
+      } catch (err: any) {
+        console.error("Save error:", err);
+        setError(err.message || "فشل الحفظ");
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    saveToSupabase();
   }
 
   function toggleAvailable(id: string) {
-    setMenu(prev => prev.map(m => m.id === id ? { ...m, available: !m.available } : m));
+    const item = menu.find(m => m.id === id);
+    if (!item) return;
+
+    const updateSupabase = async () => {
+      try {
+        const supabase = getSupabase();
+        if (!supabase) {
+          setError("خطأ في الاتصال");
+          return;
+        }
+
+        const { error: updateError } = await (supabase
+          .from("menu_items") as any)
+          .update({ available: !item.available })
+          .eq("id", id);
+
+        if (updateError) throw updateError;
+        await loadMenuItems();
+      } catch (err: any) {
+        console.error("Toggle error:", err);
+        setError(err.message || "فشل التحديث");
+      }
+    };
+
+    updateSupabase();
   }
 
   function confirmDelete(id: string) { setDeleteId(id); }
+
   function doDelete() {
-    setMenu(prev => prev.filter(m => m.id !== deleteId));
-    setDeleteId(null);
+    setSaving(true);
+    const deleteFromSupabase = async () => {
+      try {
+        const supabase = getSupabase();
+        if (!supabase) {
+          setError("خطأ في الاتصال");
+          return;
+        }
+
+        const { error: deleteError } = await (supabase
+          .from("menu_items") as any)
+          .delete()
+          .eq("id", deleteId);
+
+        if (deleteError) throw deleteError;
+        setDeleteId(null);
+        setError(null);
+        await loadMenuItems();
+      } catch (err: any) {
+        console.error("Delete error:", err);
+        setError(err.message || "فشل الحذف");
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    deleteFromSupabase();
   }
 
   const availableCount   = menu.filter(m => m.available).length;
@@ -99,37 +202,65 @@ export default function MenuPage() {
         </div>
         <button
           onClick={openAdd}
+          disabled={loading || saving}
           style={{
-            padding: "10px 20px", borderRadius: 12, border: "none", cursor: "pointer",
+            padding: "10px 20px", borderRadius: 12, border: "none", cursor: loading || saving ? "not-allowed" : "pointer",
             background: C.primary, color: "white", fontWeight: 900, fontSize: 14,
-            boxShadow: "0 4px 14px rgba(139,92,246,0.35)",
+            boxShadow: "0 4px 14px rgba(139,92,246,0.35)", opacity: loading || saving ? 0.7 : 1,
           }}
         >
           + إضافة صنف
         </button>
       </div>
 
-      {/* CATEGORY TABS */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat}
-            onClick={() => setFilter(cat)}
-            style={{
-              padding: "7px 16px", borderRadius: 20, border: filter === cat ? "none" : `1px solid ${C.border}`,
-              cursor: "pointer", fontSize: 13, fontWeight: 700,
-              background: filter === cat ? C.primary : C.surface,
-              color: filter === cat ? "white" : C.textMuted,
-              boxShadow: filter === cat ? "0 4px 12px rgba(139,92,246,0.3)" : "none",
-            }}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
+      {/* ERROR ALERT */}
+      {error && (
+        <div style={{
+          background: "#FEE2E2", color: C.danger, padding: 16, borderRadius: 12, marginBottom: 20,
+          fontSize: 14,
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
 
-      {/* MENU GRID */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+      {/* LOADING STATE */}
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 60, color: C.textMuted }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: "50%", border: "3px solid " + C.border,
+            borderTopColor: C.primary, margin: "0 auto 12px",
+            animation: "spin 1s linear infinite",
+          }} />
+          جاري تحميل القائمة...
+        </div>
+      ) : (
+        <>
+          {/* CATEGORY TABS */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setFilter(cat)}
+                style={{
+                  padding: "7px 16px", borderRadius: 20, border: filter === cat ? "none" : `1px solid ${C.border}`,
+                  cursor: "pointer", fontSize: 13, fontWeight: 700,
+                  background: filter === cat ? C.primary : C.surface,
+                  color: filter === cat ? "white" : C.textMuted,
+                  boxShadow: filter === cat ? "0 4px 12px rgba(139,92,246,0.3)" : "none",
+                }}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* MENU GRID */}
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 60, color: C.textMuted }}>
+              لا توجد أصناف في هذه الفئة
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
         {filtered.map(item => (
           <div
             key={item.id}
@@ -203,7 +334,10 @@ export default function MenuPage() {
             </div>
           </div>
         ))}
-      </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* ADD/EDIT MODAL */}
       {modal && (
@@ -337,14 +471,15 @@ export default function MenuPage() {
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 onClick={saveItem}
-                disabled={!form.name.trim() || !form.price}
+                disabled={!form.name.trim() || !form.price || saving}
                 style={{
                   flex: 1, padding: 13, borderRadius: 12, border: "none",
                   background: form.name.trim() && form.price ? C.primary : C.border,
-                  color: "white", fontWeight: 900, fontSize: 14, cursor: "pointer",
+                  color: "white", fontWeight: 900, fontSize: 14, cursor: saving ? "not-allowed" : "pointer",
+                  opacity: saving ? 0.7 : 1,
                 }}
               >
-                {modal === "add" ? "إضافة الصنف" : "حفظ التغييرات"}
+                {saving ? "جاري الحفظ..." : (modal === "add" ? "إضافة الصنف" : "حفظ التغييرات")}
               </button>
               <button
                 onClick={() => setModal(null)}
@@ -381,11 +516,13 @@ export default function MenuPage() {
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 onClick={doDelete}
+                disabled={saving}
                 style={{
                   flex: 1, padding: 12, borderRadius: 12, border: "none",
-                  background: C.danger, color: "white", fontWeight: 900, cursor: "pointer",
+                  background: C.danger, color: "white", fontWeight: 900, cursor: saving ? "not-allowed" : "pointer",
+                  opacity: saving ? 0.7 : 1,
                 }}
-              >حذف</button>
+              >{saving ? "جاري الحذف..." : "حذف"}</button>
               <button
                 onClick={() => setDeleteId(null)}
                 style={{
@@ -398,6 +535,12 @@ export default function MenuPage() {
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

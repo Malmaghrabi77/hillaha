@@ -23,9 +23,10 @@ export type MenuItemType = z.infer<typeof MenuItemSchema>;
 export const PromotionSchema = z.object({
   name: z.string().min(2, 'اسم العرض يجب أن يكون 2 أحرف على الأقل').max(100),
   description: z.string().optional(),
-  discountType: z.enum(['percentage', 'fixed'], {
-    errorMap: () => ({ message: 'اختر نوع الخصم' }),
-  }),
+  discountType: z.enum(['percentage', 'fixed']).refine(
+    (val) => val !== undefined,
+    { message: 'اختر نوع الخصم' }
+  ),
   discountValue: z.number().positive('قيمة الخصم يجب أن تكون موجبة'),
   minOrderValue: z.number().nonnegative('الحد الأدنى يجب أن يكون 0 أو أكثر'),
   startDate: z.string().min(1, 'اختر تاريخ البدء'),
@@ -88,7 +89,7 @@ export type LoginType = z.infer<typeof LoginSchema>;
 export const formatZodError = (error: z.ZodError): Record<string, string> => {
   const formatted: Record<string, string> = {};
 
-  error.errors.forEach((err) => {
+  error.issues.forEach((err) => {
     const path = err.path.join('.');
     formatted[path] = err.message;
   });

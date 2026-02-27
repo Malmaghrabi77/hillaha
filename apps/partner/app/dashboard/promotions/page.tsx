@@ -27,10 +27,20 @@ export default function PromotionsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    discount_type: 'percentage' | 'fixed';
+    discount_value: number;
+    min_order_value: number;
+    start_date: string;
+    end_date: string;
+    coupon_code: string;
+    max_uses: number;
+  }>({
     name: "",
     description: "",
-    discount_type: "percentage" as const,
+    discount_type: "percentage",
     discount_value: 10,
     min_order_value: 0,
     start_date: "",

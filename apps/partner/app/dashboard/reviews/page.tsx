@@ -183,15 +183,24 @@ export default function ReviewsPage() {
           {[5, 4, 3, 2, 1].map((rating) => {
             const count = reviews.filter((r) => r.rating === rating).length;
             return (
-              <Badge
+              <button
                 key={rating}
-                variant={filterRating === rating ? 'default' : 'ghost' as any}
-                size="lg"
-                style={{ cursor: 'pointer' }}
+                type="button"
                 onClick={() => setFilterRating(filterRating === rating ? null : rating)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
               >
-                {rating}★ ({count})
-              </Badge>
+                <Badge
+                  variant={filterRating === rating ? 'default' : 'ghost' as any}
+                  size="lg"
+                >
+                  {rating}★ ({count})
+                </Badge>
+              </button>
             );
           })}
         </div>

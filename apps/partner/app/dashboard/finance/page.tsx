@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { getSupabase } from "@hillaha/core";
+import { getSupabase, generateFinanceReport } from "@hillaha/core";
 
 const C = {
   primary: "#8B5CF6",
@@ -216,6 +216,21 @@ export default function FinancePage() {
     "الصافي": stat.net,
   }));
 
+  const handleExportPDF = () => {
+    const reportData = monthlyStats.map((m) => ({
+      month: m.month,
+      total_sales: m.sales,
+      commission: m.commission,
+      net_profit: m.net,
+      order_count: m.orders,
+    }));
+
+    generateFinanceReport(reportData, {
+      name: "متجري",
+      email: "partner@example.com",
+    });
+  };
+
   if (loading) {
     return (
       <div
@@ -264,12 +279,33 @@ export default function FinancePage() {
 
       {/* HEADER */}
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: C.text }}>
-          المالية والعمولات
-        </h1>
-        <p style={{ margin: "4px 0 0", color: C.textMuted, fontSize: 14 }}>
-          تتبع إيراداتك وعمولات المنصة وصافي أرباحك خلال آخر 6 أشهر
-        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: C.text }}>
+              المالية والعمولات
+            </h1>
+            <p style={{ margin: "4px 0 0", color: C.textMuted, fontSize: 14 }}>
+              تتبع إيراداتك وعمولات المنصة وصافي أرباحك خلال آخر 6 أشهر
+            </p>
+          </div>
+          <button
+            onClick={handleExportPDF}
+            style={{
+              padding: "10px 16px",
+              borderRadius: 12,
+              border: "none",
+              background: C.primary,
+              color: "white",
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(139,92,246,0.3)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            📥 تحميل التقرير PDF
+          </button>
+        </div>
       </div>
 
       {/* TOP STATS CARDS */}

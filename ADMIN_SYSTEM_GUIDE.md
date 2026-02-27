@@ -25,40 +25,62 @@
 
 ## 🚀 الخطوات التالية لتشغيل النظام:
 
-### ⚡ الطريقة السريعة (ملف واحد):
+### ⚡ الطريقة الآمنة (للمنصة الحية - PRODUCTION):
 
-**ملف إعداد شامل:**
+**ملف إعداد آمن (لا يحذف أي بيانات):**
 ```
-File: c:\hillaha-platform\supabase\COMPLETE_SETUP.sql
+File: c:\hillaha-platform\supabase\INCREMENTAL_SETUP.sql
 ```
 
 **خطوات التشغيل:**
 1. اذهب إلى **[Supabase Dashboard](https://supabase.com/dashboard)**
 2. اختر مشروع **hillaha**
 3. اضغط **SQL Editor** → **New Query**
-4. انسخ **كل محتوى** `COMPLETE_SETUP.sql`
+4. انسخ **كل محتوى** `INCREMENTAL_SETUP.sql`
 5. اضغط **RUN** ✅
 
 **النتيجة المتوقعة:**
 ```
-✅ Success - Database setup complete in one query
+✅ Success - New features added without losing any data
 ```
+
+**المميزات الأمان:**
+- ✅ لا يحذف أي جداول موجودة
+- ✅ لا يحذف أي بيانات المستخدمين
+- ✅ لا يحذف أي طلبات أو مدفوعات
+- ✅ فقط ينشئ الجداول الجديدة إذا لم تكن موجودة
+- ✅ آمن تماماً للاستخدام على المنصة الحية
+
+---
+
+### 🗑️ الطريقة الشاملة (للبيئات الجديدة فقط):
+
+**ملف إعادة بناء شاملة (يحذف كل شيء):**
+```
+File: c:\hillaha-platform\supabase\COMPLETE_SETUP.sql
+```
+
+⚠️ **تحذير:** استخدم هذا فقط إذا كنت تريد:
+- بيئة تطوير جديدة بدون أي بيانات
+- اختبار شامل من الصفر
+- إعادة بناء كاملة (مع حذف جميع البيانات القديمة)
+
+**لا تستخدم على Production!**
 
 ---
 
 ### 📋 الطريقة اليدوية (إذا فضّلت تشغيل الملفات منفصلة):
 
-إذا كنت تفضّل تشغيل كل ملف على حدة:
+إذا كنت تفضّل تشغيل كل ملف على حدة (الطريقة الآمنة أيضاً):
 
 | الملف | الترتيب | الوصف |
 |------|--------|-------|
-| `full_migration.sql` | 1️⃣ | الجداول الأساسية والأنواع |
-| `payment_methods_setup.sql` | 2️⃣ | طرق الدفع (8 خيارات) |
-| `offers_setup.sql` | 3️⃣ | العروض الترويجية |
-| `admin_management_setup.sql` | 4️⃣ | إدارة الصلاحيات والقيود |
-| `setup_super_admin.sql` | 5️⃣ | إعداد حساب السوبر أدمن |
+| `payment_methods_setup.sql` | 1️⃣ | طرق الدفع (8 خيارات) |
+| `offers_setup.sql` | 2️⃣ | العروض الترويجية |
+| `admin_management_setup.sql` | 3️⃣ | إدارة الصلاحيات والقيود |
+| `setup_super_admin.sql` | 4️⃣ | إعداد حساب السوبر أدمن |
 
-**تنبيه:** اتبع الترتيب بدقة!
+**ملاحظة:** جميع هذه الملفات آمنة ولا تحذف أي بيانات
 
 ---
 
@@ -188,24 +210,30 @@ File: c:\hillaha-platform\supabase\COMPLETE_SETUP.sql
 
 ### قبل البدء - أهم شيء:
 ```
-⚠️ CRITICAL: تشغيل ملف إعداد واحد:
-👉 supabase/COMPLETE_SETUP.sql
+⚠️ PRODUCTION: استخدم INCREMENTAL_SETUP.sql
+👉 supabase/INCREMENTAL_SETUP.sql
 
-هذا الملف يحتوي على كل شيء:
-- جميع الجداول الأساسية
-- طرق الدفع (8 خيارات)
-- نظام العروض
-- إدارة الصلاحيات والقيود
-- إعدادات السوبر أدمن
+هذا الملف آمن تماماً:
+- لا يحذف أي بيانات موجودة
+- لا يؤثر على المستخدمين الحاليين
+- لا يحذف أي طلبات أو مدفوعات
+- فقط يضيف الميزات الجديدة
+
+OR
+
+⚙️ DEVELOPMENT: استخدم COMPLETE_SETUP.sql
+👉 supabase/COMPLETE_SETUP.sql
+(فقط في بيئات التطوير الجديدة)
 ```
 
 ### خطوات الفحص:
-1. ✅ تشغيل `COMPLETE_SETUP.sql` في Supabase
-2. ✅ مسح الـ Browser Cache (Ctrl+Shift+Delete)
-3. ✅ تسجيل الدخول مرة أخرى بـ `malmaghrabi77@gmail.com`
-4. ✅ التأكد من ظهور جميع الصفحات في القائمة الجانبية
+1. ✅ اختر الملف الصحيح (INCREMENTAL أم COMPLETE)
+2. ✅ شغّل الملف في Supabase SQL Editor
+3. ✅ مسح الـ Browser Cache (Ctrl+Shift+Delete)
+4. ✅ تسجيل الدخول مرة أخرى بـ `malmaghrabi77@gmail.com`
+5. ✅ التأكد من ظهور جميع الصفحات في القائمة الجانبية
 
 ---
 
 **آخر تحديث:** 27 فبراير 2025
-**الإصدار:** 1.2.0 (ملف إعداد شامل موحد COMPLETE_SETUP.sql)
+**الإصدار:** 1.3.0 (ملف INCREMENTAL_SETUP.sql الآمن للمنصة الحية)

@@ -44,6 +44,35 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 -- ============================================================
+-- PHASE 1.5: Ensure profiles table exists with role column
+-- ============================================================
+
+DO $$ BEGIN
+  -- Create profiles table if it doesn't exist
+  CREATE TABLE IF NOT EXISTS public.profiles (
+    id uuid primary key references auth.users(id) on delete cascade,
+    full_name text,
+    phone text,
+    role public.user_role not null default 'customer',
+    country_code text,
+    created_at timestamptz not null default now()
+  );
+
+  -- Add role column if it doesn't exist
+  ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role public.user_role DEFAULT 'customer';
+
+  -- Enable RLS if not already enabled
+  ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+EXCEPTION WHEN others THEN NULL;
+END $$;
+
+-- Safely create basic profile policies
+DO $$ BEGIN
+  CREATE POLICY "profiles_read_own" ON public.profiles FOR SELECT USING (id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- ============================================================
 -- PHASE 2: Payment Methods Management (Safe)
 -- ============================================================
 

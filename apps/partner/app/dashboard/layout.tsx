@@ -17,6 +17,9 @@ const NAV = [
   { href: "/dashboard/orders",   icon: "📦", label: "الطلبات" },
   { href: "/dashboard/menu",     icon: "🍽️", label: "القائمة" },
   { href: "/dashboard/finance",  icon: "💰", label: "المالية" },
+  { href: "/dashboard/promotions", icon: "🎁", label: "العروض" },
+  { href: "/dashboard/reviews",  icon: "⭐", label: "التقييمات" },
+  { href: "/dashboard/drivers",  icon: "👨", label: "المندوبون" },
   { href: "/dashboard/settings", icon: "⚙️", label: "الإعدادات" },
 ];
 

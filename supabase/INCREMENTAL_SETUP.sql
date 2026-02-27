@@ -5,6 +5,17 @@
 -- ============================================================
 
 -- ============================================================
+-- PHASE 0: Clean up old functions and triggers
+-- ============================================================
+
+-- Drop old trigger functions that might conflict
+DO $$ BEGIN
+  DROP TRIGGER IF EXISTS enforce_role_limits_trigger ON public.profiles CASCADE;
+  DROP FUNCTION IF EXISTS public.enforce_role_limits() CASCADE;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+-- ============================================================
 -- PHASE 1: Ensure Types Exist (Safe Creation)
 -- ============================================================
 

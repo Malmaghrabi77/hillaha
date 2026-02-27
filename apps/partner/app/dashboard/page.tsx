@@ -1,5 +1,6 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getSupabase } from "@hillaha/core";
 
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",
@@ -10,28 +11,112 @@ const C = {
   warning: "#F59E0B", danger: "#EF4444",
 };
 
-const STATS = [
-  { label: "طلبات اليوم",    value: "12",      icon: "📦", color: C.primary,  bg: C.primarySoft },
-  { label: "إيراد اليوم",    value: "1,240 ج", icon: "💰", color: "#059669",  bg: "#D1FAE5"     },
-  { label: "بانتظار القبول", value: "3",       icon: "⏳", color: C.warning,   bg: "#FEF3C7"     },
-  { label: "التقييم",        value: "4.8 ⭐",  icon: "⭐", color: C.pink,      bg: C.pinkSoft    },
-];
+interface Order {
+  id: string;
+  total: number;
+  status: string;
+  created_at: string;
+  profiles?: { full_name: string };
+}
 
-const RECENT_ORDERS = [
-  { id: "ORD-001", customer: "مصطفى محمد",   items: "برجر كلاسيك × 2، كوكاكولا", total: 190, status: "pending",    time: "منذ 3 دقائق" },
-  { id: "ORD-002", customer: "أحمد علي",      items: "بيتزا لحمة × 1",            total: 120, status: "preparing",  time: "منذ 8 دقائق" },
-  { id: "ORD-003", customer: "فاطمة حسن",     items: "تشيكن برجر × 1، عصير ليمون", total: 100, status: "delivered",  time: "منذ 25 دقيقة" },
-  { id: "ORD-004", customer: "محمد إبراهيم",  items: "برجر كلاسيك × 1",           total: 85,  status: "cancelled",  time: "منذ ساعة" },
-];
+interface Stats {
+  todayOrders: number;
+  todayRevenue: number;
+  pendingOrders: number;
+  averageRating: number;
+}
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   pending:   { label: "بانتظار القبول", color: C.warning,  bg: "#FEF3C7" },
+  accepted:  { label: "مقبول",          color: C.primary,  bg: C.primarySoft },
   preparing: { label: "قيد التجهيز",    color: C.primary,  bg: C.primarySoft },
+  out_for_delivery: { label: "في الطريق", color: "#059669", bg: "#D1FAE5" },
   delivered: { label: "مُسلَّم",         color: "#059669",  bg: "#D1FAE5" },
-  cancelled: { label: "ملغي",           color: C.danger,   bg: "#FEF2F2" },
+  cancelled: { label: "ملغي",           color: C.danger,   bg: "#FEE2E2" },
 };
 
 export default function Dashboard() {
+  const [stats, setStats] = useState<Stats>({
+    todayOrders: 0,
+    todayRevenue: 0,
+    pendingOrders: 0,
+    averageRating: 0,
+  });
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      const supabase = getSupabase();
+      if (!supabase) {
+        setError("خطأ في الاتصال");
+        setLoading(false);
+        return;
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+
+      // Get today's orders
+      const { data: todayOrdersData, error: ordersError } = await (supabase
+        .from("orders") as any)
+        .select("id, total, status, created_at, profiles(full_name)")
+        .gte("created_at", `${today}T00:00:00`)
+        .lte("created_at", `${today}T23:59:59`);
+
+      if (ordersError) throw ordersError;
+
+      const todayOrders = todayOrdersData || [];
+      const todayRevenue = todayOrders
+        .filter(o => o.status !== 'cancelled')
+        .reduce((sum, o) => sum + (o.total || 0), 0);
+
+      const pendingOrders = todayOrders.filter(o => o.status === 'pending').length;
+
+      // Get partner rating
+      const { data: partnerData, error: partnerError } = await (supabase
+        .from("partners") as any)
+        .select("average_rating")
+        .single();
+
+      if (partnerError) console.log("Partner rating not available");
+
+      setStats({
+        todayOrders: todayOrders.length,
+        todayRevenue,
+        pendingOrders,
+        averageRating: partnerData?.average_rating || 0,
+      });
+
+      // Get recent orders (last 5)
+      const { data: recentData, error: recentError } = await (supabase
+        .from("orders") as any)
+        .select("id, total, status, created_at, profiles(full_name)")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (recentError) throw recentError;
+      setRecentOrders(recentData || []);
+      setError(null);
+    } catch (err: any) {
+      console.error("Dashboard error:", err);
+      setError(err.message || "فشل تحميل البيانات");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const STAT_CARDS = [
+    { label: "طلبات اليوم", value: stats.todayOrders.toString(), icon: "📦", color: C.primary, bg: C.primarySoft },
+    { label: "إيراد اليوم", value: `${stats.todayRevenue.toFixed(0)} ر.س`, icon: "💰", color: "#059669", bg: "#D1FAE5" },
+    { label: "بانتظار القبول", value: stats.pendingOrders.toString(), icon: "⏳", color: C.warning, bg: "#FEF3C7" },
+    { label: "التقييم", value: `${stats.averageRating.toFixed(1)} ⭐`, icon: "⭐", color: C.pink, bg: C.pinkSoft },
+  ];
+
   return (
     <div>
       {/* HEADER */}
@@ -40,13 +125,22 @@ export default function Dashboard() {
           مرحباً! 👋
         </h1>
         <p style={{ margin: "4px 0 0", color: C.textMuted, fontSize: 14 }}>
-          الأربعاء، 21 فبراير 2026 — نظرة عامة على أداء متجرك اليوم
+          {new Date().toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} — نظرة عامة على أداء متجرك اليوم
         </p>
       </div>
 
+      {error && (
+        <div style={{
+          background: "#FEE2E2", color: C.danger, padding: 16, borderRadius: 12, marginBottom: 20,
+          fontSize: 14,
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
+
       {/* STATS */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
-        {STATS.map((s, i) => (
+        {STAT_CARDS.map((s, i) => (
           <div key={i} style={{
             background: C.surface, borderRadius: 18, padding: 20,
             border: `1px solid ${C.border}`,
@@ -78,44 +172,74 @@ export default function Dashboard() {
             padding: "6px 14px", borderRadius: 20,
             background: C.primarySoft, color: C.primary,
             fontWeight: 700, fontSize: 12,
+            cursor: "pointer", transition: "all 0.2s",
           }}>
-            عرض الكل ←
+            عرض الكل →
           </a>
         </div>
 
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ borderBottom: `2px solid ${C.border}` }}>
-              {["رقم الطلب", "العميل", "البنود", "الإجمالي", "الحالة", "الوقت"].map(h => (
-                <th key={h} style={{
-                  padding: "8px 12px", textAlign: "right",
-                  fontSize: 12, fontWeight: 700, color: C.textMuted,
-                }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {RECENT_ORDERS.map(o => {
-              const st = STATUS_LABELS[o.status];
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 40, color: C.textMuted }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: "50%", border: "3px solid " + C.border,
+              borderTopColor: C.primary, margin: "0 auto 12px",
+              animation: "spin 1s linear infinite",
+            }} />
+            جاري التحميل...
+          </div>
+        ) : recentOrders.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 40, color: C.textMuted }}>
+            لا توجد طلبات في هذا اليوم
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {recentOrders.map((order) => {
+              const timeAgo = Math.floor((new Date().getTime() - new Date(order.created_at).getTime()) / 1000 / 60);
+              const timeLabel = timeAgo < 1 ? "الآن" : timeAgo < 60 ? `منذ ${timeAgo} د` : `منذ ${Math.floor(timeAgo / 60)} س`;
+              const statusInfo = STATUS_LABELS[order.status] || { label: order.status, color: C.text, bg: C.bg };
+
               return (
-                <tr key={o.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                  <td style={{ padding: "12px", fontSize: 13, fontWeight: 700, color: C.primary }}>{o.id}</td>
-                  <td style={{ padding: "12px", fontSize: 13, color: C.text }}>{o.customer}</td>
-                  <td style={{ padding: "12px", fontSize: 12, color: C.textMuted, maxWidth: 180 }}>{o.items}</td>
-                  <td style={{ padding: "12px", fontSize: 13, fontWeight: 700, color: C.text }}>{o.total} ج</td>
-                  <td style={{ padding: "12px" }}>
-                    <span style={{
-                      padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
-                      color: st.color, background: st.bg,
-                    }}>{st.label}</span>
-                  </td>
-                  <td style={{ padding: "12px", fontSize: 12, color: C.textMuted }}>{o.time}</td>
-                </tr>
+                <div key={order.id} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: 16, borderRadius: 12, background: C.bg, border: `1px solid ${C.border}`,
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, color: C.text, marginBottom: 4 }}>
+                      #{order.id.substring(0, 8).toUpperCase()}
+                    </div>
+                    <div style={{ fontSize: 13, color: C.textMuted }}>
+                      {order.profiles?.full_name || "عميل مجهول"}
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: "center", flex: 1 }}>
+                    <div style={{ fontWeight: 700, color: C.text }}>
+                      {order.total.toFixed(0)} ر.س
+                    </div>
+                    <div style={{ fontSize: 12, color: C.textMuted }}>
+                      {timeLabel}
+                    </div>
+                  </div>
+
+                  <div style={{
+                    padding: "6px 12px", borderRadius: 20,
+                    background: statusInfo.bg, color: statusInfo.color,
+                    fontWeight: 700, fontSize: 12,
+                  }}>
+                    {statusInfo.label}
+                  </div>
+                </div>
               );
             })}
-          </tbody>
-        </table>
+          </div>
+        )}
       </div>
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

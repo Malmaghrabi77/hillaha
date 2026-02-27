@@ -9,11 +9,12 @@
     "lint": "next lint || true"
   },
   "dependencies": {
+    "@hillaha/core": "workspace:*",
+    "@hillaha/ui": "workspace:*",
     "next": "14.2.5",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "@hillaha/core": "workspace:*",
-    "@hillaha/ui": "workspace:*"
+    "recharts": "^3.7.0"
   },
   "devDependencies": {
     "@types/node": "^20",

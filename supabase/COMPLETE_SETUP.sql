@@ -20,28 +20,29 @@ BEGIN
   END LOOP;
 END $$;
 
--- Drop all tables (in reverse dependency order)
-DROP TABLE IF EXISTS public.permission_audit_logs;
-DROP TABLE IF EXISTS public.admin_restrictions;
-DROP TABLE IF EXISTS public.partner_restrictions;
-DROP TABLE IF EXISTS public.admin_permissions;
-DROP TABLE IF EXISTS public.offer_approval_logs;
-DROP TABLE IF EXISTS public.partner_offers;
-DROP TABLE IF EXISTS public.promotions;
-DROP TABLE IF EXISTS public.payment_method_logs;
-DROP TABLE IF EXISTS public.payment_method_configs;
-DROP TABLE IF EXISTS public.payment_methods;
-DROP TABLE IF EXISTS public.order_items;
-DROP TABLE IF EXISTS public.orders;
-DROP TABLE IF EXISTS public.driver_profiles;
-DROP TABLE IF EXISTS public.partner_users;
-DROP TABLE IF EXISTS public.partners;
-DROP TABLE IF EXISTS public.user_consents;
-DROP TABLE IF EXISTS public.profiles;
-DROP TABLE IF EXISTS public.delivery_bands;
-DROP TABLE IF EXISTS public.zones;
-DROP TABLE IF EXISTS public.cities;
-DROP TABLE IF EXISTS public.countries;
+-- Drop all tables (in reverse dependency order) - use CASCADE to handle unknown dependencies
+DROP TABLE IF EXISTS public.permission_audit_logs CASCADE;
+DROP TABLE IF EXISTS public.admin_restrictions CASCADE;
+DROP TABLE IF EXISTS public.partner_restrictions CASCADE;
+DROP TABLE IF EXISTS public.admin_permissions CASCADE;
+DROP TABLE IF EXISTS public.offer_approval_logs CASCADE;
+DROP TABLE IF EXISTS public.partner_offers CASCADE;
+DROP TABLE IF EXISTS public.promotions CASCADE;
+DROP TABLE IF EXISTS public.payment_method_logs CASCADE;
+DROP TABLE IF EXISTS public.payment_method_configs CASCADE;
+DROP TABLE IF EXISTS public.payment_methods CASCADE;
+DROP TABLE IF EXISTS public.loyalty_points CASCADE;
+DROP TABLE IF EXISTS public.order_items CASCADE;
+DROP TABLE IF EXISTS public.orders CASCADE;
+DROP TABLE IF EXISTS public.driver_profiles CASCADE;
+DROP TABLE IF EXISTS public.partner_users CASCADE;
+DROP TABLE IF EXISTS public.partners CASCADE;
+DROP TABLE IF EXISTS public.user_consents CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP TABLE IF EXISTS public.delivery_bands CASCADE;
+DROP TABLE IF EXISTS public.zones CASCADE;
+DROP TABLE IF EXISTS public.cities CASCADE;
+DROP TABLE IF EXISTS public.countries CASCADE;
 
 -- Drop all types (in order)
 DROP TYPE IF EXISTS public.user_role CASCADE;

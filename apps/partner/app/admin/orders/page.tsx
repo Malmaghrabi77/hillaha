@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getSupabase } from "@hillaha/core";
+import { getSupabase, generateOrderReport } from "@hillaha/core";
 import { useAdminAuth } from "../hooks/useAdminAuth";
 
 const C = {
@@ -61,6 +61,7 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const itemsPerPage = 50;
 
@@ -192,6 +193,27 @@ export default function OrdersPage() {
     }
   };
 
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      const reportData = filteredOrders.map(order => ({
+        id: order.id,
+        customerName: order.customer_name,
+        total: order.total,
+        status: order.status,
+        createdAt: order.created_at,
+        items: [],
+      }));
+
+      generateOrderReport(reportData, { name: "إدارة الطلبات" }, "الفترة الحالية");
+    } catch (error: any) {
+      console.error("Error exporting PDF:", error);
+      alert("حدث خطأ في تصدير التقرير");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "delivered": return C.success;
@@ -256,11 +278,31 @@ export default function OrdersPage() {
   return (
     <div dir="rtl" style={{ padding: "24px", background: C.surfaceLight, minHeight: "100%" }}>
       {/* Header */}
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 900, color: C.text, margin: 0, marginBottom: 4 }}>
-          📦 إدارة الطلبات
-        </h1>
-        <p style={{ color: C.textMuted, fontSize: 14, margin: 0 }}>عرض وإدارة جميع الطلبات</p>
+      <div style={{ marginBottom: 32, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <h1 style={{ fontSize: 32, fontWeight: 900, color: C.text, margin: 0, marginBottom: 4 }}>
+            📦 إدارة الطلبات
+          </h1>
+          <p style={{ color: C.textMuted, fontSize: 14, margin: 0 }}>عرض وإدارة جميع الطلبات</p>
+        </div>
+        <button
+          onClick={handleExportPDF}
+          disabled={exporting || filteredOrders.length === 0}
+          style={{
+            padding: "10px 16px",
+            borderRadius: 8,
+            background: C.primary,
+            color: "white",
+            border: "none",
+            fontWeight: 700,
+            fontSize: 13,
+            cursor: exporting || filteredOrders.length === 0 ? "not-allowed" : "pointer",
+            opacity: exporting || filteredOrders.length === 0 ? 0.6 : 1,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {exporting ? "جاري التصدير..." : "📥 تصدير PDF"}
+        </button>
       </div>
 
       {/* Stats Grid */}

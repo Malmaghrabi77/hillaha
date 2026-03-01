@@ -122,17 +122,22 @@ export default function LoginPage() {
         </form>
 
         <p style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: C.textMuted }}>
-          هل تريد الانضمام كشريك؟{" "}
-          <a href={`mailto:${EMAILS.webmaster}?subject=طلب تسجيل شريك جديد`}
-             style={{ color: C.primary, fontWeight: 700 }}>
-            {EMAILS.webmaster}
+          ليس لديك حساب؟{" "}
+          <a href="/signup"
+             style={{ color: C.primary, fontWeight: 700, textDecoration: "none" }}>
+            سجّل الآن
           </a>
         </p>
         <p style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.textMuted }}>
-          للدعم الفني:{" "}
-          <a href={`mailto:${EMAILS.admin}?subject=دعم فني — لوحة الشريك`}
+          أو جرب{" "}
+          <a href="/demo"
+             style={{ color: C.primary, fontWeight: 700, textDecoration: "none" }}>
+            حساب تجريبي
+          </a>
+          {" "}أو تواصل معنا:{" "}
+          <a href={`mailto:${EMAILS.webmaster}?subject=طلب تسجيل شريك جديد`}
              style={{ color: C.textMuted, fontWeight: 600 }}>
-            {EMAILS.admin}
+            {EMAILS.webmaster}
           </a>
         </p>
       </div>

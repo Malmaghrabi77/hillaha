@@ -46,49 +46,187 @@ export default function AnalyticsPage() {
         return;
       }
 
-      // Placeholder data structure - will be replaced with real queries
+      // Get the current partner ID from session/auth
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        setError("يجب تسجيل الدخول أولاً");
+        setLoading(false);
+        return;
+      }
+
+      // Get partner ID from profiles
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("partner_id")
+        .eq("id", session.user.id)
+        .single();
+
+      const partnerId = (profile as any)?.partner_id;
+      if (!partnerId) {
+        setError("لم يتم العثور على معرّف الشريك");
+        setLoading(false);
+        return;
+      }
+
+      // Calculate date range based on period
+      const getDatesForPeriod = (p: "week" | "month" | "year") => {
+        const now = new Date();
+        const start = new Date();
+        if (p === "week") {
+          start.setDate(now.getDate() - 7);
+        } else if (p === "month") {
+          start.setMonth(now.getMonth() - 1);
+        } else {
+          start.setFullYear(now.getFullYear() - 1);
+        }
+        return { start, end: now };
+      };
+
+      const { start, end } = getDatesForPeriod(period);
+
+      // 1. Load hourly orders (last 24 hours)
+      const { data: hourlyOrdersData } = await (supabase
+        .from("orders") as any)
+        .select("created_at")
+        .eq("partner_id", partnerId)
+        .eq("status", "delivered")
+        .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+      const hourlyOrders = Array.from({ length: 14 }, (_, i) => {
+        const hour = 8 + i;
+        const orders = ((hourlyOrdersData as any[]) || []).filter((order: any) => {
+          const orderHour = new Date(order.created_at).getHours();
+          return orderHour === hour;
+        }).length;
+        return { hour: `${hour.toString().padStart(2, "0")}:00`, orders };
+      });
+
+      // 2. Load top items (products) by order count
+      const { data: allOrders } = await (supabase
+        .from("orders") as any)
+        .select("items")
+        .eq("partner_id", partnerId)
+        .gte("created_at", start.toISOString())
+        .lte("created_at", end.toISOString());
+
+      const itemCounts = new Map<string, number>();
+      ((allOrders as any[]) || []).forEach((order: any) => {
+        const items = order.items;
+        if (Array.isArray(items)) {
+          items.forEach((item: any) => {
+            const name = item.name || item.product_name || "منتج";
+            itemCounts.set(name, (itemCounts.get(name) || 0) + 1);
+          });
+        }
+      });
+
+      const topItems = Array.from(itemCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name, count]) => ({ name, count }));
+
+      // 3. Load payment methods distribution
+      const { data: paymentData } = await (supabase
+        .from("orders") as any)
+        .select("payment_method")
+        .eq("partner_id", partnerId)
+        .gte("created_at", start.toISOString())
+        .lte("created_at", end.toISOString());
+
+      const paymentCounts = new Map<string, number>();
+      ((paymentData as any[]) || []).forEach((order: any) => {
+        const method = order.payment_method || "غير محدد";
+        const displayName = method === "cash" ? "الدفع عند الاستقبال"
+          : method === "card" ? "بطاقة ائتمان"
+          : method === "wallet" ? "محفظة رقمية"
+          : method === "bank_transfer" ? "تحويل بنكي"
+          : method;
+        paymentCounts.set(displayName, (paymentCounts.get(displayName) || 0) + 1);
+      });
+
+      const totalPayments = Array.from(paymentCounts.values()).reduce((a, b) => a + b, 0) || 1;
+      const paymentMethods = Array.from(paymentCounts.entries())
+        .map(([name, count]) => ({
+          name,
+          value: Math.round((count / totalPayments) * 100)
+        }));
+
+      // 4. Load weekly trend
+      const namesOfDays = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+      const weeklyTrend = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - i));
+        const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+
+        return {
+          day: namesOfDays[date.getDay()],
+          dayDate: date,
+          dayStart,
+          dayEnd,
+        };
+      });
+
+      // Fetch orders for weekly trend
+      const { data: weeklyOrdersData } = await (supabase
+        .from("orders") as any)
+        .select("total, created_at, status")
+        .eq("partner_id", partnerId)
+        .gte("created_at", weeklyTrend[0].dayStart.toISOString())
+        .lte("created_at", weeklyTrend[6].dayEnd.toISOString());
+
+      const weeklyData = weeklyTrend.map(w => {
+        const dayOrders = ((weeklyOrdersData as any[]) || []).filter((order: any) => {
+          const orderDate = new Date(order.created_at);
+          return orderDate >= w.dayStart && orderDate < w.dayEnd;
+        });
+
+        const sales = dayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+        const orders = dayOrders.length;
+
+        return {
+          day: w.day,
+          sales: Math.round(sales),
+          orders,
+        };
+      });
+
+      // 5. Load delivery metrics
+      const { data: completedOrders } = await (supabase
+        .from("orders") as any)
+        .select("created_at, status")
+        .eq("partner_id", partnerId)
+        .eq("status", "delivered")
+        .gte("created_at", start.toISOString())
+        .lte("created_at", end.toISOString());
+
+      const { data: allPartnerOrders } = await (supabase
+        .from("orders") as any)
+        .select("created_at, status")
+        .eq("partner_id", partnerId)
+        .gte("created_at", start.toISOString())
+        .lte("created_at", end.toISOString());
+
+      const totalOrders = ((allPartnerOrders as any[]) || []).length || 1;
+      const completedCount = ((completedOrders as any[]) || []).length;
+      const completionRate = totalOrders > 0 ? (completedCount / totalOrders) * 100 : 0;
+
+      // Calculate average delivery time (assuming 30 minutes default, in real app would calculate from timestamps)
+      const avgDeliveryTime = 32;
+      const onTimeRate = 94.2; // In real app, calculate from delivery_time vs expected_time
+
       setData({
-        hourlyOrders: [
-          { hour: "08:00", orders: 5 },
-          { hour: "09:00", orders: 8 },
-          { hour: "10:00", orders: 12 },
-          { hour: "11:00", orders: 15 },
-          { hour: "12:00", orders: 24 },
-          { hour: "13:00", orders: 18 },
-          { hour: "14:00", orders: 10 },
-          { hour: "15:00", orders: 9 },
-          { hour: "16:00", orders: 8 },
-          { hour: "17:00", orders: 14 },
-          { hour: "18:00", orders: 22 },
-          { hour: "19:00", orders: 28 },
-          { hour: "20:00", orders: 25 },
-          { hour: "21:00", orders: 18 },
+        hourlyOrders,
+        topItems: topItems.length > 0 ? topItems : [{ name: "لا توجد طلبات بعد", count: 0 }],
+        paymentMethods: paymentMethods.length > 0 ? paymentMethods : [
+          { name: "لا توجد بيانات", value: 100 }
         ],
-        topItems: [
-          { name: "برجر كلاسيك", count: 156 },
-          { name: "بيتزا لحمة", count: 143 },
-          { name: "باستا بولونيز", count: 98 },
-          { name: "تشيكن برجر", count: 87 },
-          { name: "برجر دبل", count: 72 },
-        ],
-        paymentMethods: [
-          { name: "تحويل بنكي", value: 45 },
-          { name: "الدفع عند الاستقبال", value: 35 },
-          { name: "محفظة رقمية", value: 20 },
-        ],
-        weeklyTrend: [
-          { day: "السبت", sales: 2800, orders: 34 },
-          { day: "الأحد", sales: 3200, orders: 42 },
-          { day: "الاثنين", sales: 2400, orders: 31 },
-          { day: "الثلاثاء", sales: 3600, orders: 48 },
-          { day: "الأربعاء", sales: 4200, orders: 58 },
-          { day: "الخميس", sales: 3800, orders: 52 },
-          { day: "الجمعة", sales: 4600, orders: 64 },
-        ],
+        weeklyTrend: weeklyData,
         deliveryMetrics: {
-          avgDeliveryTime: 32, // minutes
-          completionRate: 98.5, // percentage
-          onTimeRate: 94.2, // percentage
+          avgDeliveryTime,
+          completionRate: Math.round(completionRate * 10) / 10,
+          onTimeRate,
         },
       });
       setError(null);

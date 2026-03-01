@@ -18,9 +18,12 @@ const NAV = [
   { href: "/dashboard/menu",     icon: "🍽️", label: "القائمة" },
   { href: "/dashboard/finance",  icon: "💰", label: "المالية" },
   { href: "/dashboard/analytics", icon: "📈", label: "الإحصائيات" },
+  { href: "/dashboard/inventory", icon: "📊", label: "المخزون" },
+  { href: "/dashboard/staff",     icon: "👥", label: "الموظفون" },
   { href: "/dashboard/promotions", icon: "🎁", label: "العروض" },
   { href: "/dashboard/reviews",  icon: "⭐", label: "التقييمات" },
   { href: "/dashboard/drivers",  icon: "👨", label: "المندوبون" },
+  { href: "/dashboard/notifications", icon: "🔔", label: "الإشعارات" },
   { href: "/dashboard/settings", icon: "⚙️", label: "الإعدادات" },
 ];
 

@@ -26,6 +26,7 @@ interface Order {
   created_at: string;
   partner_id: string;
   partner?: { name: string };
+  payment_method?: string;
 }
 
 interface OrderStats {
@@ -35,10 +36,16 @@ interface OrderStats {
   completionRate: number;
 }
 
+interface Partner {
+  id: string;
+  name: string;
+}
+
 export default function OrdersPage() {
   const auth = useAdminAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [stats, setStats] = useState<OrderStats>({
     totalOrders: 0,
     totalRevenue: 0,
@@ -48,14 +55,19 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [partnerFilter, setPartnerFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [cancelling, setCancelling] = useState<string | null>(null);
 
   const itemsPerPage = 50;
 
   useEffect(() => {
     if (!auth.user) return;
     loadOrders();
+    loadPartners();
   }, [auth.user]);
 
   useEffect(() => {
@@ -64,6 +76,22 @@ export default function OrdersPage() {
     // Apply status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter(order => order.status === statusFilter);
+    }
+
+    // Apply partner filter
+    if (partnerFilter !== "all") {
+      filtered = filtered.filter(order => order.partner_id === partnerFilter);
+    }
+
+    // Apply date range filter
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      filtered = filtered.filter(order => new Date(order.created_at) >= fromDate);
+    }
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(order => new Date(order.created_at) <= toDate);
     }
 
     // Apply search filter
@@ -76,25 +104,34 @@ export default function OrdersPage() {
 
     setFilteredOrders(filtered);
     setCurrentPage(1);
-  }, [orders, searchTerm, statusFilter]);
+  }, [orders, searchTerm, statusFilter, partnerFilter, dateFrom, dateTo]);
 
   const loadOrders = async () => {
     try {
       const supabase = getSupabase();
       if (!supabase) return;
 
-      let query = supabase.from("orders").select("*").order("created_at", { ascending: false });
+      const { data } = await (supabase.from("orders") as any)
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      const { data } = await query;
       const ordersData = (data || []) as Order[];
 
-      // Load partner names
-      const ordersWithPartners = await Promise.all(
-        ordersData.map(async (order) => {
-          const { data: partner } = await supabase.from("partners").select("name").eq("id", order.partner_id).single();
-          return { ...order, partner };
-        })
-      );
+      // Load partner info in bulk
+      const partnerIds = Array.from(new Set(ordersData.map(o => o.partner_id)));
+      const { data: partnersData } = await (supabase.from("partners") as any)
+        .select("id, name")
+        .in("id", partnerIds);
+
+      const partnersMap = (partnersData || []).reduce((acc: any, p: any) => {
+        acc[p.id] = p;
+        return acc;
+      }, {});
+
+      const ordersWithPartners = ordersData.map(order => ({
+        ...order,
+        partner: partnersMap[order.partner_id] || { name: "غير معروف" }
+      }));
 
       setOrders(ordersWithPartners);
 
@@ -112,6 +149,46 @@ export default function OrdersPage() {
       console.error("Error loading orders:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPartners = async () => {
+    try {
+      const supabase = getSupabase();
+      if (!supabase) return;
+
+      const { data } = await (supabase.from("partners") as any)
+        .select("id, name")
+        .order("name");
+
+      setPartners(data || []);
+    } catch (error) {
+      console.error("Error loading partners:", error);
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm("هل تريد بالفعل إلغاء هذا الطلب؟")) return;
+
+    setCancelling(orderId);
+    try {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("لا يوجد اتصال");
+
+      const updateData = { status: "cancelled" };
+      const { error } = await (supabase.from("orders") as any)
+        .update(updateData)
+        .eq("id", orderId);
+
+      if (error) throw error;
+
+      await loadOrders();
+      setSelectedOrder(null);
+    } catch (error: any) {
+      console.error("Error cancelling order:", error);
+      alert(error.message || "حدث خطأ في إلغاء الطلب");
+    } finally {
+      setCancelling(null);
     }
   };
 
@@ -203,8 +280,8 @@ export default function OrdersPage() {
           border: `1px solid ${C.border}`,
           marginBottom: 24,
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: 16,
+          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+          gap: 12,
         }}
       >
         <input
@@ -233,9 +310,52 @@ export default function OrdersPage() {
         >
           <option value="all">جميع الحالات</option>
           <option value="pending">قيد الانتظار</option>
+          <option value="confirmed">مؤكدة</option>
+          <option value="preparing">قيد الإعداد</option>
+          <option value="delivering">قيد التوصيل</option>
           <option value="delivered">مكتملة</option>
           <option value="cancelled">ملغاة</option>
         </select>
+        <select
+          value={partnerFilter}
+          onChange={(e) => setPartnerFilter(e.target.value)}
+          style={{
+            padding: 12,
+            borderRadius: 8,
+            border: `1px solid ${C.border}`,
+            fontSize: 13,
+            fontFamily: "inherit",
+          }}
+        >
+          <option value="all">جميع الشركاء</option>
+          {partners.map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          style={{
+            padding: 12,
+            borderRadius: 8,
+            border: `1px solid ${C.border}`,
+            fontSize: 13,
+            fontFamily: "inherit",
+          }}
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          style={{
+            padding: 12,
+            borderRadius: 8,
+            border: `1px solid ${C.border}`,
+            fontSize: 13,
+            fontFamily: "inherit",
+          }}
+        />
       </div>
 
       {/* Orders Table */}
@@ -414,22 +534,53 @@ export default function OrdersPage() {
               </p>
             </div>
 
-            <button
-              onClick={() => setSelectedOrder(null)}
-              style={{
-                width: "100%",
-                padding: 12,
-                borderRadius: 8,
-                background: C.primary,
-                color: "white",
-                border: "none",
-                fontWeight: 700,
-                fontSize: 14,
-                cursor: "pointer",
-              }}
-            >
-              إغلاق
-            </button>
+            <div style={{ marginBottom: 24 }}>
+              <p style={{ fontSize: 12, color: C.textMuted, margin: "0 0 4px 0" }}>طريقة الدفع</p>
+              <p style={{ fontSize: 14, color: C.text, margin: 0 }}>
+                {selectedOrder.payment_method ?
+                  (selectedOrder.payment_method === "cash" ? "نقد" :
+                   selectedOrder.payment_method === "card" ? "بطاقة ائتمان" :
+                   selectedOrder.payment_method === "wallet_transfer" ? "محفظة" : selectedOrder.payment_method)
+                  : "غير محدد"}
+              </p>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                style={{
+                  padding: 12,
+                  borderRadius: 8,
+                  background: C.primary,
+                  color: "white",
+                  border: "none",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                إغلاق
+              </button>
+              {selectedOrder.status !== "cancelled" && selectedOrder.status !== "delivered" && (
+                <button
+                  onClick={() => handleCancelOrder(selectedOrder.id)}
+                  disabled={cancelling === selectedOrder.id}
+                  style={{
+                    padding: 12,
+                    borderRadius: 8,
+                    background: C.danger,
+                    color: "white",
+                    border: "none",
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: cancelling === selectedOrder.id ? "not-allowed" : "pointer",
+                    opacity: cancelling === selectedOrder.id ? 0.6 : 1,
+                  }}
+                >
+                  {cancelling === selectedOrder.id ? "جاري الإلغاء..." : "إلغاء الطلب"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

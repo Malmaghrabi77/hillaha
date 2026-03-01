@@ -10,6 +10,9 @@ export interface AdminAuthContext {
   role: AdminRole | null;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  isRegionalManager: boolean;
+  isRegularAdmin: boolean;
+  adminType: "regional_manager" | "regular_admin" | null;
   loading: boolean;
 }
 
@@ -20,6 +23,9 @@ export function useAdminAuth(): AdminAuthContext {
     role: null,
     isAdmin: false,
     isSuperAdmin: false,
+    isRegionalManager: false,
+    isRegularAdmin: false,
+    adminType: null,
     loading: true,
   });
 
@@ -49,10 +55,10 @@ export function useAdminAuth(): AdminAuthContext {
       const userId = sessionData.session.user.id;
       const email = sessionData.session.user.email || "";
 
-      // Get user role
+      // Get user role and admin_type
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, admin_type")
         .eq("id", userId)
         .single();
 
@@ -71,6 +77,7 @@ export function useAdminAuth(): AdminAuthContext {
       }
 
       const role = (profile as any)?.role as string;
+      const adminType = (profile as any)?.admin_type as string | null;
 
       if (!role) {
         console.error("Role not found in profile");
@@ -88,13 +95,27 @@ export function useAdminAuth(): AdminAuthContext {
         return;
       }
 
-      console.log("Admin auth successful. User:", userId, "Role:", role);
+      const isSuperAdmin = role === "super_admin";
+      const isRegionalManager = adminType === "regional_manager";
+      const isRegularAdmin = adminType === "regular_admin";
+
+      console.log("Admin auth successful.", {
+        userId,
+        role,
+        adminType,
+        isSuperAdmin,
+        isRegionalManager,
+        isRegularAdmin,
+      });
 
       setAuth({
         user: { id: userId, email },
         role: role as any,
         isAdmin: true,
-        isSuperAdmin: role === "super_admin",
+        isSuperAdmin,
+        isRegionalManager,
+        isRegularAdmin,
+        adminType: (adminType as "regional_manager" | "regular_admin") || null,
         loading: false,
       });
     } catch (error) {

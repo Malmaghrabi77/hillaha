@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS public.admin_invitations (
   email TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
   phone TEXT NOT NULL,
-  admin_type TEXT NOT NULL CHECK (admin_type IN ('regional_manager', 'regular_admin')),
+  admin_type TEXT NOT NULL CHECK (admin_type IN ('regional_manager')),
   invited_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
   super_admin_approval TEXT DEFAULT 'pending' CHECK (super_admin_approval IN ('pending', 'approved', 'rejected')),

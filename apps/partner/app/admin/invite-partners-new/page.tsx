@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { getSupabase } from "@hillaha/core";
 import { useAdminAuth } from "../hooks/useAdminAuth";
-import type { AdminInvitation } from "@hillaha/core";
 
 const C = {
   primary: "#8B5CF6",
@@ -21,40 +20,68 @@ const C = {
   warningSoft: "#FEF3C7",
 };
 
-export default function InviteRegionalManagerPage() {
+interface PartnerInvitation {
+  id: string;
+  email: string;
+  name: string;
+  phone: string;
+  status: string;
+  invited_by_name: string;
+  created_at: string;
+}
+
+export default function InvitePartnersPage() {
   const auth = useAdminAuth();
-  const [invitations, setInvitations] = useState<AdminInvitation[]>([]);
+  const [invitations, setInvitations] = useState<PartnerInvitation[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Form state
   const [formData, setFormData] = useState({ name: "", email: "", phone: "" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  // Filter
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [filter, setFilter] = useState<"all" | "pending" | "accepted" | "rejected">("all");
 
   useEffect(() => {
-    if (!auth.user) return;
+    if (!auth.user || !auth.isSuperAdmin) {
+      setError("فقط السوبر أدمن يمكنه دعوة الشركاء");
+      return;
+    }
     loadInvitations();
-  }, [auth.user]);
+  }, [auth.user, auth.isSuperAdmin]);
 
   const loadInvitations = async () => {
     try {
       const supabase = getSupabase();
-      if (!supabase) return;
+      if (!supabase) throw new Error("لا يوجد اتصال");
 
-      const { data, error: err } = await supabase
-        .from("admin_invitations")
-        .select("*")
-        .eq("admin_type", "regional_manager")
-        .eq("invited_by", auth.user?.id)
+      const { data, error: err } = await (supabase
+        .from("partner_invitations") as any)
+        .select(`
+          id,
+          email,
+          name,
+          phone,
+          status,
+          invited_by,
+          created_at,
+          invited_by_profile:invited_by (full_name)
+        `)
         .order("created_at", { ascending: false });
 
       if (err) throw err;
-      setInvitations(data || []);
-    } catch (error) {
-      console.error("Error loading invitations:", error);
+
+      const mappedData = (data || []).map((inv: any) => ({
+        ...inv,
+        invited_by_name: inv.invited_by_profile?.full_name || "غير معروف",
+      }));
+
+      setInvitations(mappedData);
+      setLoading(false);
+    } catch (err: any) {
+      console.error("Error loading invitations:", err);
+      setError(err.message);
+      setLoading(false);
     }
   };
 
@@ -73,70 +100,64 @@ export default function InviteRegionalManagerPage() {
       return;
     }
 
-    if (!/^[0-9\-\+]{10,}$/.test(formData.phone)) {
-      setError("رقم الجوال غير صحيح");
-      return;
-    }
-
-    const existingInvitation = invitations.find(inv => inv.email === formData.email);
-    if (existingInvitation) {
-      setError("هذا البريد الإلكتروني مستخدم بالفعل");
+    const existingInvitation = invitations.find((inv) => inv.email === formData.email);
+    if (existingInvitation && existingInvitation.status === "pending") {
+      setError("تم دعوة هذا البريد بالفعل، في انتظار الموافقة");
       return;
     }
 
     setSubmitting(true);
     try {
       const supabase = getSupabase();
-      if (!supabase) return;
+      if (!supabase) throw new Error("لا يوجد اتصال");
 
-      const { data, error: err } = await (supabase.from("admin_invitations") as any)
-        .insert({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          admin_type: "regional_manager",
-          invited_by: auth.user?.id,
-          status: "pending",
-          super_admin_approval: "pending", // ينتظر موافقة السوبر أدمن
-        })
-        .select();
-
-      if (err) throw err;
-
-      // Log action
-      await (supabase.from("admin_logs") as any).insert({
-        admin_id: auth.user?.id,
-        action: "invite_regular_admin",
-        entity_type: "partner",
-        entity_id: data?.[0]?.id,
-        new_data: { name: formData.name, email: formData.email },
+      // Insert partner invitation
+      const { error: err } = await (supabase.from("partner_invitations") as any).insert({
+        email: formData.email.toLowerCase(),
+        name: formData.name,
+        phone: formData.phone,
+        status: "pending",
+        invited_by: auth.user?.id,
+        invited_type: "super_admin",
       });
 
-      setSuccess(`✅ تم إرسال الدعوة لـ ${formData.name}. ستنتظر موافقة مالك المنصة`);
+      if (err) {
+        console.error("Insert error:", err);
+        throw err;
+      }
+
+      setSuccess(`✅ تم إرسال الدعوة لـ ${formData.name}. في انتظار قبول الشريك`);
       setFormData({ name: "", email: "", phone: "" });
       await loadInvitations();
-    } catch (error: any) {
-      console.error("Error creating invitation:", error);
-      const errorMsg = error?.message || "حدث خطأ أثناء إرسال الدعوة";
-      setError(`❌ ${errorMsg}`);
+    } catch (err: any) {
+      console.error("Error creating invitation:", err);
+      setError(`❌ ${err.message || "حدث خطأ أثناء إرسال الدعوة"}`);
     } finally {
       setSubmitting(false);
     }
   };
 
   const filteredInvitations = invitations.filter(
-    inv => filter === "all" || (filter === "approved" ? inv.super_admin_approval === "approved" : filter === "rejected" ? inv.super_admin_approval === "rejected" : inv.super_admin_approval === "pending")
+    (inv) => filter === "all" || inv.status === filter
   );
 
+  if (!auth.isSuperAdmin) {
+    return (
+      <div style={{ padding: 20, textAlign: "center", color: C.danger }}>
+        ⚠️ فقط السوبر أدمن يمكنه دعوة الشركاء
+      </div>
+    );
+  }
+
   return (
-    <div dir="rtl">
+    <div dir="rtl" style={{ padding: "24px" }}>
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 900, color: C.text, margin: 0, marginBottom: 8 }}>
-          دعوة مديرين عاديين
+        <h1 style={{ fontSize: 28, fontWeight: 900, color: C.text, margin: "0 0 8px 0" }}>
+          📨 دعوة الشركاء
         </h1>
         <p style={{ color: C.textMuted, fontSize: 14, margin: 0 }}>
-          استدعِ مديرين جدد (ينتظر موافقة مالك المنصة)
+          دعوة شركاء جدد للانضمام إلى المنصة
         </p>
       </div>
 
@@ -150,21 +171,21 @@ export default function InviteRegionalManagerPage() {
           marginBottom: 32,
         }}
       >
-        <h2 style={{ fontSize: 18, fontWeight: 900, color: C.text, margin: 0, marginBottom: 20 }}>
-          📋 استمارة الدعوة
+        <h2 style={{ fontSize: 18, fontWeight: 900, color: C.text, margin: "0 0 20px 0" }}>
+          📋 نموذج الدعوة
         </h2>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
             <div>
               <label style={{ display: "block", fontWeight: 700, fontSize: 14, color: C.text, marginBottom: 8 }}>
-                الاسم الكامل
+                اسم المتجر
               </label>
               <input
                 type="text"
                 value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                placeholder="مثال: محمد إبراهيم"
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="مثال: مطعم البهار"
                 style={{
                   width: "100%",
                   padding: "10px 14px",
@@ -172,7 +193,7 @@ export default function InviteRegionalManagerPage() {
                   border: `1.5px solid ${C.border}`,
                   fontSize: 14,
                   fontFamily: "inherit",
-                  direction: "rtl",
+                  outline: "none",
                 }}
               />
             </div>
@@ -184,8 +205,8 @@ export default function InviteRegionalManagerPage() {
               <input
                 type="email"
                 value={formData.email}
-                onChange={e => setFormData({ ...formData, email: e.target.value })}
-                placeholder="example@email.com"
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="partner@example.com"
                 style={{
                   width: "100%",
                   padding: "10px 14px",
@@ -194,6 +215,7 @@ export default function InviteRegionalManagerPage() {
                   fontSize: 14,
                   fontFamily: "inherit",
                   direction: "ltr",
+                  outline: "none",
                 }}
               />
             </div>
@@ -206,7 +228,7 @@ export default function InviteRegionalManagerPage() {
             <input
               type="tel"
               value={formData.phone}
-              onChange={e => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               placeholder="01XXXXXXXXX"
               style={{
                 width: "100%",
@@ -216,6 +238,7 @@ export default function InviteRegionalManagerPage() {
                 fontSize: 14,
                 fontFamily: "inherit",
                 direction: "ltr",
+                outline: "none",
               }}
             />
           </div>
@@ -232,7 +255,7 @@ export default function InviteRegionalManagerPage() {
                 marginBottom: 16,
               }}
             >
-              ⚠️ {error}
+              {error}
             </div>
           )}
 
@@ -248,13 +271,13 @@ export default function InviteRegionalManagerPage() {
                 marginBottom: 16,
               }}
             >
-              ✓ {success}
+              {success}
             </div>
           )}
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || loading}
             style={{
               width: "100%",
               padding: "12px 16px",
@@ -275,15 +298,15 @@ export default function InviteRegionalManagerPage() {
 
       {/* List */}
       <div>
-        <h2 style={{ fontSize: 18, fontWeight: 900, color: C.text, margin: 0, marginBottom: 16 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 900, color: C.text, margin: "0 0 16px 0" }}>
           📬 قائمة الدعوات ({invitations.length})
         </h2>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-          {["all", "pending", "approved", "rejected"].map(tab => (
+          {(["all", "pending", "accepted", "rejected"] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setFilter(tab as any)}
+              onClick={() => setFilter(tab)}
               style={{
                 padding: "8px 16px",
                 borderRadius: 10,
@@ -298,15 +321,19 @@ export default function InviteRegionalManagerPage() {
               {tab === "all"
                 ? "الكل"
                 : tab === "pending"
-                ? "قيد الانتظار"
-                : tab === "approved"
-                ? "موافق"
+                ? `قيد الانتظار`
+                : tab === "accepted"
+                ? "مقبول"
                 : "مرفوض"}
             </button>
           ))}
         </div>
 
-        {filteredInvitations.length === 0 ? (
+        {loading ? (
+          <div style={{ textAlign: "center", color: C.textMuted, padding: 40 }}>
+            جاري التحميل...
+          </div>
+        ) : filteredInvitations.length === 0 ? (
           <div
             style={{
               backgroundColor: C.surface,
@@ -320,14 +347,7 @@ export default function InviteRegionalManagerPage() {
             لا توجد دعوات
           </div>
         ) : (
-          <div
-            style={{
-              backgroundColor: C.surface,
-              borderRadius: 12,
-              border: `1px solid ${C.border}`,
-              overflow: "hidden",
-            }}
-          >
+          <div style={{ backgroundColor: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
             {filteredInvitations.map((inv, idx) => (
               <div
                 key={inv.id}
@@ -342,7 +362,7 @@ export default function InviteRegionalManagerPage() {
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>موافقة المالك</div>
+                  <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>الحالة</div>
                   <span
                     style={{
                       padding: "4px 10px",
@@ -350,22 +370,22 @@ export default function InviteRegionalManagerPage() {
                       fontWeight: 700,
                       fontSize: 12,
                       backgroundColor:
-                        inv.super_admin_approval === "approved"
+                        inv.status === "accepted"
                           ? C.successSoft
-                          : inv.super_admin_approval === "pending"
+                          : inv.status === "pending"
                           ? C.warningSoft
                           : C.dangerSoft,
                       color:
-                        inv.super_admin_approval === "approved"
+                        inv.status === "accepted"
                           ? C.success
-                          : inv.super_admin_approval === "pending"
+                          : inv.status === "pending"
                           ? C.warning
                           : C.danger,
                     }}
                   >
-                    {inv.super_admin_approval === "approved"
-                      ? "موافق ✓"
-                      : inv.super_admin_approval === "pending"
+                    {inv.status === "accepted"
+                      ? "مقبول ✓"
+                      : inv.status === "pending"
                       ? "قيد الانتظار"
                       : "مرفوض ✗"}
                   </span>
@@ -384,27 +404,17 @@ export default function InviteRegionalManagerPage() {
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>التاريخ</div>
+                  <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>المرسل</div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>
-                    {new Date(inv.created_at).toLocaleDateString("ar-EG")}
+                    {inv.invited_by_name}
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>الحالة</div>
-                  <span
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: 6,
-                      fontWeight: 700,
-                      fontSize: 12,
-                      backgroundColor:
-                        inv.status === "accepted" ? C.successSoft : inv.status === "pending" ? C.warningSoft : C.dangerSoft,
-                      color: inv.status === "accepted" ? C.success : inv.status === "pending" ? C.warning : C.danger,
-                    }}
-                  >
-                    {inv.status === "accepted" ? "مقبول ✓" : inv.status === "pending" ? "قيد الانتظار" : "مرفوض ✗"}
-                  </span>
+                  <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>التاريخ</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>
+                    {new Date(inv.created_at).toLocaleDateString("ar-EG")}
+                  </div>
                 </div>
               </div>
             ))}

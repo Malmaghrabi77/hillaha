@@ -86,6 +86,25 @@ export default function AdminLayout({
     return true;
   });
 
+  // Add role-specific admin management items
+  const adminManagementItems: NavItem[] = [];
+
+  if (auth.isRegionalManager) {
+    adminManagementItems.push(
+      { href: "/admin/admin-management/invite-regular-admin", label: "دعوة مدير عادي", icon: "👤" },
+      { href: "/admin/admin-management/invite-partners-regional-manager", label: "دعوة شريك جديد", icon: "🤝" },
+      { href: "/admin/admin-management/approve-partners-regional-manager", label: "موافقة دعوات الشركاء", icon: "✅" }
+    );
+  }
+
+  if (auth.isRegularAdmin) {
+    adminManagementItems.push(
+      { href: "/admin/admin-management/invite-partners-regular-admin", label: "دعوة شريك", icon: "🤝" }
+    );
+  }
+
+  const allNavItems = [...visibleNavItems, ...adminManagementItems];
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: C.bg }}>
       {/* Sidebar */}
@@ -109,13 +128,19 @@ export default function AdminLayout({
             </h1>
           </div>
           <p style={{ color: C.textMuted, fontSize: 12, margin: 0 }}>
-            {auth.isSuperAdmin ? "Super Admin" : "Frid Admin"}
+            {auth.isSuperAdmin
+              ? "Super Admin"
+              : auth.isRegionalManager
+              ? "المدير الإقليمي"
+              : auth.isRegularAdmin
+              ? "مدير عادي"
+              : "Admin"}
           </p>
         </div>
 
         {/* Navigation */}
         <nav style={{ flex: 1, padding: "16px 12px", overflowY: "auto" }}>
-          {visibleNavItems.map((item) => {
+          {allNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <button

@@ -87,6 +87,7 @@ export type AdminInvitation = {
   super_admin_approval: "pending" | "approved" | "rejected";
   approved_by_super_admin?: string;
   super_admin_notes?: string;
+  can_be_invited_by?: "super_admin" | "regional_manager" | "super_admin,regional_manager";
   created_at: string;
   accepted_at?: string;
   approved_at?: string;
@@ -109,4 +110,40 @@ export type PartnerApprovalHistory = {
   action: "approved" | "rejected";
   notes?: string;
   created_at: string;
+};
+
+export type PartnerInvitation = {
+  id: string;
+  email: string;
+  name: string;
+  phone: string;
+  status: "pending" | "accepted" | "rejected";
+  invited_by: string;
+  invited_by_role: "super_admin" | "regional_manager" | "regular_admin";
+  invited_type?: string;
+  regional_manager_approval?: "pending" | "approved" | "rejected" | null;
+  super_admin_approval?: "pending" | "approved" | "rejected" | null;
+  approved_by_regional_manager?: string;
+  approved_by_super_admin?: string;
+  approval_notes?: string;
+  rejection_reason?: string;
+  created_at: string;
+  accepted_at?: string;
+  approved_at?: string;
+  regional_manager_approved_at?: string;
+};
+
+export type StoreAdmin = {
+  id: string;
+  email: string;
+  name: string;
+  phone: string;
+  store_id?: string;
+  store_name?: string;
+  partner_id: string;
+  assigned_by: string;
+  status: "active" | "inactive" | "pending";
+  user_id?: string;
+  created_at: string;
+  activated_at?: string;
 };

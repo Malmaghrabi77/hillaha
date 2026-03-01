@@ -12,8 +12,8 @@ CREATE TABLE public.admin_invitations (
   name TEXT NOT NULL,
   phone TEXT NOT NULL,
 
-  -- نوع الدعوة (frid_admin أو regular_admin)
-  admin_type TEXT NOT NULL CHECK (admin_type IN ('frid_admin', 'regular_admin')),
+  -- نوع الدعوة (regional_manager only)
+  admin_type TEXT NOT NULL CHECK (admin_type IN ('regional_manager')),
 
   -- من أرسل الدعوة
   invited_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -89,10 +89,10 @@ CREATE POLICY "super_admin_see_all_invitations" ON public.admin_invitations
     )
   );
 
--- الفريد أدمن يرى فقط الدعوات التي أرسلها (للـ regular_admin)
-CREATE POLICY "frid_admin_see_own_invitations" ON public.admin_invitations
+-- Regional Manager يرى فقط الدعوات التي أرسلها
+CREATE POLICY "regional_manager_see_own_invitations" ON public.admin_invitations
   FOR SELECT USING (
-    invited_by = auth.uid() AND admin_type = 'regular_admin'
+    invited_by = auth.uid() AND admin_type = 'regional_manager'
   );
 
 -- سياسات partner_approval_history

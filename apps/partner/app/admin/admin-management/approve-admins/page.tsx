@@ -53,7 +53,7 @@ export default function ApproveAdminsPage() {
       const { data, error: err } = await supabase
         .from("admin_invitations")
         .select("*")
-        .eq("admin_type", "regular_admin")
+        .eq("admin_type", "regional_manager")
         .eq("super_admin_approval", "pending")
         .order("created_at", { ascending: false });
 

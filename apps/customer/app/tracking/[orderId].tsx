@@ -58,6 +58,18 @@ interface OrderInfo {
   customerLng:   number;
 }
 
+// Calculate distance between two coordinates (in km)
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
 export default function Tracking() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
 
@@ -66,6 +78,7 @@ export default function Tracking() {
   const [driverCoord, setDriverCoord] = useState<DriverCoord | null>(null);
   const [eta,         setEta]         = useState(25);
   const [loading,     setLoading]     = useState(true);
+  const [distance,    setDistance]    = useState(0);
 
   const pulseAnim  = useRef(new Animated.Value(1)).current;
 
@@ -112,7 +125,7 @@ export default function Tracking() {
         const custLat = QENA_DEFAULT.latitude - 0.004;
         const custLng = QENA_DEFAULT.longitude + 0.006;
 
-        setOrderInfo({
+        const orderObj = {
           id:           data.id.substring(0, 8).toUpperCase(),
           status:       data.status,
           driverName:   (data as any).driver?.full_name ?? "أحمد المندوب",
@@ -123,9 +136,17 @@ export default function Tracking() {
           restaurantLng: restLng,
           customerLat:   custLat,
           customerLng:   custLng,
-        });
+        };
 
+        setOrderInfo(orderObj);
+
+        // Calculate initial distance if driver location is available
         if (data.driver_lat && data.driver_lng) {
+          const initialDist = calculateDistance(
+            Number(data.driver_lat), Number(data.driver_lng),
+            custLat, custLng
+          );
+          setDistance(initialDist);
           setDriverCoord({
             latitude:  Number(data.driver_lat),
             longitude: Number(data.driver_lng),
@@ -154,10 +175,20 @@ export default function Tracking() {
 
           // Update driver marker
           if (d.driver_lat && d.driver_lng) {
+            const driverLat = Number(d.driver_lat);
+            const driverLng = Number(d.driver_lng);
             setDriverCoord({
-              latitude:  Number(d.driver_lat),
-              longitude: Number(d.driver_lng),
+              latitude:  driverLat,
+              longitude: driverLng,
               heading:   d.driver_heading ? Number(d.driver_heading) : null,
+            });
+
+            // Calculate distance to customer in real-time
+            setOrderInfo(prev => {
+              if (!prev) return null;
+              const dist = calculateDistance(driverLat, driverLng, prev.customerLat, prev.customerLng);
+              setDistance(dist);
+              return prev;
             });
           }
         }
@@ -189,14 +220,109 @@ export default function Tracking() {
         height: SCREEN.height * 0.58,
         backgroundColor: "#E8E4F0",
         justifyContent: "center", alignItems: "center",
+        overflow: "hidden",
+        position: "relative",
       }}>
-        <Text style={{ fontSize: 48, marginBottom: 12 }}>🗺️</Text>
-        <Text style={{ fontSize: 14, color: "#6B7280", fontWeight: "700" }}>
-          تتبع المندوب على الخريطة
-        </Text>
-        <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>
-          متاح قريباً
-        </Text>
+        {/* Map visualization background gradient */}
+        <View style={{
+          position: "absolute",
+          width: "100%", height: "100%",
+          backgroundColor: "#E8ECFF",
+        }} />
+
+        {/* Route visualization */}
+        {orderInfo && step >= 2 && (
+          <View style={{
+            position: "absolute",
+            width: "100%", height: "100%",
+            justifyContent: "center", alignItems: "center",
+          }}>
+            {/* Simplified route line */}
+            <View style={{
+              position: "absolute",
+              width: 2, height: "60%",
+              backgroundColor: "#8B5CF6",
+              opacity: 0.3,
+            }} />
+
+            {/* Restaurant marker (top) */}
+            <View style={{
+              position: "absolute", top: "20%",
+              width: 44, height: 44,
+              borderRadius: 22,
+              backgroundColor: "#FEF3C7",
+              borderWidth: 2.5, borderColor: "#F59E0B",
+              justifyContent: "center", alignItems: "center",
+            }}>
+              <Text style={{ fontSize: 20 }}>🍽️</Text>
+            </View>
+
+            {/* Driver marker (middle) - animated */}
+            <Animated.View style={{
+              position: "absolute",
+              width: 50, height: 50,
+              borderRadius: 25,
+              backgroundColor: "#DBEAFE",
+              borderWidth: 3, borderColor: "#2563EB",
+              justifyContent: "center", alignItems: "center",
+              shadowColor: "#2563EB",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.4,
+              shadowRadius: 8,
+              elevation: 8,
+              transform: [{ scale: pulseAnim }],
+            }}>
+              <Text style={{ fontSize: 24 }}>🛵</Text>
+            </Animated.View>
+
+            {/* Customer marker (bottom) */}
+            <View style={{
+              position: "absolute", bottom: "20%",
+              width: 44, height: 44,
+              borderRadius: 22,
+              backgroundColor: "#DBEAFE",
+              borderWidth: 2.5, borderColor: "#2563EB",
+              justifyContent: "center", alignItems: "center",
+            }}>
+              <Text style={{ fontSize: 20 }}>📍</Text>
+            </View>
+
+            {/* Distance badge */}
+            {distance > 0 && (
+              <View style={{
+                position: "absolute", right: 16, top: "40%",
+                backgroundColor: "white",
+                paddingVertical: 8, paddingHorizontal: 12,
+                borderRadius: 12,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 8,
+                elevation: 4,
+              }}>
+                <Text style={{ fontSize: 11, color: "#6B7280", fontWeight: "700" }}>
+                  المسافة
+                </Text>
+                <Text style={{ fontSize: 16, color: "#2563EB", fontWeight: "900", marginTop: 2 }}>
+                  {distance.toFixed(1)} كم
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Fallback text when not in delivery step */}
+        {step < 2 && (
+          <>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>🗺️</Text>
+            <Text style={{ fontSize: 14, color: "#6B7280", fontWeight: "700" }}>
+              الخريطة ستظهر عند خروج المندوب
+            </Text>
+            <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>
+              سيتم تتبع موقع المندوب تلقائياً
+            </Text>
+          </>
+        )}
 
         {/* Back button overlay */}
         <Pressable

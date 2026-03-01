@@ -50,6 +50,8 @@ export default function UsersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [suspending, setSuspending] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const itemsPerPage = 50;
 
@@ -115,6 +117,55 @@ export default function UsersPage() {
       console.error("Error loading users:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSuspendUser = async (userId: string, currentStatus: boolean) => {
+    const action = currentStatus ? "تعطيل" : "تفعيل";
+    if (!confirm(`هل تريد بالفعل ${action} هذا المستخدم؟`)) return;
+
+    setSuspending(userId);
+    try {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("لا يوجد اتصال");
+
+      const { error } = await (supabase.from("profiles") as any)
+        .update({ is_active: !currentStatus })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      await loadUsers();
+      setSelectedUser(null);
+    } catch (error: any) {
+      console.error("Error suspending user:", error);
+      alert(error.message || `حدث خطأ في ${action} المستخدم`);
+    } finally {
+      setSuspending(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("هل تريد بالفعل حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء!")) return;
+
+    setDeleting(userId);
+    try {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("لا يوجد اتصال");
+
+      const { error } = await (supabase.from("profiles") as any)
+        .delete()
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      await loadUsers();
+      setSelectedUser(null);
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      alert(error.message || "حدث خطأ في حذف المستخدم");
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -591,6 +642,50 @@ export default function UsersPage() {
                 })}
               </p>
             </div>
+
+            {/* Show action buttons only for non-admin users */}
+            {selectedUser.role !== "admin" && selectedUser.role !== "super_admin" && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                <button
+                  onClick={() => handleSuspendUser(selectedUser.id, selectedUser.is_active)}
+                  disabled={suspending === selectedUser.id}
+                  style={{
+                    padding: 12,
+                    borderRadius: 8,
+                    background: selectedUser.is_active ? C.warning : C.success,
+                    color: "white",
+                    border: "none",
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: suspending === selectedUser.id ? "not-allowed" : "pointer",
+                    opacity: suspending === selectedUser.id ? 0.6 : 1,
+                  }}
+                >
+                  {suspending === selectedUser.id
+                    ? "جاري المعالجة..."
+                    : selectedUser.is_active
+                    ? "تعطيل المستخدم"
+                    : "تفعيل المستخدم"}
+                </button>
+                <button
+                  onClick={() => handleDeleteUser(selectedUser.id)}
+                  disabled={deleting === selectedUser.id}
+                  style={{
+                    padding: 12,
+                    borderRadius: 8,
+                    background: C.danger,
+                    color: "white",
+                    border: "none",
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: deleting === selectedUser.id ? "not-allowed" : "pointer",
+                    opacity: deleting === selectedUser.id ? 0.6 : 1,
+                  }}
+                >
+                  {deleting === selectedUser.id ? "جاري الحذف..." : "حذف المستخدم"}
+                </button>
+              </div>
+            )}
 
             <button
               onClick={() => setSelectedUser(null)}

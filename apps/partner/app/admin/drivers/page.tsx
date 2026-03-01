@@ -52,6 +52,8 @@ export default function DriversPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [suspending, setSuspending] = useState<string | null>(null);
+  const [ratingFilter, setRatingFilter] = useState<string>("all");
 
   const itemsPerPage = 50;
 
@@ -69,6 +71,12 @@ export default function DriversPage() {
       filtered = filtered.filter(driver => driver.is_active === isActiveFilter);
     }
 
+    // Apply rating filter
+    if (ratingFilter !== "all") {
+      const minRating = parseFloat(ratingFilter);
+      filtered = filtered.filter(driver => (driver.rating || 0) >= minRating);
+    }
+
     // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(driver =>
@@ -80,7 +88,7 @@ export default function DriversPage() {
 
     setFilteredDrivers(filtered);
     setCurrentPage(1);
-  }, [drivers, searchTerm, statusFilter]);
+  }, [drivers, searchTerm, statusFilter, ratingFilter]);
 
   const loadDrivers = async () => {
     try {
@@ -112,6 +120,31 @@ export default function DriversPage() {
       console.error("Error loading drivers:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSuspendDriver = async (driverId: string, currentStatus: boolean) => {
+    const action = currentStatus ? "تعطيل" : "تفعيل";
+    if (!confirm(`هل تريد بالفعل ${action} هذا المندوب؟`)) return;
+
+    setSuspending(driverId);
+    try {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("لا يوجد اتصال");
+
+      const { error } = await (supabase.from("profiles") as any)
+        .update({ is_active: !currentStatus })
+        .eq("id", driverId);
+
+      if (error) throw error;
+
+      await loadDrivers();
+      setSelectedDriver(null);
+    } catch (error: any) {
+      console.error("Error suspending driver:", error);
+      alert(error.message || `حدث خطأ في ${action} المندوب`);
+    } finally {
+      setSuspending(null);
     }
   };
 
@@ -252,6 +285,22 @@ export default function DriversPage() {
           <option value="all">جميع الحالات</option>
           <option value="active">نشط</option>
           <option value="inactive">غير نشط</option>
+        </select>
+        <select
+          value={ratingFilter}
+          onChange={(e) => setRatingFilter(e.target.value)}
+          style={{
+            padding: 12,
+            borderRadius: 8,
+            border: `1px solid ${C.border}`,
+            fontSize: 13,
+            fontFamily: "inherit",
+          }}
+        >
+          <option value="all">جميع التقييمات</option>
+          <option value="4">⭐⭐⭐⭐ و أعلى</option>
+          <option value="3">⭐⭐⭐ و أعلى</option>
+          <option value="2">⭐⭐ و أعلى</option>
         </select>
       </div>
 
@@ -562,6 +611,30 @@ export default function DriversPage() {
                 {selectedDriver.is_active ? "نشط" : "غير نشط"}
               </span>
             </div>
+
+            <button
+              onClick={() => handleSuspendDriver(selectedDriver.id, selectedDriver.is_active)}
+              disabled={suspending === selectedDriver.id}
+              style={{
+                width: "100%",
+                padding: 12,
+                borderRadius: 8,
+                background: selectedDriver.is_active ? C.warning : C.success,
+                color: "white",
+                border: "none",
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: suspending === selectedDriver.id ? "not-allowed" : "pointer",
+                opacity: suspending === selectedDriver.id ? 0.6 : 1,
+                marginBottom: 12,
+              }}
+            >
+              {suspending === selectedDriver.id
+                ? "جاري المعالجة..."
+                : selectedDriver.is_active
+                ? "تعطيل المندوب"
+                : "تفعيل المندوب"}
+            </button>
 
             <button
               onClick={() => setSelectedDriver(null)}

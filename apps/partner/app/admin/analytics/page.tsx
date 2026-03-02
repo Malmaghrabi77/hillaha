@@ -3,7 +3,9 @@
 import React, { useEffect, useState } from "react";
 import { getSupabase } from "@hillaha/core";
 import { useAdminAuth } from "../hooks/useAdminAuth";
-import {
+import * as RechartsPrimitives from "recharts";
+
+const {
   LineChart,
   Line,
   BarChart,
@@ -17,7 +19,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from "recharts";
+} = RechartsPrimitives;
 
 const C = {
   primary: "#8B5CF6",

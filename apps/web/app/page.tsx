@@ -1,5 +1,4 @@
 import React from "react";
-import Image from "next/image";
 
 export default function WebHome() {
   return (
@@ -17,7 +16,7 @@ export default function WebHome() {
         borderBottom: "1px solid rgba(139,92,246,0.15)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Image src="/logo.png" alt="حلّها" width={36} height={36} style={{ objectFit: "contain" }} />
+          <img src="/logo.png" alt="حلّها" width="36" height="36" style={{ objectFit: "contain" }} />
           <span style={{
             fontSize: 22, fontWeight: 900,
             background: "linear-gradient(135deg, #C4B5FD, #EC4899)",
@@ -73,7 +72,7 @@ export default function WebHome() {
           display: "flex", alignItems: "center", justifyContent: "center",
           marginBottom: 28, boxShadow: "0 0 60px rgba(139,92,246,0.4)",
         }}>
-          <Image src="/logo.png" alt="حلّها" width={80} height={80} style={{ objectFit: "contain" }} />
+          <img src="/logo.png" alt="حلّها" width="80" height="80" style={{ objectFit: "contain" }} />
         </div>
 
         {/* Badge */}
@@ -374,7 +373,7 @@ export default function WebHome() {
         background: "linear-gradient(135deg, #1E0A3C, #3D0F6B)",
         textAlign: "center",
       }}>
-        <Image src="/logo.png" alt="حلّها" width={64} height={64} style={{ objectFit: "contain", marginBottom: 20 }} />
+        <img src="/logo.png" alt="حلّها" width="64" height="64" style={{ objectFit: "contain", marginBottom: 20 }} />
         <h2 style={{
           margin: "0 0 12px", fontSize: "clamp(28px, 5vw, 44px)", fontWeight: 900, color: "white",
         }}>
@@ -422,7 +421,7 @@ export default function WebHome() {
             flexWrap: "wrap", gap: 16, marginBottom: 28,
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Image src="/logo.png" alt="حلّها" width={32} height={32} style={{ objectFit: "contain" }} />
+              <img src="/logo.png" alt="حلّها" width="32" height="32" style={{ objectFit: "contain" }} />
               <span style={{
                 fontSize: 18, fontWeight: 900,
                 background: "linear-gradient(135deg, #C4B5FD, #EC4899)",

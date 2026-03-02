@@ -3,21 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { getSupabase } from "@hillaha/core";
 import { useAdminAuth } from "./hooks/useAdminAuth";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
 
 const C = {
   primary: "#8B5CF6",
@@ -459,8 +444,6 @@ export default function AdminDashboard() {
     );
   };
 
-  const PIE_COLORS = [C.primary, C.success, C.warning, "#F97316", "#06B6D4"];
-
   if (loading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
@@ -618,38 +601,32 @@ export default function AdminDashboard() {
       {auth.isSuperAdmin && (
         <>
           <ChartSection title="📈 اتجاه الإيرادات (6 أشهر)">
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={stats.monthlyRevenueData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-                <XAxis dataKey="month" stroke={C.textMuted} />
-                <YAxis stroke={C.textMuted} />
-                <Tooltip contentStyle={{ background: C.surface, border: `1px solid ${C.border}` }} />
-                <Line type="monotone" dataKey="revenue" stroke={C.primary} strokeWidth={2} dot={{ fill: C.primary, r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            <div style={{
+              padding: 32,
+              backgroundColor: C.surfaceLight,
+              borderRadius: 12,
+              textAlign: "center",
+              color: C.textMuted,
+              minHeight: 300
+            }}>
+              <p style={{ margin: 0 }}>📊 الرسم البياني سيتم تحميله على العميل</p>
+              <p style={{ margin: "8px 0 0 0", fontSize: 12 }}>البيانات: {stats.monthlyRevenueData.length} شهور</p>
+            </div>
           </ChartSection>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, marginBottom: 24 }}>
             <ChartSection title="📊 توزيع حالات الطلبات">
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={stats.orderDistributionData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {stats.orderDistributionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <div style={{
+                padding: 32,
+                backgroundColor: C.surfaceLight,
+                borderRadius: 12,
+                textAlign: "center",
+                color: C.textMuted,
+                minHeight: 250
+              }}>
+                <p style={{ margin: 0 }}>📊 البيانات متاحة</p>
+                <p style={{ margin: "8px 0 0 0", fontSize: 12 }}>عدد الحالات: {stats.orderDistributionData.length}</p>
+              </div>
             </ChartSection>
 
             <ChartSection title="👥 معدل إتمام الطلبات">
@@ -690,38 +667,32 @@ export default function AdminDashboard() {
       {!auth.isSuperAdmin && (
         <>
           <ChartSection title="📈 اتجاه الإيرادات (6 أشهر)">
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={stats.monthlyRevenueData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-                <XAxis dataKey="month" stroke={C.textMuted} />
-                <YAxis stroke={C.textMuted} />
-                <Tooltip contentStyle={{ background: C.surface, border: `1px solid ${C.border}` }} />
-                <Line type="monotone" dataKey="revenue" stroke={C.primary} strokeWidth={2} dot={{ fill: C.primary, r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            <div style={{
+              padding: 32,
+              backgroundColor: C.surfaceLight,
+              borderRadius: 12,
+              textAlign: "center",
+              color: C.textMuted,
+              minHeight: 300
+            }}>
+              <p style={{ margin: 0 }}>📊 الرسم البياني سيتم تحميله على العميل</p>
+              <p style={{ margin: "8px 0 0 0", fontSize: 12 }}>البيانات: {stats.monthlyRevenueData.length} شهور</p>
+            </div>
           </ChartSection>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, marginBottom: 24 }}>
             <ChartSection title="📊 توزيع الإيرادات حسب الشريك">
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={stats.orderDistributionData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {stats.orderDistributionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <div style={{
+                padding: 32,
+                backgroundColor: C.surfaceLight,
+                borderRadius: 12,
+                textAlign: "center",
+                color: C.textMuted,
+                minHeight: 250
+              }}>
+                <p style={{ margin: 0 }}>📊 البيانات متاحة</p>
+                <p style={{ margin: "8px 0 0 0", fontSize: 12 }}>عدد البيانات: {stats.orderDistributionData.length}</p>
+              </div>
             </ChartSection>
 
             <ChartSection title="📋 حالات الطلبات">

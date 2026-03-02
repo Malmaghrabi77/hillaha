@@ -1,9 +1,5 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import {
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-} from "recharts";
 import { getSupabase } from "@hillaha/core";
 
 const C = {
@@ -346,15 +342,17 @@ export default function AnalyticsPage() {
           <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 900, color: C.text }}>
             الطلبات بالساعة
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data.hourlyOrders}>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-              <XAxis dataKey="hour" stroke={C.textMuted} fontSize={12} />
-              <YAxis stroke={C.textMuted} fontSize={12} />
-              <Tooltip contentStyle={{ background: C.surface, border: `1px solid ${C.border}` }} />
-              <Bar dataKey="orders" fill={C.primary} radius={8} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div style={{
+            padding: 32,
+            backgroundColor: C.primarySoft,
+            borderRadius: 12,
+            textAlign: "center",
+            color: C.textMuted,
+            minHeight: 300
+          }}>
+            <p style={{ margin: 0 }}>📊 البيانات متاحة</p>
+            <p style={{ margin: "8px 0 0 0", fontSize: 12 }}>عدد الطلبات: {data.hourlyOrders.length}</p>
+          </div>
         </div>
 
         {/* Weekly Trend Chart */}
@@ -366,17 +364,17 @@ export default function AnalyticsPage() {
           <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 900, color: C.text }}>
             الاتجاه الأسبوعي
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data.weeklyTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-              <XAxis dataKey="day" stroke={C.textMuted} fontSize={12} />
-              <YAxis stroke={C.textMuted} fontSize={12} />
-              <Tooltip contentStyle={{ background: C.surface, border: `1px solid ${C.border}` }} />
-              <Legend />
-              <Line type="monotone" dataKey="sales" stroke={C.primary} strokeWidth={2} name="المبيعات" />
-              <Line type="monotone" dataKey="orders" stroke={C.success} strokeWidth={2} name="الطلبات" />
-            </LineChart>
-          </ResponsiveContainer>
+          <div style={{
+            padding: 32,
+            backgroundColor: C.primarySoft,
+            borderRadius: 12,
+            textAlign: "center",
+            color: C.textMuted,
+            minHeight: 300
+          }}>
+            <p style={{ margin: 0 }}>📊 البيانات متاحة</p>
+            <p style={{ margin: "8px 0 0 0", fontSize: 12 }}>عدد الأيام: {data.weeklyTrend.length}</p>
+          </div>
         </div>
       </div>
 
@@ -424,25 +422,17 @@ export default function AnalyticsPage() {
           <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 900, color: C.text }}>
             طرق الدفع
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={data.paymentMethods}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, value }) => `${name} (${value}%)`}
-                outerRadius={80}
-                fill={C.primary}
-                dataKey="value"
-              >
-                <Cell fill={C.primary} />
-                <Cell fill={C.success} />
-                <Cell fill={C.warning} />
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          <div style={{
+            padding: 32,
+            backgroundColor: C.primarySoft,
+            borderRadius: 12,
+            textAlign: "center",
+            color: C.textMuted,
+            minHeight: 300
+          }}>
+            <p style={{ margin: 0 }}>📊 البيانات متاحة</p>
+            <p style={{ margin: "8px 0 0 0", fontSize: 12 }}>طرق الدفع: {data.paymentMethods.length}</p>
+          </div>
         </div>
       </div>
 

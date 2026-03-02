@@ -1,15 +1,5 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
 import { getSupabase, generateFinanceReport } from "@hillaha/core";
 
 const C = {
@@ -417,60 +407,17 @@ export default function FinancePage() {
           </div>
 
           {monthlyStats.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={C.border}
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="name"
-                  stroke={C.textMuted}
-                  style={{ fontSize: 12 }}
-                />
-                <YAxis
-                  stroke={C.textMuted}
-                  style={{ fontSize: 12 }}
-                  label={{ value: "ج.س", angle: -90, position: "insideLeft" }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: C.surface,
-                    border: `1px solid ${C.border}`,
-                    borderRadius: 8,
-                    fontFamily:
-                      '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                  }}
-                  formatter={(value: any) =>
-                    `${Number(value).toLocaleString("ar-EG")} ج.س`
-                  }
-                  labelFormatter={(label) => `${label}`}
-                />
-                <Legend
-                  wrapperStyle={{ fontSize: 12, paddingTop: 10 }}
-                  formatter={(value) => {
-                    const labels: Record<string, string> = {
-                      المبيعات: "المبيعات",
-                      الصافي: "الصافي",
-                    };
-                    return labels[value] || value;
-                  }}
-                />
-                <Bar
-                  dataKey="المبيعات"
-                  fill={C.primary}
-                  radius={[6, 6, 0, 0]}
-                  barSize={40}
-                />
-                <Bar
-                  dataKey="الصافي"
-                  fill={C.success}
-                  radius={[6, 6, 0, 0]}
-                  barSize={40}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <div style={{
+              padding: 32,
+              backgroundColor: C.primarySoft,
+              borderRadius: 12,
+              textAlign: "center",
+              color: C.textMuted,
+              minHeight: 300
+            }}>
+              <p style={{ margin: 0 }}>📊 البيانات متاحة</p>
+              <p style={{ margin: "8px 0 0 0", fontSize: 12 }}>عدد البيانات: {chartData.length}</p>
+            </div>
           ) : (
             <div
               style={{

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, TextInput, Pressable, ScrollView,
-  ActivityIndicator, Image,
+  ActivityIndicator, Image, Modal,
 } from "react-native";
 import { router } from "expo-router";
 
@@ -18,45 +18,97 @@ function getSB() {
 
 interface Partner {
   id: string;
-  name_ar: string;
-  category: string;
-  rating: number | null;
-  delivery_time: string | null;
-  delivery_fee: number | null;
+  name: string;
+  type: string;
   cover_image: string | null;
+  rating: number | null;
+  review_count: number;
+  delivery_time: string;
+  delivery_fee: number;
 }
 
 const POPULAR_TAGS = ["مطاعم", "شاورما", "برجر", "صيدلية", "قهوة وحلويات", "طبيب"];
 
+const SORT_OPTIONS = [
+  { id: "rating", label: "الأفضل تقييماً", icon: "⭐" },
+  { id: "fastest", label: "الأسرع توصيلاً", icon: "🚀" },
+  { id: "cheapest", label: "الأرخص توصيل", icon: "💰" },
+];
+
 export default function Search() {
-  const [query,   setQuery]   = useState("");
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filter states
+  const [sortBy, setSortBy] = useState("rating");
+  const [minRating, setMinRating] = useState(0);
+  const [maxDeliveryFee, setMaxDeliveryFee] = useState(50);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function searchPartners() {
+    const supabase = getSB();
+    if (!supabase) return;
+
+    setLoading(true);
+    try {
+      let queryBuilder = supabase
+        .from("partners")
+        .select("id, name, type, cover_image, rating, review_count, delivery_time, delivery_fee")
+        .eq("is_approved", true);
+
+      // Search filter
+      if (query.trim()) {
+        queryBuilder = queryBuilder.or(`name.ilike.%${query}%,type.ilike.%${query}%`);
+      }
+
+      // Rating filter
+      if (minRating > 0) {
+        queryBuilder = queryBuilder.gte("rating", minRating);
+      }
+
+      // Delivery fee filter
+      queryBuilder = queryBuilder.lte("delivery_fee", maxDeliveryFee);
+
+      // Sort
+      if (sortBy === "rating") {
+        queryBuilder = queryBuilder.order("rating", { ascending: false });
+      } else if (sortBy === "fastest") {
+        queryBuilder = queryBuilder.order("delivery_time", { ascending: true });
+      } else if (sortBy === "cheapest") {
+        queryBuilder = queryBuilder.order("delivery_fee", { ascending: true });
+      }
+
+      const { data } = await queryBuilder.limit(30);
+      setResults((data as Partner[]) ?? []);
+    } catch (error) {
+      console.log("Search error:", error);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (!query.trim()) { setResults([]); return; }
+    if (!query.trim() && minRating === 0 && maxDeliveryFee === 50) {
+      setResults([]);
+      return;
+    }
 
-    debounceRef.current = setTimeout(async () => {
-      const supabase = getSB();
-      if (!supabase) return;
-      setLoading(true);
-      try {
-        const { data } = await supabase
-          .from("partners")
-          .select("id, name_ar, category, rating, delivery_time, delivery_fee, cover_image")
-          .or(`name_ar.ilike.%${query}%,name.ilike.%${query}%,category.ilike.%${query}%`)
-          .order("rating", { ascending: false })
-          .limit(20);
-        setResults((data as Partner[]) ?? []);
-      } catch { setResults([]); }
-      finally { setLoading(false); }
+    debounceRef.current = setTimeout(() => {
+      searchPartners();
     }, 350);
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query]);
+  }, [query, minRating, maxDeliveryFee]);
+
+  useEffect(() => {
+    searchPartners();
+  }, [sortBy]);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -66,33 +118,76 @@ export default function Search() {
         paddingTop: 52,
       }}>
         <Text style={{ fontSize: 20, fontWeight: "900", color: C.text, marginBottom: 12 }}>بحث</Text>
+
+        {/* Search Bar */}
         <View style={{
-          flexDirection: "row", alignItems: "center",
-          backgroundColor: C.bg, borderRadius: 14,
-          borderWidth: 1.5, borderColor: C.border,
-          paddingHorizontal: 12, paddingVertical: 10, gap: 8,
+          flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12,
         }}>
-          <Text style={{ fontSize: 16, opacity: 0.5 }}>🔍</Text>
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="ابحث عن مطعم، صيدلية، طبيب..."
-            placeholderTextColor={C.textMuted}
-            autoFocus
-            style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
-          />
-          {loading ? (
-            <ActivityIndicator size="small" color={C.primary} />
-          ) : query.length > 0 ? (
-            <Pressable onPress={() => setQuery("")}>
-              <Text style={{ color: C.textMuted, fontSize: 16 }}>✕</Text>
-            </Pressable>
-          ) : null}
+          <View style={{
+            flex: 1, flexDirection: "row", alignItems: "center",
+            backgroundColor: C.bg, borderRadius: 14,
+            borderWidth: 1.5, borderColor: C.border,
+            paddingHorizontal: 12, paddingVertical: 10,
+          }}>
+            <Text style={{ fontSize: 16, opacity: 0.5 }}>🔍</Text>
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="ابحث عن مطعم، صيدلية..."
+              placeholderTextColor={C.textMuted}
+              autoFocus
+              style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right", marginRight: 8 }}
+            />
+            {loading ? (
+              <ActivityIndicator size="small" color={C.primary} />
+            ) : query.length > 0 ? (
+              <Pressable onPress={() => setQuery("")}>
+                <Text style={{ color: C.textMuted, fontSize: 16 }}>✕</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          <Pressable
+            onPress={() => setShowFilters(true)}
+            style={{
+              width: 44, height: 44, borderRadius: 12,
+              backgroundColor: C.primarySoft,
+              justifyContent: "center", alignItems: "center",
+            }}
+          >
+            <Text style={{ fontSize: 18 }}>⚙️</Text>
+          </Pressable>
         </View>
+
+        {/* Sort Options */}
+        {results.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+            {SORT_OPTIONS.map(opt => (
+              <Pressable
+                key={opt.id}
+                onPress={() => setSortBy(opt.id)}
+                style={{
+                  paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20,
+                  backgroundColor: sortBy === opt.id ? C.primary : C.bg,
+                  marginRight: 8,
+                  borderWidth: 1,
+                  borderColor: sortBy === opt.id ? C.primary : C.border,
+                }}
+              >
+                <Text style={{
+                  fontSize: 11, fontWeight: "700",
+                  color: sortBy === opt.id ? "white" : C.text,
+                }}>
+                  {opt.icon} {opt.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       <ScrollView style={{ padding: 16 }} contentContainerStyle={{ paddingBottom: 80 }}>
-        {query.length === 0 && (
+        {query.length === 0 && minRating === 0 && maxDeliveryFee === 50 && (
           <View>
             <Text style={{ fontSize: 14, fontWeight: "700", color: C.textMuted, marginBottom: 12 }}>
               الأكثر بحثاً
@@ -110,11 +205,14 @@ export default function Search() {
           </View>
         )}
 
-        {query.length > 0 && !loading && results.length === 0 && (
+        {(query.length > 0 || minRating > 0 || maxDeliveryFee < 50) && !loading && results.length === 0 && (
           <View style={{ alignItems: "center", marginTop: 60 }}>
             <Text style={{ fontSize: 48, marginBottom: 12 }}>🔍</Text>
             <Text style={{ color: C.textMuted, fontSize: 15, fontWeight: "700" }}>
-              لا توجد نتائج لـ "{query}"
+              لا توجد نتائج
+            </Text>
+            <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>
+              جرب البحث بكلمات أخرى
             </Text>
           </View>
         )}
@@ -127,12 +225,10 @@ export default function Search() {
               flexDirection: "row", alignItems: "center", gap: 12,
               padding: 12, borderRadius: 18, marginBottom: 10,
               backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
-              shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
             }}
           >
             <View style={{
-              width: 60, height: 60, borderRadius: 14,
+              width: 70, height: 70, borderRadius: 14,
               backgroundColor: C.primarySoft, overflow: "hidden",
             }}>
               {p.cover_image ? (
@@ -147,28 +243,135 @@ export default function Search() {
               )}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "900", color: C.text, fontSize: 15 }}>{p.name_ar}</Text>
-              <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{p.category}</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
-                {p.rating != null && (
+              <Text style={{ fontWeight: "900", color: C.text, fontSize: 14 }}>{p.name}</Text>
+              <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>{p.type}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 }}>
+                {p.rating ? (
                   <Text style={{ fontSize: 11, fontWeight: "700", color: "#F59E0B" }}>
-                    ★ {Number(p.rating).toFixed(1)}
+                    ★ {p.rating.toFixed(1)} ({p.review_count})
                   </Text>
-                )}
-                {p.delivery_time && (
-                  <Text style={{ fontSize: 11, color: C.textMuted }}>🕐 {p.delivery_time}</Text>
-                )}
+                ) : null}
+                <Text style={{ fontSize: 10, color: C.textMuted }}>•</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted }}>🕐 {p.delivery_time}</Text>
               </View>
             </View>
-            <View style={{ backgroundColor: C.primarySoft, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10 }}>
-              <Text style={{ color: C.primary, fontWeight: "900", fontSize: 12 }}>
-                {p.delivery_fee != null ? `${p.delivery_fee} ج` : "اطلب"}
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ fontSize: 12, fontWeight: "900", color: C.primary }}>
+                {p.delivery_fee} ج
               </Text>
+              <Text style={{ fontSize: 9, color: C.textMuted, marginTop: 2 }}>توصيل</Text>
             </View>
           </Pressable>
         ))}
-        <View style={{ height: 40 }} />
+        <View style={{ height: 20 }} />
       </ScrollView>
+
+      {/* Filter Modal */}
+      <Modal visible={showFilters} animationType="slide" transparent>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <View style={{
+            marginTop: "auto",
+            backgroundColor: C.bg,
+            borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            paddingBottom: 40, paddingHorizontal: 16, paddingTop: 20,
+          }}>
+            <View style={{
+              width: 44, height: 5, borderRadius: 3,
+              backgroundColor: "#E5E7EB",
+              alignSelf: "center", marginBottom: 20,
+            }} />
+
+            <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, marginBottom: 20 }}>
+              تصفية النتائج
+            </Text>
+
+            {/* Min Rating */}
+            <View style={{ marginBottom: 20 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: C.text, marginBottom: 10 }}>
+                التقييم الأدنى: ⭐ {minRating.toFixed(1)}
+              </Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {[0, 3, 4, 4.5].map(val => (
+                  <Pressable
+                    key={val}
+                    onPress={() => setMinRating(val)}
+                    style={{
+                      flex: 1, paddingVertical: 8, borderRadius: 10,
+                      backgroundColor: minRating === val ? C.primary : C.surface,
+                      borderWidth: 1,
+                      borderColor: minRating === val ? C.primary : C.border,
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: 12, fontWeight: "700",
+                      color: minRating === val ? "white" : C.text,
+                      textAlign: "center",
+                    }}>
+                      {val === 0 ? "الكل" : `${val}+`}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Max Delivery Fee */}
+            <View style={{ marginBottom: 20 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: C.text, marginBottom: 10 }}>
+                حد أقصى لرسوم التوصيل: {maxDeliveryFee} جنيه
+              </Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {[15, 25, 50].map(val => (
+                  <Pressable
+                    key={val}
+                    onPress={() => setMaxDeliveryFee(val)}
+                    style={{
+                      flex: 1, paddingVertical: 8, borderRadius: 10,
+                      backgroundColor: maxDeliveryFee === val ? C.primary : C.surface,
+                      borderWidth: 1,
+                      borderColor: maxDeliveryFee === val ? C.primary : C.border,
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: 12, fontWeight: "700",
+                      color: maxDeliveryFee === val ? "white" : C.text,
+                      textAlign: "center",
+                    }}>
+                      {val} ج
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Buttons */}
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <Pressable
+                onPress={() => {
+                  setMinRating(0);
+                  setMaxDeliveryFee(50);
+                }}
+                style={{
+                  flex: 1, borderWidth: 1.5, borderColor: C.primary,
+                  paddingVertical: 13, borderRadius: 12,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: C.primary, fontWeight: "700", fontSize: 14 }}>إعادة تعيين</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setShowFilters(false)}
+                style={{
+                  flex: 1, backgroundColor: C.primary,
+                  paddingVertical: 13, borderRadius: 12,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "white", fontWeight: "700", fontSize: 14 }}>تطبيق</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

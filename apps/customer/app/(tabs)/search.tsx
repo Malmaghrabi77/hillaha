@@ -91,7 +91,7 @@ export default function Search() {
         </View>
       </View>
 
-      <ScrollView style={{ padding: 16 }}>
+      <ScrollView style={{ padding: 16 }} contentContainerStyle={{ paddingBottom: 80 }}>
         {query.length === 0 && (
           <View>
             <Text style={{ fontSize: 14, fontWeight: "700", color: C.textMuted, marginBottom: 12 }}>

@@ -109,7 +109,7 @@ export default function Account() {
       </View>
 
       {/* MENU */}
-      <ScrollView style={{ padding: 16 }}>
+      <ScrollView style={{ padding: 16 }} contentContainerStyle={{ paddingBottom: 80 }}>
         {MENU.map((item, i) => (
           <Pressable
             key={i}
@@ -179,8 +179,6 @@ export default function Account() {
           <Text style={{ fontSize: 18 }}>🚪</Text>
           <Text style={{ fontWeight: "900", color: "#EF4444", fontSize: 15 }}>تسجيل الخروج</Text>
         </Pressable>
-
-        <View style={{ height: 30 }} />
       </ScrollView>
     </View>
   );

@@ -144,7 +144,7 @@ export default function Orders() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: C.bg }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />}
     >
       <Text style={{ fontSize: 20, fontWeight: "900", color: C.text, marginBottom: 16 }}>طلباتي</Text>

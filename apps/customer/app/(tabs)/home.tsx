@@ -256,7 +256,7 @@ export default function Home() {
         </Pressable>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} bounces>
+      <ScrollView showsVerticalScrollIndicator={false} bounces contentContainerStyle={{ paddingBottom: 80 }}>
 
         {/* ── BANNER CAROUSEL ────────────────────────────────── */}
         <View>
@@ -325,7 +325,7 @@ export default function Home() {
                     {b.sub}
                   </Text>
                   <Pressable
-                    onPress={() => router.push("/restaurant/1")}
+                    onPress={() => router.push(`/restaurant/${b.id}`)}
                     style={{
                       marginTop: 10, alignSelf: "flex-start",
                       backgroundColor: "white",
@@ -665,7 +665,6 @@ export default function Home() {
           ))}
         </View>
 
-        <View style={{ height: 20 }} />
       </ScrollView>
     </View>
   );

@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   splashLogo:    { width: 120, height: 120, marginBottom: 24 },
-  splashArabic:  { fontSize: 48, fontWeight: "900", color: C.white, letterSpacing: -1 },
+  splashArabic:  { fontSize: 28, fontWeight: "900", color: C.white, letterSpacing: -1 },
   splashEnglish: { fontSize: 22, fontWeight: "700", color: C.purpleGlow, marginTop: 2, letterSpacing: 3 },
   splashTagline: { fontSize: 15, color: C.whiteAlpha, marginTop: 12, textAlign: "center" },
 
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   },
   authTop:    { alignItems: "center", marginBottom: 32 },
   authLogo:   { width: 80, height: 80, marginBottom: 12 },
-  authBrand:  { fontSize: 36, fontWeight: "900", color: C.white, letterSpacing: -0.5 },
+  authBrand:  { fontSize: 24, fontWeight: "900", color: C.white, letterSpacing: -0.5 },
   authTagline:{ fontSize: 14, color: C.whiteAlpha, marginTop: 6 },
 
   chips: {

@@ -19,9 +19,9 @@ function getSB() {
   try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
 }
 
-// ─── Data ──────────────────────────────────────────────────────────────────
+// ─── Defaults ──────────────────────────────────────────────────────────────
 
-const BANNERS = [
+const DEFAULT_BANNERS = [
   {
     id: "1",
     title: "أول طلب مجاني التوصيل!",
@@ -48,7 +48,7 @@ const BANNERS = [
   },
 ];
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   { id: "all",       label: "الكل",           icon: "🏠",  color: "#7C3AED", route: null },
   { id: "restaurant", label: "مطاعم",        icon: "🍽️", color: "#F97316", route: null },
   { id: "pharmacy",  label: "صيدلية",        icon: "💊",  color: "#059669", route: null },
@@ -59,7 +59,7 @@ const CATEGORIES = [
   { id: "delivery",  label: "توصيل أغراض",   icon: "📦",  color: "#7C3AED", route: "/services/delivery" },
 ];
 
-const SERVICES = [
+const DEFAULT_SERVICES = [
   {
     id: "cleaning",
     title: "تنظيف المنزل",
@@ -119,38 +119,114 @@ interface Partner {
   review_count: number;
 }
 
+interface Banner {
+  id: string;
+  title: string;
+  sub: string;
+  cta: string;
+  bg: string;
+  accent: string;
+  image: string | null;
+}
+
+interface Category {
+  id: string;
+  label: string;
+  icon: string;
+  color: string;
+  route: string | null;
+}
+
+interface Service {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: string;
+  color: string;
+  bgColor: string;
+  route: string;
+  badge: string;
+  badgeBg: string;
+}
+
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [bannerIndex, setBannerIndex]       = useState(0);
+  const [banners, setBanners]               = useState<Banner[]>(DEFAULT_BANNERS);
+  const [categories, setCategories]         = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [services, setServices]             = useState<Service[]>(DEFAULT_SERVICES);
   const [partners, setPartners]             = useState<Partner[]>(FALLBACK_PARTNERS);
   const [loading, setLoading]               = useState(true);
   const bannerRef  = useRef<ScrollView>(null);
   const pulseAnim  = useRef(new Animated.Value(1)).current;
   const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Fetch partners from Supabase
+  // Fetch all data from Supabase
   useFocusEffect(
     React.useCallback(() => {
-      async function fetchPartners() {
+      async function fetchData() {
         const supabase = getSB();
         if (!supabase) { setLoading(false); return; }
+
         try {
-          const { data } = await supabase
+          // Fetch partners
+          const { data: partnersData } = await supabase
             .from("partners")
             .select("id, name, type, cover_image, delivery_time, delivery_fee, rating, review_count")
             .eq("is_approved", true)
             .order("rating", { ascending: false })
             .limit(20);
-          if (data && data.length > 0) {
-            setPartners(data as Partner[]);
+
+          // Fetch banners
+          const { data: bannersData } = await supabase
+            .from("banners")
+            .select("id, title, sub, cta, bg, accent, image")
+            .eq("is_active", true)
+            .order("position", { ascending: true })
+            .limit(10);
+
+          // Fetch categories
+          const { data: categoriesData } = await supabase
+            .from("categories")
+            .select("id, label, icon, color, route")
+            .eq("is_active", true)
+            .order("position", { ascending: true });
+
+          // Fetch services
+          const { data: servicesData } = await supabase
+            .from("services")
+            .select("id, title, subtitle, icon, color, bg_color, route, badge, badge_bg")
+            .eq("is_active", true)
+            .order("position", { ascending: true });
+
+          if (partnersData && partnersData.length > 0) {
+            setPartners(partnersData as Partner[]);
+          }
+
+          if (bannersData && bannersData.length > 0) {
+            setBanners(bannersData as Banner[]);
+          }
+
+          if (categoriesData && categoriesData.length > 0) {
+            setCategories(categoriesData as Category[]);
+          }
+
+          if (servicesData && servicesData.length > 0) {
+            const mapped = servicesData.map((s: any) => ({
+              ...s,
+              bgColor: s.bg_color,
+              badgeBg: s.badge_bg,
+            }));
+            setServices(mapped as Service[]);
           }
         } catch (error) {
-          console.log("Error fetching partners:", error);
+          console.log("Error fetching home data:", error);
         } finally {
           setLoading(false);
         }
       }
-      fetchPartners();
+
+      fetchData();
     }, [])
   );
 
@@ -271,7 +347,7 @@ export default function Home() {
               setBannerIndex(idx);
             }}
           >
-            {BANNERS.map((b) => (
+            {banners.map((b) => (
               <View
                 key={b.id}
                 style={{
@@ -344,7 +420,7 @@ export default function Home() {
 
           {/* Dots */}
           <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, paddingVertical: 10 }}>
-            {BANNERS.map((_, i) => (
+            {banners.map((_, i) => (
               <View key={i} style={{
                 width: bannerIndex === i ? 20 : 6,
                 height: 6, borderRadius: 3,
@@ -359,7 +435,7 @@ export default function Home() {
           horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: 6 }}
         >
-          {CATEGORIES.map(cat => {
+          {categories.map(cat => {
             const isActive = activeCategory === cat.id;
             return (
               <Pressable
@@ -445,7 +521,7 @@ export default function Home() {
             horizontal showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
           >
-            {SERVICES.map(srv => (
+            {services.map(srv => (
               <Pressable
                 key={srv.id}
                 onPress={() => router.push(srv.route as any)}
@@ -500,7 +576,7 @@ export default function Home() {
               horizontal showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
             >
-              {featured.map(p => (
+              {partners.slice(0, 5).map(p => (
                 <Pressable
                   key={p.id}
                   onPress={() => router.push(`/restaurant/${p.id}`)}
@@ -515,7 +591,7 @@ export default function Home() {
                   {/* Real cover image */}
                   <View style={{ height: 110, overflow: "hidden" }}>
                     <Image
-                      source={{ uri: p.coverImage }}
+                      source={{ uri: p.cover_image || "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=200&q=80" }}
                       style={{ width: "100%", height: "100%", resizeMode: "cover" }}
                     />
                     {/* Dark gradient overlay */}
@@ -523,23 +599,6 @@ export default function Home() {
                       position: "absolute", bottom: 0, left: 0, right: 0, height: 50,
                       backgroundColor: "rgba(0,0,0,0.18)",
                     }} />
-                    {p.discount ? (
-                      <View style={{
-                        position: "absolute", top: 8, right: 8,
-                        backgroundColor: "#EF4444",
-                        paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8,
-                      }}>
-                        <Text style={{ color: "white", fontSize: 10, fontWeight: "900" }}>خصم {p.discount}</Text>
-                      </View>
-                    ) : p.tag ? (
-                      <View style={{
-                        position: "absolute", top: 8, right: 8,
-                        backgroundColor: p.tagColor,
-                        paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8,
-                      }}>
-                        <Text style={{ color: "white", fontSize: 10, fontWeight: "900" }}>{p.tag}</Text>
-                      </View>
-                    ) : null}
                   </View>
                   {/* Info */}
                   <View style={{ padding: 12 }}>
@@ -547,15 +606,15 @@ export default function Home() {
                       {p.name}
                     </Text>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}>
-                      <Text style={{ fontSize: 11, color: "#F59E0B", fontWeight: "900" }}>★ {p.rating}</Text>
-                      <Text style={{ fontSize: 10, color: "#9CA3AF" }}>({p.reviewCount})</Text>
+                      <Text style={{ fontSize: 11, color: "#F59E0B", fontWeight: "900" }}>★ {p.rating?.toFixed(1)}</Text>
+                      <Text style={{ fontSize: 10, color: "#9CA3AF" }}>({p.review_count})</Text>
                     </View>
                     <View style={{ flexDirection: "row", gap: 8, marginTop: 6 }}>
                       <View style={{ backgroundColor: "#F3F4F6", paddingVertical: 3, paddingHorizontal: 7, borderRadius: 8 }}>
-                        <Text style={{ fontSize: 10, color: "#6B7280", fontWeight: "600" }}>🕐 {p.time}</Text>
+                        <Text style={{ fontSize: 10, color: "#6B7280", fontWeight: "600" }}>🕐 {p.delivery_time}</Text>
                       </View>
                       <View style={{ backgroundColor: "#F3F4F6", paddingVertical: 3, paddingHorizontal: 7, borderRadius: 8 }}>
-                        <Text style={{ fontSize: 10, color: "#6B7280", fontWeight: "600" }}>🛵 {p.fee}</Text>
+                        <Text style={{ fontSize: 10, color: "#6B7280", fontWeight: "600" }}>🛵 {p.delivery_fee}</Text>
                       </View>
                     </View>
                   </View>
@@ -572,7 +631,7 @@ export default function Home() {
             alignItems: "center", marginBottom: 14,
           }}>
             <Text style={{ fontSize: 17, fontWeight: "900", color: C.text }}>
-              {activeCategory === "all" ? "🏪 جميع الشركاء" : CATEGORIES.find(c => c.id === activeCategory)?.label}
+              {activeCategory === "all" ? "🏪 جميع الشركاء" : categories.find(c => c.id === activeCategory)?.label}
             </Text>
             <Text style={{ fontSize: 12, color: "#9CA3AF" }}>
               {filtered.length} متجر

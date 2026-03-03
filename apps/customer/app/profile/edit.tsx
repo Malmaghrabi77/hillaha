@@ -1,103 +1,240 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, TextInput, Pressable, ScrollView, StatusBar, Platform, ActivityIndicator, Alert } from "react-native";
 import { router } from "expo-router";
+
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
-  pink: "#EC4899",       pinkSoft: "#FCE7F3",
   bg: "#FAFAFF",         surface: "#FFFFFF",
   border: "#E7E3FF",     text: "#1F1B2E",
   textMuted: "#6B6480",  success: "#34D399",
-  warning: "#F59E0B",    danger: "#EF4444",
-  deepPurple: "#6D28D9",
 } as const;
 
-export default function EditProfile() {
-  const [name, setName]     = useState("مصطفى محمد");
-  const [phone, setPhone]   = useState("01012345678");
-  const [email, setEmail]   = useState("malmaghrabi77@gmail.com");
-  const [city, setCity]     = useState("قنا");
-  const [address, setAddress] = useState("وسط المدينة، شارع النيل");
-  const [saved, setSaved]   = useState(false);
+function getSB() {
+  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
+}
 
-  function handleSave() {
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      router.back();
-    }, 1200);
+export default function EditProfile() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  async function loadUserData() {
+    const supabase = getSB();
+    if (!supabase) { setLoading(false); return; }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      setEmail(user.email ?? "");
+
+      const metadata = user.user_metadata as any;
+      setFullName(metadata?.full_name ?? "");
+      setPhone(metadata?.phone ?? "");
+    } catch (error) {
+      console.log("Error loading user data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave() {
+    if (!fullName.trim() || !phone.trim()) {
+      Alert.alert("خطأ", "الرجاء ملء جميع الحقول المطلوبة");
+      return;
+    }
+
+    setSaving(true);
+    const supabase = getSB();
+    if (!supabase) { setSaving(false); return; }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          full_name: fullName.trim(),
+          phone: phone.trim(),
+        },
+      });
+
+      if (error) throw error;
+
+      setSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+        router.back();
+      }, 1500);
+    } catch (error) {
+      Alert.alert("خطأ", "حدث خطأ أثناء حفظ البيانات");
+      console.log("Error saving data:", error);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={C.primary} />
+      </View>
+    );
   }
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: C.bg }}
-      contentContainerStyle={{ padding: 20 }}
-      keyboardShouldPersistTaps="handled"
-    >
-      {/* AVATAR */}
-      <View style={{ alignItems: "center", marginBottom: 24 }}>
-        <View style={{
-          width: 90, height: 90, borderRadius: 45,
-          backgroundColor: C.primarySoft,
-          borderWidth: 3, borderColor: C.primary,
-          justifyContent: "center", alignItems: "center",
-          marginBottom: 10,
-        }}>
-          <Text style={{ fontSize: 44 }}>👤</Text>
-        </View>
-        <Pressable style={{
-          paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20,
-          borderWidth: 1.5, borderColor: C.primary,
-        }}>
-          <Text style={{ color: C.primary, fontWeight: "700", fontSize: 13 }}>تغيير الصورة</Text>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+
+      {/* Header */}
+      <View style={{
+        paddingTop: Platform.OS === "android" ? 18 : 54,
+        paddingHorizontal: 16, paddingBottom: 16,
+        backgroundColor: C.surface,
+        borderBottomWidth: 1, borderColor: C.border,
+        flexDirection: "row", alignItems: "center", gap: 12,
+      }}>
+        <Pressable
+          onPress={() => router.back()}
+          style={{
+            width: 40, height: 40, borderRadius: 12,
+            backgroundColor: C.primarySoft,
+            justifyContent: "center", alignItems: "center",
+          }}
+        >
+          <Text style={{ fontSize: 18 }}>←</Text>
         </Pressable>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 18, fontWeight: "900", color: C.text }}>✏️ تعديل البيانات</Text>
+        </View>
       </View>
 
-      {/* FIELDS */}
-      {[
-        { label: "الاسم الكامل",      value: name,    setter: setName,    icon: "👤", keyboardType: "default" },
-        { label: "رقم الهاتف",        value: phone,   setter: setPhone,   icon: "📞", keyboardType: "phone-pad" },
-        { label: "البريد الإلكتروني", value: email,   setter: setEmail,   icon: "✉️",  keyboardType: "email-address" },
-        { label: "المدينة",           value: city,    setter: setCity,    icon: "🏙️", keyboardType: "default" },
-        { label: "العنوان",           value: address, setter: setAddress, icon: "📍", keyboardType: "default" },
-      ].map((field, i) => (
-        <View key={i} style={{ marginBottom: 16 }}>
-          <Text style={{ fontSize: 12, fontWeight: "700", color: C.textMuted, marginBottom: 6 }}>
-            {field.label}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Avatar */}
+        <View style={{ alignItems: "center", marginBottom: 28 }}>
+          <View style={{
+            width: 100, height: 100, borderRadius: 50,
+            backgroundColor: C.primarySoft,
+            borderWidth: 3, borderColor: C.primary,
+            justifyContent: "center", alignItems: "center",
+            marginBottom: 14,
+            shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+          }}>
+            <Text style={{ fontSize: 48 }}>👤</Text>
+          </View>
+          <Pressable style={{
+            paddingVertical: 7, paddingHorizontal: 18, borderRadius: 20,
+            borderWidth: 1.5, borderColor: C.primary,
+          }}>
+            <Text style={{ color: C.primary, fontWeight: "700", fontSize: 13 }}>تحميل صورة</Text>
+          </Pressable>
+        </View>
+
+        {/* Email (Read-only) */}
+        <View style={{ marginBottom: 18 }}>
+          <Text style={{ fontSize: 12, fontWeight: "700", color: C.textMuted, marginBottom: 8 }}>
+            البريد الإلكتروني (غير قابل للتعديل)
+          </Text>
+          <View style={{
+            flexDirection: "row", alignItems: "center",
+            borderWidth: 1.5, borderColor: C.border, borderRadius: 14,
+            backgroundColor: "#F9FAFB", paddingHorizontal: 14, paddingVertical: 12, gap: 10,
+          }}>
+            <Text style={{ fontSize: 18 }}>✉️</Text>
+            <Text style={{ flex: 1, fontSize: 14, color: C.textMuted, textAlign: "right" }}>
+              {email}
+            </Text>
+          </View>
+        </View>
+
+        {/* Full Name */}
+        <View style={{ marginBottom: 18 }}>
+          <Text style={{ fontSize: 12, fontWeight: "700", color: C.text, marginBottom: 8 }}>
+            الاسم الكامل *
           </Text>
           <View style={{
             flexDirection: "row", alignItems: "center",
             borderWidth: 1.5, borderColor: C.border, borderRadius: 14,
             backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10,
           }}>
-            <Text style={{ fontSize: 18 }}>{field.icon}</Text>
+            <Text style={{ fontSize: 18 }}>👤</Text>
             <TextInput
-              value={field.value}
-              onChangeText={field.setter as any}
-              keyboardType={field.keyboardType as any}
-              style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder="أدخل اسمك الكامل"
               placeholderTextColor={C.textMuted}
+              style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
             />
           </View>
         </View>
-      ))}
 
-      {/* SAVE BUTTON */}
-      <Pressable
-        onPress={handleSave}
-        style={{
-          marginTop: 8, paddingVertical: 16, borderRadius: 16,
-          backgroundColor: saved ? C.success : C.primary,
-          shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
-          alignItems: "center",
-        }}
-      >
-        <Text style={{ color: "white", fontWeight: "900", fontSize: 16 }}>
-          {saved ? "تم الحفظ ✓" : "حفظ التغييرات"}
-        </Text>
-      </Pressable>
+        {/* Phone */}
+        <View style={{ marginBottom: 28 }}>
+          <Text style={{ fontSize: 12, fontWeight: "700", color: C.text, marginBottom: 8 }}>
+            رقم الهاتف *
+          </Text>
+          <View style={{
+            flexDirection: "row", alignItems: "center",
+            borderWidth: 1.5, borderColor: C.border, borderRadius: 14,
+            backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10,
+          }}>
+            <Text style={{ fontSize: 18 }}>📞</Text>
+            <TextInput
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="01212345678"
+              placeholderTextColor={C.textMuted}
+              keyboardType="phone-pad"
+              style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
+            />
+          </View>
+        </View>
 
-      <View style={{ height: 30 }} />
-    </ScrollView>
+        {/* Info Box */}
+        <View style={{
+          backgroundColor: "#F0F9FF",
+          borderRadius: 12, padding: 14,
+          borderWidth: 1, borderColor: "#BAE6FD",
+          marginBottom: 20,
+        }}>
+          <Text style={{ fontSize: 12, color: "#0369A1", fontWeight: "600", textAlign: "right" }}>
+            ℹ️ هذه البيانات ستُستخدم فقط لتوصيل طلباتك
+          </Text>
+        </View>
+
+        {/* Save Button */}
+        <Pressable
+          onPress={handleSave}
+          disabled={saving}
+          style={{
+            paddingVertical: 16, borderRadius: 14,
+            backgroundColor: saved ? C.success : C.primary,
+            shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+            alignItems: "center",
+            opacity: saving ? 0.6 : 1,
+          }}
+        >
+          {saving ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={{ color: "white", fontWeight: "900", fontSize: 16 }}>
+              {saved ? "✓ تم الحفظ" : "حفظ البيانات"}
+            </Text>
+          )}
+        </Pressable>
+      </ScrollView>
+    </View>
   );
 }
+

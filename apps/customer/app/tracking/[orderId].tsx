@@ -57,6 +57,7 @@ interface OrderInfo {
   restaurantLng: number;
   customerLat:   number;
   customerLng:   number;
+  partnerType:  string;  // restaurant, pharmacy, clinic, store
 }
 
 // Calculate distance between two coordinates (in km)
@@ -69,6 +70,21 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
             Math.sin(dLng/2) * Math.sin(dLng/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
+}
+
+// Get icon and colors based on partner type
+function getPartnerIcon(type: string): { icon: string; bgColor: string; borderColor: string } {
+  switch (type) {
+    case "pharmacy":
+      return { icon: "💊", bgColor: "#FEE2E4", borderColor: "#F87171" };
+    case "clinic":
+      return { icon: "👨‍⚕️", bgColor: "#DBEAFE", borderColor: "#3B82F6" };
+    case "store":
+      return { icon: "🏪", bgColor: "#FEF08A", borderColor: "#EAB308" };
+    case "restaurant":
+    default:
+      return { icon: "🍽️", bgColor: "#FEF3C7", borderColor: "#F59E0B" };
+  }
 }
 
 export default function Tracking() {
@@ -108,7 +124,7 @@ export default function Tracking() {
         .select(`
           id, status, total, delivery_fee,
           driver_lat, driver_lng, driver_heading,
-          partners(name, address, lat, lng),
+          partners(name, address, lat, lng, type),
           profiles!orders_customer_id_fkey(full_name, phone),
           driver:profiles!orders_driver_id_fkey(full_name, phone)
         `)
@@ -137,6 +153,7 @@ export default function Tracking() {
           restaurantLng: restLng,
           customerLat:   custLat,
           customerLng:   custLng,
+          partnerType:   (data.partners as any)?.type ?? "restaurant",
         };
 
         setOrderInfo(orderObj);
@@ -228,25 +245,30 @@ export default function Tracking() {
           }}
           provider="google"
         >
-          {/* Restaurant marker */}
-          <Marker
-            coordinate={{
-              latitude: orderInfo.restaurantLat,
-              longitude: orderInfo.restaurantLng,
-            }}
-            title="المطعم"
-            description={orderInfo.id}
-          >
-            <View style={{
-              width: 44, height: 44,
-              borderRadius: 22,
-              backgroundColor: "#FEF3C7",
-              borderWidth: 2.5, borderColor: "#F59E0B",
-              justifyContent: "center", alignItems: "center",
-            }}>
-              <Text style={{ fontSize: 20 }}>🍽️</Text>
-            </View>
-          </Marker>
+          {/* Partner marker - dynamic based on type */}
+          {(() => {
+            const { icon, bgColor, borderColor } = getPartnerIcon(orderInfo.partnerType);
+            return (
+              <Marker
+                coordinate={{
+                  latitude: orderInfo.restaurantLat,
+                  longitude: orderInfo.restaurantLng,
+                }}
+                title={orderInfo.partnerType === "restaurant" ? "المطعم" : "الشركة"}
+                description={orderInfo.id}
+              >
+                <View style={{
+                  width: 44, height: 44,
+                  borderRadius: 22,
+                  backgroundColor: bgColor,
+                  borderWidth: 2.5, borderColor: borderColor,
+                  justifyContent: "center", alignItems: "center",
+                }}>
+                  <Text style={{ fontSize: 20 }}>{icon}</Text>
+                </View>
+              </Marker>
+            );
+          })()}
 
           {/* Driver marker - animated */}
           <Marker

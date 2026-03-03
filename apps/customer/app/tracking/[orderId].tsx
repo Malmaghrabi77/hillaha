@@ -4,6 +4,7 @@ import {
   StatusBar, Animated, Platform,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
+import MapView, { Marker } from "react-native-maps";
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
   pink: "#EC4899",       pinkSoft: "#FCE7F3",
@@ -215,39 +216,28 @@ export default function Tracking() {
     <View style={{ flex: 1 }}>
       <StatusBar barStyle={step < 2 ? "dark-content" : "light-content"} translucent backgroundColor="transparent" />
 
-      {/* ── MAP PLACEHOLDER (top 58%) ─────────────────────────────────── */}
-      <View style={{
-        height: SCREEN.height * 0.58,
-        backgroundColor: "#E8E4F0",
-        justifyContent: "center", alignItems: "center",
-        overflow: "hidden",
-        position: "relative",
-      }}>
-        {/* Map visualization background gradient */}
-        <View style={{
-          position: "absolute",
-          width: "100%", height: "100%",
-          backgroundColor: "#E8ECFF",
-        }} />
-
-        {/* Route visualization */}
-        {orderInfo && step >= 2 && (
-          <View style={{
-            position: "absolute",
-            width: "100%", height: "100%",
-            justifyContent: "center", alignItems: "center",
-          }}>
-            {/* Simplified route line */}
+      {/* ── GOOGLE MAPS (top 58%) ─────────────────────────────────── */}
+      {step >= 2 && orderInfo && driverCoord ? (
+        <MapView
+          style={{ height: SCREEN.height * 0.58 }}
+          initialRegion={{
+            latitude: (orderInfo.restaurantLat + orderInfo.customerLat) / 2,
+            longitude: (orderInfo.restaurantLng + orderInfo.customerLng) / 2,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          }}
+          provider="google"
+        >
+          {/* Restaurant marker */}
+          <Marker
+            coordinate={{
+              latitude: orderInfo.restaurantLat,
+              longitude: orderInfo.restaurantLng,
+            }}
+            title="المطعم"
+            description={orderInfo.id}
+          >
             <View style={{
-              position: "absolute",
-              width: 2, height: "60%",
-              backgroundColor: "#8B5CF6",
-              opacity: 0.3,
-            }} />
-
-            {/* Restaurant marker (top) */}
-            <View style={{
-              position: "absolute", top: "20%",
               width: 44, height: 44,
               borderRadius: 22,
               backgroundColor: "#FEF3C7",
@@ -256,28 +246,38 @@ export default function Tracking() {
             }}>
               <Text style={{ fontSize: 20 }}>🍽️</Text>
             </View>
+          </Marker>
 
-            {/* Driver marker (middle) - animated */}
+          {/* Driver marker - animated */}
+          <Marker
+            coordinate={{
+              latitude: driverCoord.latitude,
+              longitude: driverCoord.longitude,
+            }}
+            title={orderInfo.driverName}
+            description={orderInfo.driverPhone}
+          >
             <Animated.View style={{
-              position: "absolute",
               width: 50, height: 50,
               borderRadius: 25,
               backgroundColor: "#DBEAFE",
               borderWidth: 3, borderColor: "#2563EB",
               justifyContent: "center", alignItems: "center",
-              shadowColor: "#2563EB",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.4,
-              shadowRadius: 8,
-              elevation: 8,
               transform: [{ scale: pulseAnim }],
             }}>
               <Text style={{ fontSize: 24 }}>🛵</Text>
             </Animated.View>
+          </Marker>
 
-            {/* Customer marker (bottom) */}
+          {/* Customer marker */}
+          <Marker
+            coordinate={{
+              latitude: orderInfo.customerLat,
+              longitude: orderInfo.customerLng,
+            }}
+            title="عنوانك"
+          >
             <View style={{
-              position: "absolute", bottom: "20%",
               width: 44, height: 44,
               borderRadius: 22,
               backgroundColor: "#DBEAFE",
@@ -286,73 +286,79 @@ export default function Tracking() {
             }}>
               <Text style={{ fontSize: 20 }}>📍</Text>
             </View>
-
-            {/* Distance badge */}
-            {distance > 0 && (
-              <View style={{
-                position: "absolute", right: 16, top: "40%",
-                backgroundColor: "white",
-                paddingVertical: 8, paddingHorizontal: 12,
-                borderRadius: 12,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.15,
-                shadowRadius: 8,
-                elevation: 4,
-              }}>
-                <Text style={{ fontSize: 11, color: "#6B7280", fontWeight: "700" }}>
-                  المسافة
-                </Text>
-                <Text style={{ fontSize: 16, color: "#2563EB", fontWeight: "900", marginTop: 2 }}>
-                  {distance.toFixed(1)} كم
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Fallback text when not in delivery step */}
-        {step < 2 && (
-          <>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>🗺️</Text>
-            <Text style={{ fontSize: 14, color: "#6B7280", fontWeight: "700" }}>
-              الخريطة ستظهر عند خروج المندوب
-            </Text>
-            <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>
-              سيتم تتبع موقع المندوب تلقائياً
-            </Text>
-          </>
-        )}
-
-        {/* Back button overlay */}
-        <Pressable
-          onPress={() => router.back()}
-          style={{
-            position: "absolute", top: Platform.OS === "android" ? 28 : 54,
-            right: 16,
-            width: 40, height: 40, borderRadius: 20,
-            backgroundColor: "white",
-            justifyContent: "center", alignItems: "center",
-            shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
-          }}
-        >
-          <Text style={{ fontSize: 16 }}>✕</Text>
-        </Pressable>
-
-        {/* Order ID pill */}
+          </Marker>
+        </MapView>
+      ) : (
         <View style={{
-          position: "absolute", top: Platform.OS === "android" ? 28 : 54,
-          left: 16,
-          backgroundColor: "white",
-          paddingVertical: 7, paddingHorizontal: 14, borderRadius: 20,
-          shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
+          height: SCREEN.height * 0.58,
+          backgroundColor: "#E8E4F0",
+          justifyContent: "center", alignItems: "center",
+          overflow: "hidden",
+          position: "relative",
         }}>
-          <Text style={{ fontSize: 12, fontWeight: "900", color: "#374151" }}>
-            طلب #{orderInfo?.id ?? "…"}
+          <Text style={{ fontSize: 48, marginBottom: 12 }}>🗺️</Text>
+          <Text style={{ fontSize: 14, color: "#6B7280", fontWeight: "700" }}>
+            الخريطة ستظهر عند خروج المندوب
+          </Text>
+          <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>
+            سيتم تتبع موقع المندوب تلقائياً
           </Text>
         </View>
+      )}
+
+      {/* Distance badge - overlay */}
+      {step >= 2 && distance > 0 && (
+        <View style={{
+          position: "absolute", right: 16, top: SCREEN.height * 0.3,
+          backgroundColor: "white",
+          paddingVertical: 8, paddingHorizontal: 12,
+          borderRadius: 12,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          elevation: 4,
+          zIndex: 10,
+        }}>
+          <Text style={{ fontSize: 11, color: "#6B7280", fontWeight: "700" }}>
+            المسافة
+          </Text>
+          <Text style={{ fontSize: 16, color: "#2563EB", fontWeight: "900", marginTop: 2 }}>
+            {distance.toFixed(1)} كم
+          </Text>
+        </View>
+      )}
+
+      {/* Back button overlay */}
+      <Pressable
+        onPress={() => router.back()}
+        style={{
+          position: "absolute", top: Platform.OS === "android" ? 28 : 54,
+          right: 16,
+          width: 40, height: 40, borderRadius: 20,
+          backgroundColor: "white",
+          justifyContent: "center", alignItems: "center",
+          shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+          zIndex: 11,
+        }}
+      >
+        <Text style={{ fontSize: 16 }}>✕</Text>
+      </Pressable>
+
+      {/* Order ID pill */}
+      <View style={{
+        position: "absolute", top: Platform.OS === "android" ? 28 : 54,
+        left: 16,
+        backgroundColor: "white",
+        paddingVertical: 7, paddingHorizontal: 14, borderRadius: 20,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
+        zIndex: 11,
+      }}>
+        <Text style={{ fontSize: 12, fontWeight: "900", color: "#374151" }}>
+          طلب #{orderInfo?.id ?? "…"}
+        </Text>
       </View>
 
       {/* ── BOTTOM PANEL (bottom 42%) ─────────────────────────────────── */}

@@ -24,6 +24,19 @@
         {
           "photosPermission": "يحتاج التطبيق للوصول إلى صورك لرفع إثبات التحويل"
         }
+      ],
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "AIzaSyA3oq4FfPFFZRoVoXUs0aBN6P-3-6AjgnE"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "حلّها يحتاج الوصول لموقعك لتتبع رحلة التوصيل",
+          "locationWhenInUsePermission": "حلّها يحتاج الوصول لموقعك لتتبع رحلة التوصيل"
+        }
       ]
     ],
     "android": {
@@ -34,14 +47,18 @@
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT",
         "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_EXTERNAL_STORAGE"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ]
     },
     "ios": {
       "bundleIdentifier": "com.hillaha.customer",
       "infoPlist": {
         "NSFaceIDUsageDescription": "استخدم Face ID لتسجيل الدخول بشكل أسرع وأكثر أماناً",
-        "NSPhotoLibraryUsageDescription": "يحتاج التطبيق للوصول إلى صورك لرفع إثبات التحويل"
+        "NSPhotoLibraryUsageDescription": "يحتاج التطبيق للوصول إلى صورك لرفع إثبات التحويل",
+        "NSLocationWhenInUseUsageDescription": "حلّها يحتاج الوصول لموقعك لتتبع رحلة التوصيل",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "حلّها يحتاج الوصول لموقعك لتتبع رحلة التوصيل"
       }
     },
     "newArchEnabled": false,

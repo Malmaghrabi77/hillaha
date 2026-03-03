@@ -566,18 +566,30 @@ export default function Tracking() {
                   </View>
                 </View>
                 <View style={{ gap: 8 }}>
-                  <Pressable style={{
-                    width: 44, height: 44, borderRadius: 14,
-                    backgroundColor: "#D1FAE5",
-                    justifyContent: "center", alignItems: "center",
-                  }}>
+                  <Pressable
+                    onPress={() => {
+                      if (orderInfo?.driverPhone) {
+                        try {
+                          require("react-native").Linking.openURL(`tel:${orderInfo.driverPhone}`);
+                        } catch (e) {}
+                      }
+                    }}
+                    style={{
+                      width: 44, height: 44, borderRadius: 14,
+                      backgroundColor: "#D1FAE5",
+                      justifyContent: "center", alignItems: "center",
+                    }}
+                  >
                     <Text style={{ fontSize: 20 }}>📞</Text>
                   </Pressable>
-                  <Pressable style={{
-                    width: 44, height: 44, borderRadius: 14,
-                    backgroundColor: "#EDE9FE",
-                    justifyContent: "center", alignItems: "center",
-                  }}>
+                  <Pressable
+                    onPress={() => router.push(`/chat/driver/${orderId}`)}
+                    style={{
+                      width: 44, height: 44, borderRadius: 14,
+                      backgroundColor: "#EDE9FE",
+                      justifyContent: "center", alignItems: "center",
+                    }}
+                  >
                     <Text style={{ fontSize: 20 }}>💬</Text>
                   </Pressable>
                 </View>

@@ -23,9 +23,11 @@ function getSB() {
 
 const MENU = [
   { icon: "📦", label: "طلباتي السابقة",    route: "/(tabs)/orders" },
-  { icon: "📍", label: "عناويني المحفوظة",  route: null },
-  { icon: "💳", label: "طرق الدفع",          route: null },
+  { icon: "📍", label: "عناويني المحفوظة",  route: "/addresses" },
+  { icon: "❤️", label: "المفضلة",            route: "/favorites" },
+  { icon: "🎟️", label: "أكود الخصم",        route: "/promo" },
   { icon: "🎁", label: "نقاط الولاء",        route: "/loyalty" },
+  { icon: "💳", label: "طرق الدفع",          route: null },
   { icon: "🔔", label: "الإشعارات",          route: null },
   { icon: "📄", label: "الشروط والأحكام",    route: "/legal/consent" },
   { icon: "🔒", label: "تغيير كلمة المرور", route: null },

@@ -58,6 +58,7 @@ interface OrderInfo {
   customerLat:   number;
   customerLng:   number;
   partnerType:  string;  // restaurant, pharmacy, clinic, store
+  serviceName?: string;  // service name if applicable (e.g., "Home Cleaning", "سباكة")
 }
 
 // Calculate distance between two coordinates (in km)
@@ -72,15 +73,35 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * c;
 }
 
-// Get icon and colors based on partner type
+// Get icon and colors based on partner type and service
 function getPartnerIcon(type: string): { icon: string; bgColor: string; borderColor: string } {
   switch (type) {
+    // Partner types
     case "pharmacy":
       return { icon: "💊", bgColor: "#FEE2E4", borderColor: "#F87171" };
     case "clinic":
       return { icon: "👨‍⚕️", bgColor: "#DBEAFE", borderColor: "#3B82F6" };
     case "store":
       return { icon: "🏪", bgColor: "#FEF08A", borderColor: "#EAB308" };
+    // Service types
+    case "Home Cleaning":
+    case "تنظيف المنازل":
+      return { icon: "🧹", bgColor: "#E0E7FF", borderColor: "#6366F1" };
+    case "Plumbing":
+    case "سباكة":
+      return { icon: "🔧", bgColor: "#F5F3FF", borderColor: "#A78BFA" };
+    case "AC Service":
+    case "تكييف وتبريد":
+      return { icon: "❄️", bgColor: "#F0F9FF", borderColor: "#0EA5E9" };
+    case "Electrical Work":
+    case "كهرباء":
+      return { icon: "⚡", bgColor: "#FEFCE8", borderColor: "#FACC15" };
+    case "Car Wash":
+    case "غسيل سيارات":
+      return { icon: "🚗", bgColor: "#F0FDF4", borderColor: "#22C55E" };
+    case "Moving & Packing":
+    case "نقل وتعبئة":
+      return { icon: "📦", bgColor: "#FDF2F8", borderColor: "#EC4899" };
     case "restaurant":
     default:
       return { icon: "🍽️", bgColor: "#FEF3C7", borderColor: "#F59E0B" };
@@ -154,6 +175,7 @@ export default function Tracking() {
           customerLat:   custLat,
           customerLng:   custLng,
           partnerType:   (data.partners as any)?.type ?? "restaurant",
+          serviceName:   (data.partners as any)?.name,  // service name from partner name field if available
         };
 
         setOrderInfo(orderObj);
@@ -247,7 +269,9 @@ export default function Tracking() {
         >
           {/* Partner marker - dynamic based on type */}
           {(() => {
-            const { icon, bgColor, borderColor } = getPartnerIcon(orderInfo.partnerType);
+            // Prioritize service name if available, otherwise use partner type
+            const markerKey = orderInfo.serviceName || orderInfo.partnerType;
+            const { icon, bgColor, borderColor } = getPartnerIcon(markerKey);
             return (
               <Marker
                 coordinate={{

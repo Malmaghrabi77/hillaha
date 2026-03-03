@@ -234,13 +234,13 @@ export default function Home() {
   useEffect(() => {
     timerRef.current = setInterval(() => {
       setBannerIndex(prev => {
-        const next = (prev + 1) % BANNERS.length;
+        const next = (prev + 1) % (banners.length || 1);
         bannerRef.current?.scrollTo({ x: next * SCREEN.width, animated: true });
         return next;
       });
     }, 3500);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, []);
+  }, [banners.length]);
 
   // Loyalty pulse
   useEffect(() => {
@@ -377,7 +377,7 @@ export default function Home() {
                   shadowOpacity: 0.3, shadowRadius: 8,
                 }}>
                   <Image
-                    source={{ uri: b.image }}
+                    source={{ uri: b.image || "https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=300&q=80" }}
                     style={{ width: "100%", height: "100%", resizeMode: "cover" }}
                   />
                   {/* Slight overlay so image blends with banner bg */}

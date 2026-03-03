@@ -205,7 +205,7 @@ export default function Tracking() {
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${orderId}` },
-        (payload) => {
+        (payload: any) => {
           const d = payload.new;
 
           // Update step / status

@@ -86,7 +86,7 @@ export default function PartnerChat() {
             table: "messages",
             filter: `partner_id=eq.${partnerId}`,
           },
-          (payload) => {
+          (payload: any) => {
             setMessages(prev => [...prev, payload.new as Message]);
             scrollRef.current?.scrollToEnd({ animated: true });
           }

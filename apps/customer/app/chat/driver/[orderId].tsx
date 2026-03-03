@@ -90,7 +90,7 @@ export default function DriverChat() {
             table: "messages",
             filter: `order_id=eq.${orderId}`,
           },
-          (payload) => {
+          (payload: any) => {
             setMessages(prev => [...prev, payload.new as Message]);
             scrollRef.current?.scrollToEnd({ animated: true });
           }

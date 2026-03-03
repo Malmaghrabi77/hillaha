@@ -38,7 +38,7 @@ export default function Account() {
   useEffect(() => {
     const supabase = getSB();
     if (!supabase) return;
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(({ data }: any) => {
       if (data.user) {
         setUserEmail(data.user.email ?? "");
         const meta = data.user.user_metadata as any;

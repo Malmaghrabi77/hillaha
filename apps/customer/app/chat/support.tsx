@@ -107,7 +107,7 @@ export default function SupportChat() {
             table: "support_messages",
             filter: `ticket_id=eq.${supportTicketId}`,
           },
-          (payload) => {
+          (payload: any) => {
             setMessages(prev => [...prev, payload.new as Message]);
             scrollRef.current?.scrollToEnd({ animated: true });
           }

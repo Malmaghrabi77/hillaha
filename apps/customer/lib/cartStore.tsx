@@ -27,12 +27,14 @@ type CartState = {
   items: Record<string, CartEntry>;
   partnerId: string | null;
   partnerName: string | null;
+  deliveryFee: number;
 };
 
 type CartAction =
-  | { type: "ADD";        item: CartItem }
-  | { type: "REMOVE";     id: string }
-  | { type: "UPDATE_QTY"; id: string; qty: number }
+  | { type: "ADD";              item: CartItem; deliveryFee?: number }
+  | { type: "REMOVE";           id: string }
+  | { type: "UPDATE_QTY";       id: string; qty: number }
+  | { type: "SET_DELIVERY_FEE"; fee: number }
   | { type: "CLEAR" };
 
 // ─── Reducer ──────────────────────────────────────────────────────────────────
@@ -49,6 +51,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         ...state,
         partnerId:   action.item.partnerId,
         partnerName: action.item.partnerName,
+        deliveryFee: action.deliveryFee ?? state.deliveryFee,
         items: {
           ...state.items,
           [action.item.id]: {
@@ -74,6 +77,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         items:       next,
         partnerId:   isEmpty ? null : state.partnerId,
         partnerName: isEmpty ? null : state.partnerName,
+        deliveryFee: isEmpty ? 0 : state.deliveryFee,
       };
     }
 
@@ -87,6 +91,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           items:       next,
           partnerId:   isEmpty ? null : state.partnerId,
           partnerName: isEmpty ? null : state.partnerName,
+          deliveryFee: isEmpty ? 0 : state.deliveryFee,
         };
       }
       return {
@@ -98,8 +103,11 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       };
     }
 
+    case "SET_DELIVERY_FEE":
+      return { ...state, deliveryFee: action.fee };
+
     case "CLEAR":
-      return { items: {}, partnerId: null, partnerName: null };
+      return { items: {}, partnerId: null, partnerName: null, deliveryFee: 0 };
   }
 }
 
@@ -117,6 +125,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     items:       {},
     partnerId:   null,
     partnerName: null,
+    deliveryFee: 0,
   });
 
   return (
@@ -136,7 +145,7 @@ export function useCart() {
   const itemList    = Object.values(state.items);
   const totalItems  = itemList.reduce((s, i) => s + i.qty, 0);
   const subtotal    = itemList.reduce((s, i) => s + i.price * i.qty, 0);
-  const deliveryFee = 15;
+  const deliveryFee = state.deliveryFee;
   const total       = subtotal + deliveryFee;
   // 1 loyalty point per 250 EGP spent
   const loyaltyEarn = Math.floor(subtotal / 250);
@@ -154,10 +163,11 @@ export function useCart() {
     loyaltyEarn,
 
     // Actions
-    addItem:    (item: CartItem)            => dispatch({ type: "ADD",        item }),
-    removeItem: (id: string)               => dispatch({ type: "REMOVE",     id }),
-    updateQty:  (id: string, qty: number)  => dispatch({ type: "UPDATE_QTY", id, qty }),
-    clearCart:  ()                          => dispatch({ type: "CLEAR" }),
+    addItem:         (item: CartItem, fee?: number) => dispatch({ type: "ADD",              item, deliveryFee: fee }),
+    removeItem:      (id: string)                     => dispatch({ type: "REMOVE",          id }),
+    updateQty:       (id: string, qty: number)        => dispatch({ type: "UPDATE_QTY",      id, qty }),
+    setDeliveryFee:  (fee: number)                     => dispatch({ type: "SET_DELIVERY_FEE", fee }),
+    clearCart:       ()                                => dispatch({ type: "CLEAR" }),
 
     // Utility: check if a partner conflicts with current cart
     hasConflict: (pId: string) =>

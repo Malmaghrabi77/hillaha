@@ -3,7 +3,7 @@ import {
   View, Text, Pressable, ScrollView, Animated,
   StatusBar, Platform, Image, Dimensions,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
   pink: "#EC4899",       pinkSoft: "#FCE7F3",
@@ -14,6 +14,10 @@ const C = {
   deepPurple: "#6D28D9",
 } as const;
 const SCREEN = Dimensions.get("window");
+
+function getSB() {
+  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
+}
 
 // ─── Data ──────────────────────────────────────────────────────────────────
 
@@ -46,17 +50,13 @@ const BANNERS = [
 
 const CATEGORIES = [
   { id: "all",       label: "الكل",           icon: "🏠",  color: "#7C3AED", route: null },
-  { id: "egyptian",  label: "كشري ومصري",      icon: "🥘",  color: "#92400E", route: null },
-  { id: "shawarma",  label: "شاورما",          icon: "🌯",  color: "#D97706", route: null },
-  { id: "burger",    label: "برجر",            icon: "🍔",  color: "#EF4444", route: null },
-  { id: "pizza",     label: "بيتزا",           icon: "🍕",  color: "#F97316", route: null },
-  { id: "chicken",   label: "فراخ",            icon: "🍗",  color: "#EAB308", route: null },
-  { id: "cafe",      label: "قهوة وحلويات",    icon: "☕",  color: "#7C3AED", route: null },
-  { id: "pharmacy",  label: "صيدلية",          icon: "💊",  color: "#059669", route: null },
-  { id: "medical",   label: "طبيب",            icon: "🏥",  color: "#2563EB", route: null },
-  { id: "cleaning",  label: "تنظيف",           icon: "🧹",  color: "#0891B2", route: "/services/cleaning" },
-  { id: "electrical",label: "كهرباء وصيانة",   icon: "⚡",  color: "#D97706", route: "/services/electrical" },
-  { id: "p2p",       label: "توصيل أغراض",     icon: "📦",  color: "#7C3AED", route: "/services/delivery" },
+  { id: "restaurant", label: "مطاعم",        icon: "🍽️", color: "#F97316", route: null },
+  { id: "pharmacy",  label: "صيدلية",        icon: "💊",  color: "#059669", route: null },
+  { id: "clinic",    label: "عيادات",        icon: "🏥", color: "#2563EB", route: null },
+  { id: "store",     label: "محلات",         icon: "🏪", color: "#EAB308", route: null },
+  { id: "cleaning",  label: "تنظيف",         icon: "🧹",  color: "#0891B2", route: "/services/cleaning" },
+  { id: "electrical",label: "كهرباء وصيانة", icon: "⚡",  color: "#D97706", route: "/services/electrical" },
+  { id: "delivery",  label: "توصيل أغراض",   icon: "📦",  color: "#7C3AED", route: "/services/delivery" },
 ];
 
 const SERVICES = [
@@ -83,7 +83,7 @@ const SERVICES = [
     badgeBg: "#D97706",
   },
   {
-    id: "p2p",
+    id: "delivery",
     title: "توصيل من عميل لعميل",
     subtitle: "أرسل أو استلم أي غرض بسهولة",
     icon: "📦",
@@ -95,60 +95,64 @@ const SERVICES = [
   },
 ];
 
-// IDs match seed.sql UUIDs (10000000-0000-0000-0000-00000000000x)
-const PARTNERS = [
+// Fallback data for initial render
+const FALLBACK_PARTNERS = [
   {
     id: "10000000-0000-0000-0000-000000000001",
-    name: "الشرقاوي",     type: "egyptian",
-    coverImage: "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=700&q=85",
-    time: "20-30 د", fee: "10 جنيه", rating: "4.8",
-    reviewCount: "1850+", tag: "الأكثر طلباً", tagColor: "#7C3AED", discount: "",
-  },
-  {
-    id: "10000000-0000-0000-0000-000000000002",
-    name: "شاورما الريم", type: "shawarma",
-    coverImage: "https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=700&q=85",
-    time: "25-35 د", fee: "12 جنيه", rating: "4.6",
-    reviewCount: "1200+", tag: "", tagColor: "", discount: "",
-  },
-  {
-    id: "10000000-0000-0000-0000-000000000003",
-    name: "برجر هاوس",   type: "burger",
-    coverImage: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=700&q=85",
-    time: "30-40 د", fee: "15 جنيه", rating: "4.5",
-    reviewCount: "780+", tag: "", tagColor: "", discount: "15%",
-  },
-  {
-    id: "10000000-0000-0000-0000-000000000004",
-    name: "بيتزا بلانيت", type: "pizza",
-    coverImage: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=700&q=85",
-    time: "30-45 د", fee: "15 جنيه", rating: "4.4",
-    reviewCount: "560+", tag: "", tagColor: "", discount: "",
-  },
-  {
-    id: "10000000-0000-0000-0000-000000000005",
-    name: "تشيكن ماستر", type: "chicken",
-    coverImage: "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=700&q=85",
-    time: "25-35 د", fee: "12 جنيه", rating: "4.7",
-    reviewCount: "920+", tag: "جديد", tagColor: "#2563EB", discount: "",
-  },
-  {
-    id: "10000000-0000-0000-0000-000000000006",
-    name: "كافيه النيل",  type: "cafe",
-    coverImage: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=700&q=85",
-    time: "15-25 د", fee: "12 جنيه", rating: "4.9",
-    reviewCount: "1100+", tag: "مميز", tagColor: "#7C3AED", discount: "",
+    name: "الشرقاوي",     type: "restaurant",
+    cover_image: "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=700&q=85",
+    delivery_time: "20-30 دقيقة", delivery_fee: 10, rating: 4.8,
+    review_count: 1850, tag: "الأكثر طلباً", tagColor: "#7C3AED",
   },
 ];
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
+interface Partner {
+  id: string;
+  name: string;
+  type: string;
+  cover_image: string | null;
+  delivery_time: string;
+  delivery_fee: number;
+  rating: number | null;
+  review_count: number;
+}
+
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [bannerIndex, setBannerIndex]       = useState(0);
+  const [partners, setPartners]             = useState<Partner[]>(FALLBACK_PARTNERS);
+  const [loading, setLoading]               = useState(true);
   const bannerRef  = useRef<ScrollView>(null);
   const pulseAnim  = useRef(new Animated.Value(1)).current;
   const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Fetch partners from Supabase
+  useFocusEffect(
+    React.useCallback(() => {
+      async function fetchPartners() {
+        const supabase = getSB();
+        if (!supabase) { setLoading(false); return; }
+        try {
+          const { data } = await supabase
+            .from("partners")
+            .select("id, name, type, cover_image, delivery_time, delivery_fee, rating, review_count")
+            .eq("is_approved", true)
+            .order("rating", { ascending: false })
+            .limit(20);
+          if (data && data.length > 0) {
+            setPartners(data as Partner[]);
+          }
+        } catch (error) {
+          console.log("Error fetching partners:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+      fetchPartners();
+    }, [])
+  );
 
   // Auto-scroll carousel
   useEffect(() => {
@@ -174,11 +178,9 @@ export default function Home() {
     return () => loop.stop();
   }, []);
 
-  const filtered = PARTNERS.filter(p =>
+  const filtered = partners.filter(p =>
     activeCategory === "all" || p.type === activeCategory
   );
-
-  const featured = PARTNERS.filter(p => p.discount || p.tag);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -599,7 +601,7 @@ export default function Home() {
               {/* Real Cover Image */}
               <View style={{ height: 155, overflow: "hidden" }}>
                 <Image
-                  source={{ uri: p.coverImage }}
+                  source={{ uri: p.cover_image || "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=700&q=85" }}
                   style={{ width: "100%", height: "100%", resizeMode: "cover" }}
                 />
                 {/* Gradient overlay bottom */}
@@ -607,42 +609,25 @@ export default function Home() {
                   position: "absolute", bottom: 0, left: 0, right: 0, height: 70,
                   backgroundColor: "rgba(0,0,0,0.22)",
                 }} />
-                {/* Badges */}
-                <View style={{ position: "absolute", top: 12, left: 12, right: 12, flexDirection: "row", justifyContent: "space-between" }}>
-                  {p.discount ? (
-                    <View style={{
-                      backgroundColor: "#EF4444",
-                      paddingVertical: 4, paddingHorizontal: 10, borderRadius: 10,
-                    }}>
-                      <Text style={{ color: "white", fontSize: 11, fontWeight: "900" }}>خصم {p.discount}</Text>
-                    </View>
-                  ) : <View />}
-                  {p.tag ? (
-                    <View style={{
-                      backgroundColor: p.tagColor,
-                      paddingVertical: 4, paddingHorizontal: 10, borderRadius: 10,
-                    }}>
-                      <Text style={{ color: "white", fontSize: 11, fontWeight: "900" }}>{p.tag}</Text>
-                    </View>
-                  ) : <View />}
-                </View>
               </View>
 
               {/* Info */}
               <View style={{ padding: 14, gap: 4 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <Text style={{ fontSize: 17, fontWeight: "900", color: C.text }}>{p.name}</Text>
-                  <View style={{
-                    flexDirection: "row", alignItems: "center", gap: 3,
-                    backgroundColor: "#FFF7ED",
-                    paddingVertical: 4, paddingHorizontal: 9, borderRadius: 10,
-                  }}>
-                    <Text style={{ fontSize: 13, color: "#F59E0B", fontWeight: "900" }}>★</Text>
-                    <Text style={{ fontSize: 13, fontWeight: "900", color: "#92400E" }}>{p.rating}</Text>
-                  </View>
+                  {p.rating && (
+                    <View style={{
+                      flexDirection: "row", alignItems: "center", gap: 3,
+                      backgroundColor: "#FFF7ED",
+                      paddingVertical: 4, paddingHorizontal: 9, borderRadius: 10,
+                    }}>
+                      <Text style={{ fontSize: 13, color: "#F59E0B", fontWeight: "900" }}>★</Text>
+                      <Text style={{ fontSize: 13, fontWeight: "900", color: "#92400E" }}>{p.rating.toFixed(1)}</Text>
+                    </View>
+                  )}
                 </View>
                 <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>
-                  {p.type}  •  {p.reviewCount} تقييم
+                  {p.type}  •  {p.review_count}+ تقييم
                 </Text>
                 <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
                   <View style={{
@@ -650,14 +635,14 @@ export default function Home() {
                     backgroundColor: "#F9FAFB", paddingVertical: 5, paddingHorizontal: 10, borderRadius: 10,
                   }}>
                     <Text style={{ fontSize: 12 }}>🕐</Text>
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: "#374151" }}>{p.time}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: "#374151" }}>{p.delivery_time}</Text>
                   </View>
                   <View style={{
                     flexDirection: "row", alignItems: "center", gap: 4,
                     backgroundColor: "#F9FAFB", paddingVertical: 5, paddingHorizontal: 10, borderRadius: 10,
                   }}>
                     <Text style={{ fontSize: 12 }}>🛵</Text>
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: "#374151" }}>{p.fee}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: "#374151" }}>{p.delivery_fee} جنيه</Text>
                   </View>
                 </View>
               </View>

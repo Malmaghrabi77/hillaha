@@ -1,20 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, ScrollView, Image, Linking } from "react-native";
 import { router } from "expo-router";
+import { useDarkMode } from "../hooks/useDarkMode";
+import { analyticsTracker } from "../utils/analyticsTracker";
+import { A11yPresets } from "../hooks/useAccessibility";
 
 // عناوين البريد الإلكتروني الرسمية لمنصة حلّها
 const EMAILS = {
-  info: "info@hillaha.com",           // معلومات عامة والتواصل مع العملاء
-  webmaster: "webmaster@hillaha.com", // طلبات تسجيل الشركاء الجدد
-} as const;
-const C = {
-  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
-  pink: "#EC4899",       pinkSoft: "#FCE7F3",
-  bg: "#FAFAFF",         surface: "#FFFFFF",
-  border: "#E7E3FF",     text: "#1F1B2E",
-  textMuted: "#6B6480",  success: "#34D399",
-  warning: "#F59E0B",    danger: "#EF4444",
-  deepPurple: "#6D28D9",
+  info: "info@hillaha.com",
+  webmaster: "webmaster@hillaha.com",
 } as const;
 
 function getSB() {
@@ -34,10 +28,14 @@ const MENU = [
 ];
 
 export default function Account() {
+  const { isDarkMode, colors } = useDarkMode();
   const [userName, setUserName]   = useState("...");
   const [userEmail, setUserEmail] = useState("...");
 
   useEffect(() => {
+    // 📊 تتبع عرض الشاشة
+    analyticsTracker.trackScreenView('account');
+
     const supabase = getSB();
     if (!supabase) return;
     supabase.auth.getUser().then(({ data }: any) => {
@@ -57,56 +55,61 @@ export default function Account() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
 
       {/* HEADER */}
       <View style={{
-        backgroundColor: C.surface,
-        borderBottomWidth: 1, borderBottomColor: C.border,
+        backgroundColor: colors.surface,
+        borderBottomWidth: 1, borderBottomColor: colors.border,
         paddingBottom: 24, paddingTop: 52,
       }}>
         <View style={{ alignItems: "center", marginBottom: 16 }}>
           <Image
             source={require("../../assets/hillaha-logo.png")}
             style={{ width: 40, height: 40, resizeMode: "contain" }}
+            {...A11yPresets.image("شعار تطبيق حلّها")}
           />
         </View>
 
         <View style={{ alignItems: "center", paddingHorizontal: 20 }}>
           <View style={{
             width: 80, height: 80, borderRadius: 40,
-            backgroundColor: C.primarySoft,
-            borderWidth: 3, borderColor: C.primary,
+            backgroundColor: isDarkMode ? colors.primarySoft : colors.primarySoft,
+            borderWidth: 3, borderColor: colors.primary,
             justifyContent: "center", alignItems: "center",
             marginBottom: 12,
-            shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
+            shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
           }}>
             <Text style={{ fontSize: 36 }}>👤</Text>
           </View>
-          <Text style={{ fontSize: 20, fontWeight: "900", color: C.text }}>{userName}</Text>
-          <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 4 }}>{userEmail}</Text>
+          <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text }}>{userName}</Text>
+          <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>{userEmail}</Text>
 
           <View style={{
             marginTop: 10, flexDirection: "row", alignItems: "center", gap: 6,
-            backgroundColor: C.pinkSoft, paddingVertical: 5, paddingHorizontal: 14,
-            borderRadius: 20, borderWidth: 1, borderColor: C.pink,
+            backgroundColor: colors.pinkSoft, paddingVertical: 5, paddingHorizontal: 14,
+            borderRadius: 20, borderWidth: 1, borderColor: colors.pink,
           }}>
             <Text style={{ fontSize: 14 }}>🎁</Text>
-            <Text style={{ fontWeight: "900", color: C.pink, fontSize: 13 }}>120 نقطة ولاء</Text>
+            <Text style={{ fontWeight: "900", color: colors.pink, fontSize: 13 }}>120 نقطة ولاء</Text>
           </View>
         </View>
 
         <Pressable
-          onPress={() => router.push("/profile/edit")}
+          onPress={() => {
+            analyticsTracker.trackEvent('edit_profile_clicked', {});
+            router.push("/profile/edit");
+          }}
+          {...A11yPresets.button("تعديل البيانات الشخصية", "انقر للانتقال إلى صفحة تعديل البيانات")}
           style={{
             marginTop: 16, marginHorizontal: 20,
             paddingVertical: 10, borderRadius: 14,
-            borderWidth: 1.5, borderColor: C.primary,
+            borderWidth: 1.5, borderColor: colors.primary,
             alignItems: "center",
           }}
         >
-          <Text style={{ color: C.primary, fontWeight: "700", fontSize: 14 }}>تعديل البيانات ✏️</Text>
+          <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 14 }}>تعديل البيانات ✏️</Text>
         </Pressable>
       </View>
 
@@ -115,56 +118,70 @@ export default function Account() {
         {MENU.map((item, i) => (
           <Pressable
             key={i}
-            onPress={() => item.route && router.push(item.route as any)}
+            onPress={() => {
+              if (item.route) {
+                analyticsTracker.trackEvent('menu_item_clicked', { label: item.label });
+                router.push(item.route as any);
+              }
+            }}
+            {...A11yPresets.button(item.label, `انقر للانتقال إلى ${item.label}`)}
             style={{
               flexDirection: "row", alignItems: "center", gap: 14,
               padding: 16, borderRadius: 16, marginBottom: 10,
-              backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+              backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
             }}
           >
             <View style={{
               width: 42, height: 42, borderRadius: 12,
-              backgroundColor: item.label === "نقاط الولاء" ? C.pinkSoft : C.primarySoft,
+              backgroundColor: item.label === "نقاط الولاء" ? colors.pinkSoft : colors.primarySoft,
               justifyContent: "center", alignItems: "center",
             }}>
               <Text style={{ fontSize: 20 }}>{item.icon}</Text>
             </View>
-            <Text style={{ flex: 1, fontWeight: "700", color: C.text, fontSize: 15 }}>{item.label}</Text>
-            <Text style={{ color: C.textMuted, fontSize: 18 }}>←</Text>
+            <Text style={{ flex: 1, fontWeight: "700", color: colors.text, fontSize: 15 }}>{item.label}</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 18 }}>←</Text>
           </Pressable>
         ))}
 
         {/* CONTACT */}
         <View style={{
           marginTop: 8, marginBottom: 10, padding: 16, borderRadius: 16,
-          backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+          backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
         }}>
-          <Text style={{ fontWeight: "800", color: C.textMuted, fontSize: 11, marginBottom: 10, letterSpacing: 1 }}>
+          <Text style={{ fontWeight: "800", color: colors.textMuted, fontSize: 11, marginBottom: 10, letterSpacing: 1 }}>
             تواصل معنا
           </Text>
           <Pressable
-            onPress={() => Linking.openURL(`mailto:${EMAILS.info}?subject=استفسار من تطبيق حلّها`)}
+            onPress={() => {
+              analyticsTracker.trackEvent('contact_email_clicked', { type: 'info' });
+              Linking.openURL(`mailto:${EMAILS.info}?subject=استفسار من تطبيق حلّها`);
+            }}
+            {...A11yPresets.button("معلومات واستفسارات", `بريد إلكتروني: ${EMAILS.info}`)}
             style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 }}
           >
-            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.primarySoft, justifyContent: "center", alignItems: "center" }}>
+            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primarySoft, justifyContent: "center", alignItems: "center" }}>
               <Text style={{ fontSize: 18 }}>📧</Text>
             </View>
             <View>
-              <Text style={{ fontWeight: "700", color: C.text, fontSize: 14 }}>معلومات واستفسارات</Text>
-              <Text style={{ color: C.textMuted, fontSize: 12 }}>{EMAILS.info}</Text>
+              <Text style={{ fontWeight: "700", color: colors.text, fontSize: 14 }}>معلومات واستفسارات</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12 }}>{EMAILS.info}</Text>
             </View>
           </Pressable>
-          <View style={{ height: 1, backgroundColor: C.border, marginVertical: 6 }} />
+          <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 6 }} />
           <Pressable
-            onPress={() => Linking.openURL(`mailto:${EMAILS.webmaster}?subject=طلب تسجيل شريك جديد`)}
+            onPress={() => {
+              analyticsTracker.trackEvent('contact_email_clicked', { type: 'webmaster' });
+              Linking.openURL(`mailto:${EMAILS.webmaster}?subject=طلب تسجيل شريك جديد`);
+            }}
+            {...A11yPresets.button("تسجيل شريك جديد", `بريد إلكتروني: ${EMAILS.webmaster}`)}
             style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 }}
           >
-            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.pinkSoft, justifyContent: "center", alignItems: "center" }}>
+            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.pinkSoft, justifyContent: "center", alignItems: "center" }}>
               <Text style={{ fontSize: 18 }}>🤝</Text>
             </View>
             <View>
-              <Text style={{ fontWeight: "700", color: C.text, fontSize: 14 }}>تسجيل شريك جديد</Text>
-              <Text style={{ color: C.textMuted, fontSize: 12 }}>{EMAILS.webmaster}</Text>
+              <Text style={{ fontWeight: "700", color: colors.text, fontSize: 14 }}>تسجيل شريك جديد</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12 }}>{EMAILS.webmaster}</Text>
             </View>
           </Pressable>
         </View>
@@ -172,14 +189,16 @@ export default function Account() {
         {/* LOGOUT */}
         <Pressable
           onPress={handleLogout}
+          {...A11yPresets.button("تسجيل الخروج", "انقر لتسجيل الخروج من حسابك")}
           style={{
             marginTop: 8, padding: 16, borderRadius: 16,
-            backgroundColor: "#FEF2F2", borderWidth: 1.5, borderColor: "#FECACA",
+            backgroundColor: isDarkMode ? "#7F1D1D" : "#FEF2F2",
+            borderWidth: 1.5, borderColor: isDarkMode ? "#DC2626" : "#FECACA",
             alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8,
           }}
         >
           <Text style={{ fontSize: 18 }}>🚪</Text>
-          <Text style={{ fontWeight: "900", color: "#EF4444", fontSize: 15 }}>تسجيل الخروج</Text>
+          <Text style={{ fontWeight: "900", color: colors.danger, fontSize: 15 }}>تسجيل الخروج</Text>
         </Pressable>
       </ScrollView>
     </View>

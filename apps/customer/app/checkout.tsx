@@ -5,16 +5,9 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useCart } from "../lib/cartStore";
-
-const C = {
-  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
-  pink: "#EC4899",       pinkSoft: "#FCE7F3",
-  bg: "#FAFAFF",         surface: "#FFFFFF",
-  border: "#E7E3FF",     text: "#1F1B2E",
-  textMuted: "#6B6480",  success: "#34D399",
-  warning: "#F59E0B",    danger: "#EF4444",
-  deepPurple: "#6D28D9",
-} as const;
+import { useDarkMode } from "../hooks/useDarkMode";
+import { analyticsTracker } from "../utils/analyticsTracker";
+import { A11yPresets } from "../hooks/useAccessibility";
 
 function getSB() {
   try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
@@ -22,9 +15,6 @@ function getSB() {
 
 type PayMethod = "cash" | "instapay" | "etisalat" | "vodafone" | "card";
 
-// ── حسابات الدفع الرسمية لمنصة حلّها ─────────────────────────────────────────
-// المصدر الحقيقي: جدول platform_settings في Supabase (قابل للتعديل من لوحة السوبر أدمن)
-// التالي: قيم احتياطية فقط للحالات التي يتعذر فيها الاتصال
 const FALLBACK_ACCOUNTS = {
   instapay:  { account: "@malmaghrabi77",  instructions: "افتح تطبيق InstaPay وحوّل المبلغ إلى الحساب التالي" },
   etisalat:  { phone:   "01107549225",     instructions: "حوّل المبلغ عبر خدمة E& (اتصالات) إلى الرقم التالي" },
@@ -40,6 +30,7 @@ const METHODS: { id: PayMethod; label: string; desc: string; icon: string; soon?
 ];
 
 export default function Checkout() {
+  const { isDarkMode, colors } = useDarkMode();
   const cart = useCart();
   const [method, setMethod]             = useState<PayMethod>("cash");
   const [address, setAddress]           = useState("");
@@ -47,23 +38,19 @@ export default function Checkout() {
   const [phone, setPhone]               = useState("");
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState("");
-
-  // إثبات الدفع
   const [proofUri, setProofUri]         = useState<string | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
-
-  // حسابات الاستلام المُحمَّلة من Supabase
   const [liveAccounts, setLiveAccounts] = useState<{
     instapay_account: string;
     etisalat_phone:   string;
     vodafone_phone:   string;
   } | null>(null);
 
-  // هل طريقة الدفع المختارة تتطلب رفع إثبات؟
   const needsProof = method === "instapay" || method === "etisalat";
 
-  // تحميل بيانات المستخدم + حسابات الاستلام من Supabase
   useEffect(() => {
+    analyticsTracker.trackScreenView('checkout');
+
     const supabase = getSB();
     if (!supabase) return;
 
@@ -88,14 +75,13 @@ export default function Checkout() {
       }).catch(() => {});
   }, []);
 
-  // عند تغيير طريقة الدفع: إعادة تعيين الإثبات
   function handleSetMethod(m: PayMethod) {
+    analyticsTracker.trackEvent('payment_method_changed', { method: m });
     setMethod(m);
     setProofUri(null);
     setError("");
   }
 
-  // اختيار صورة إثبات التحويل من المعرض
   async function pickProof() {
     try {
       const ImagePicker = require("expo-image-picker") as any;
@@ -110,6 +96,7 @@ export default function Checkout() {
         quality: 0.8,
       });
       if (!result.canceled && result.assets?.[0]?.uri) {
+        analyticsTracker.trackEvent('payment_proof_uploaded', {});
         setProofUri(result.assets[0].uri);
         setError("");
       }
@@ -131,7 +118,6 @@ export default function Checkout() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("يجب تسجيل الدخول أولاً");
 
-      // رفع صورة الإثبات إلى Supabase Storage
       let proofStorageUrl: string | null = null;
       if (proofUri && needsProof) {
         setUploadingProof(true);
@@ -167,10 +153,7 @@ export default function Checkout() {
           delivery_fee:      cart.deliveryFee,
           discount:          0,
           total:             cart.total,
-          // map UI method → DB enum (instapay/etisalat/vodafone → wallet_transfer)
-          payment_method:    (method === "cash" || method === "card")
-            ? method
-            : "wallet_transfer",
+          payment_method:    (method === "cash" || method === "card") ? method : "wallet_transfer",
           payment_proof_url: proofStorageUrl,
           status:            "pending",
         })
@@ -179,6 +162,7 @@ export default function Checkout() {
 
       if (insertError) throw insertError;
 
+      analyticsTracker.trackOrderCompleted(order.id, cart.total, cart.partnerId!, method);
       cart.clearCart();
       router.replace(`/tracking/${order.id}`);
     } catch (e: any) {
@@ -189,8 +173,6 @@ export default function Checkout() {
   }
 
   const loyaltyPoints = cart.loyaltyEarn;
-
-  // حسابات الاستلام النشطة (live أو fallback)
   const accounts = liveAccounts
     ? {
         instapay: { account: liveAccounts.instapay_account, instructions: FALLBACK_ACCOUNTS.instapay.instructions },
@@ -199,107 +181,108 @@ export default function Checkout() {
     : FALLBACK_ACCOUNTS;
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140 }}>
 
         {/* ORDER SUMMARY */}
         <View style={{
           padding: 16, borderRadius: 16, marginBottom: 16,
-          backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+          backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
         }}>
-          <Text style={{ fontWeight: "900", color: C.text, fontSize: 15, marginBottom: 12 }}>
+          <Text style={{ fontWeight: "900", color: colors.text, fontSize: 15, marginBottom: 12 }}>
             ملخص الطلب — {cart.partnerName ?? "المتجر"}
           </Text>
           {cart.itemList.map((item, i) => (
             <View key={item.id} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-              <Text style={{ color: C.textMuted, fontSize: 13 }}>{item.nameAr} × {item.qty}</Text>
-              <Text style={{ fontWeight: "700", color: C.text, fontSize: 13 }}>{item.price * item.qty} ج</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 13 }}>{item.nameAr} × {item.qty}</Text>
+              <Text style={{ fontWeight: "700", color: colors.text, fontSize: 13 }}>{item.price * item.qty} ج</Text>
             </View>
           ))}
-          <View style={{ height: 1, backgroundColor: C.border, marginVertical: 8 }} />
+          <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 8 }} />
           {[
             { label: "المجموع الجزئي", value: `${cart.subtotal} ج` },
             { label: "رسوم التوصيل",   value: `${cart.deliveryFee} ج` },
           ].map((row, i) => (
             <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
-              <Text style={{ color: C.textMuted, fontSize: 13 }}>{row.label}</Text>
-              <Text style={{ fontWeight: "700", color: C.text, fontSize: 13 }}>{row.value}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 13 }}>{row.label}</Text>
+              <Text style={{ fontWeight: "700", color: colors.text, fontSize: 13 }}>{row.value}</Text>
             </View>
           ))}
-          <View style={{ height: 1, backgroundColor: C.border, marginVertical: 8 }} />
+          <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 8 }} />
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ fontWeight: "900", color: C.text, fontSize: 15 }}>الإجمالي</Text>
-            <Text style={{ fontWeight: "900", color: C.primary, fontSize: 18 }}>{cart.total} ج</Text>
+            <Text style={{ fontWeight: "900", color: colors.text, fontSize: 15 }}>الإجمالي</Text>
+            <Text style={{ fontWeight: "900", color: colors.primary, fontSize: 18 }}>{cart.total} ج</Text>
           </View>
         </View>
 
         {/* DELIVERY ADDRESS */}
         <View style={{
           padding: 16, borderRadius: 16, marginBottom: 16,
-          backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+          backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
         }}>
-          <Text style={{ fontWeight: "900", color: C.text, fontSize: 14, marginBottom: 10 }}>
+          <Text style={{ fontWeight: "900", color: colors.text, fontSize: 14, marginBottom: 10 }}>
             📍 عنوان التوصيل
           </Text>
           <TextInput
             value={address}
             onChangeText={setAddress}
             placeholder="مثال: شارع التحرير، المعادي، الدور 3"
-            placeholderTextColor={C.textMuted}
+            placeholderTextColor={colors.textMuted}
             multiline
             numberOfLines={2}
             style={{
-              borderWidth: 1.5, borderColor: C.border, borderRadius: 12,
-              padding: 12, fontSize: 14, color: C.text,
-              backgroundColor: C.bg, textAlign: "right", marginBottom: 10,
+              borderWidth: 1.5, borderColor: colors.border, borderRadius: 12,
+              padding: 12, fontSize: 14, color: colors.text,
+              backgroundColor: colors.bg, textAlign: "right", marginBottom: 10,
             }}
           />
           <TextInput
             value={phone}
             onChangeText={setPhone}
             placeholder="رقم الهاتف للمندوب"
-            placeholderTextColor={C.textMuted}
+            placeholderTextColor={colors.textMuted}
             keyboardType="phone-pad"
             style={{
-              borderWidth: 1.5, borderColor: C.border, borderRadius: 12,
-              padding: 12, fontSize: 14, color: C.text,
-              backgroundColor: C.bg, textAlign: "right", marginBottom: 10,
+              borderWidth: 1.5, borderColor: colors.border, borderRadius: 12,
+              padding: 12, fontSize: 14, color: colors.text,
+              backgroundColor: colors.bg, textAlign: "right", marginBottom: 10,
             }}
           />
           <TextInput
             value={note}
             onChangeText={setNote}
             placeholder="ملاحظة للمطعم (اختياري)"
-            placeholderTextColor={C.textMuted}
+            placeholderTextColor={colors.textMuted}
             style={{
-              borderWidth: 1.5, borderColor: C.border, borderRadius: 12,
-              padding: 12, fontSize: 14, color: C.text,
-              backgroundColor: C.bg, textAlign: "right",
+              borderWidth: 1.5, borderColor: colors.border, borderRadius: 12,
+              padding: 12, fontSize: 14, color: colors.text,
+              backgroundColor: colors.bg, textAlign: "right",
             }}
           />
         </View>
 
         {/* PAYMENT METHODS */}
-        <Text style={{ fontSize: 15, fontWeight: "900", color: C.text, marginBottom: 12 }}>
+        <Text style={{ fontSize: 15, fontWeight: "900", color: colors.text, marginBottom: 12 }}>
           طريقة الدفع
         </Text>
         {METHODS.map(m => (
           <Pressable
             key={m.id}
             onPress={() => !m.soon && handleSetMethod(m.id)}
+            {...A11yPresets.button(m.label, m.desc)}
             style={{
               flexDirection: "row", alignItems: "center", gap: 14,
               padding: 16, borderRadius: 16, marginBottom: 10,
-              backgroundColor: method === m.id ? C.primarySoft : C.surface,
+              backgroundColor: method === m.id ? colors.primarySoft : colors.surface,
               borderWidth: 2,
-              borderColor: method === m.id ? C.primary : C.border,
+              borderColor: method === m.id ? colors.primary : colors.border,
               opacity: m.soon ? 0.5 : 1,
             }}
           >
             <View style={{
               width: 22, height: 22, borderRadius: 11,
-              borderWidth: 2, borderColor: method === m.id ? C.primary : C.border,
-              backgroundColor: method === m.id ? C.primary : "transparent",
+              borderWidth: 2, borderColor: method === m.id ? colors.primary : colors.border,
+              backgroundColor: method === m.id ? colors.primary : "transparent",
               justifyContent: "center", alignItems: "center",
             }}>
               {method === m.id && (
@@ -308,18 +291,18 @@ export default function Checkout() {
             </View>
             <Text style={{ fontSize: 22 }}>{m.icon}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "900", color: C.text, fontSize: 14 }}>{m.label}</Text>
-              <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{m.desc}</Text>
+              <Text style={{ fontWeight: "900", color: colors.text, fontSize: 14 }}>{m.label}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{m.desc}</Text>
             </View>
             {m.soon && (
-              <View style={{ backgroundColor: C.warning, paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8 }}>
+              <View style={{ backgroundColor: colors.warning, paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8 }}>
                 <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>قريباً</Text>
               </View>
             )}
           </Pressable>
         ))}
 
-        {/* TRANSFER INSTRUCTIONS — يظهر عند اختيار InstaPay أو E& */}
+        {/* TRANSFER INSTRUCTIONS */}
         {(method === "instapay" || method === "etisalat") && (() => {
           const acct = accounts[method as "instapay" | "etisalat"];
           const value = method === "instapay"
@@ -328,62 +311,61 @@ export default function Checkout() {
           return (
             <View style={{
               padding: 16, borderRadius: 16, marginBottom: 12,
-              backgroundColor: "#F0FDF4", borderWidth: 1.5, borderColor: "#86EFAC",
+              backgroundColor: isDarkMode ? "#064E3B" : "#F0FDF4",
+              borderWidth: 1.5, borderColor: isDarkMode ? "#10B981" : "#86EFAC",
             }}>
-              <Text style={{ fontWeight: "900", color: "#15803D", fontSize: 13, marginBottom: 6 }}>
+              <Text style={{ fontWeight: "900", color: isDarkMode ? "#6EE7B7" : "#15803D", fontSize: 13, marginBottom: 6 }}>
                 📋 تعليمات التحويل
               </Text>
-              <Text style={{ color: "#166534", fontSize: 13, marginBottom: 10, lineHeight: 20 }}>
+              <Text style={{ color: isDarkMode ? "#10B981" : "#166534", fontSize: 13, marginBottom: 10, lineHeight: 20 }}>
                 {acct.instructions}
               </Text>
               <View style={{
-                backgroundColor: "#DCFCE7", borderRadius: 10,
+                backgroundColor: isDarkMode ? "#0F766E" : "#DCFCE7", borderRadius: 10,
                 paddingVertical: 10, paddingHorizontal: 14, alignItems: "center",
               }}>
-                <Text style={{ color: "#14532D", fontWeight: "900", fontSize: 20, letterSpacing: 1, textAlign: "center" }}>
+                <Text style={{ color: isDarkMode ? "#CCFBF1" : "#14532D", fontWeight: "900", fontSize: 20, letterSpacing: 1, textAlign: "center" }}>
                   {value}
                 </Text>
               </View>
-              <Text style={{ color: "#6B7280", fontSize: 11, marginTop: 8, textAlign: "center" }}>
+              <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 8, textAlign: "center" }}>
                 اكتب رقم طلبك في ملاحظة التحويل حتى نتعرف عليك
               </Text>
             </View>
           );
         })()}
 
-        {/* ── رفع إثبات الدفع (إلزامي للمحافظ الإلكترونية) ── */}
+        {/* رفع إثبات الدفع */}
         {needsProof && (
           <View style={{
             padding: 16, borderRadius: 16, marginBottom: 16,
-            backgroundColor: C.surface,
+            backgroundColor: colors.surface,
             borderWidth: 2,
-            borderColor: proofUri ? "#86EFAC" : C.warning,
+            borderColor: proofUri ? colors.success : colors.warning,
           }}>
-            {/* Header */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <Text style={{ fontSize: 18 }}>{proofUri ? "✅" : "📎"}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: "900", color: C.text, fontSize: 14 }}>
+                <Text style={{ fontWeight: "900", color: colors.text, fontSize: 14 }}>
                   رفع إثبات التحويل
                 </Text>
-                <Text style={{ color: C.danger, fontSize: 11, fontWeight: "700" }}>
+                <Text style={{ color: colors.danger, fontSize: 11, fontWeight: "700" }}>
                   إلزامي — لا يمكن تأكيد الطلب بدونه
                 </Text>
               </View>
             </View>
 
-            {/* صورة الإثبات المختارة */}
             {proofUri ? (
               <View style={{ marginBottom: 10 }}>
                 <Image
                   source={{ uri: proofUri }}
                   style={{
                     width: "100%", height: 160, borderRadius: 12,
-                    resizeMode: "cover", backgroundColor: C.border,
+                    resizeMode: "cover", backgroundColor: colors.border,
                   }}
                 />
                 <Text style={{
-                  color: "#15803D", fontWeight: "700", fontSize: 12,
+                  color: colors.success, fontWeight: "700", fontSize: 12,
                   textAlign: "center", marginTop: 6,
                 }}>
                   تم اختيار صورة الإثبات
@@ -392,34 +374,34 @@ export default function Checkout() {
             ) : (
               <View style={{
                 height: 100, borderRadius: 12, borderWidth: 2,
-                borderColor: C.border, borderStyle: "dashed",
+                borderColor: colors.border, borderStyle: "dashed",
                 justifyContent: "center", alignItems: "center", marginBottom: 10,
-                backgroundColor: C.bg,
+                backgroundColor: colors.bg,
               }}>
                 <Text style={{ fontSize: 28, marginBottom: 4 }}>🖼️</Text>
-                <Text style={{ color: C.textMuted, fontSize: 12 }}>لم يتم اختيار صورة بعد</Text>
+                <Text style={{ color: colors.textMuted, fontSize: 12 }}>لم يتم اختيار صورة بعد</Text>
               </View>
             )}
 
-            {/* زر الاختيار / التغيير */}
             <Pressable
               onPress={pickProof}
+              {...A11yPresets.button("اختر صورة من المعرج", "انقر لاختيار صورة إثبات التحويل")}
               style={{
                 paddingVertical: 12, borderRadius: 12, alignItems: "center",
-                backgroundColor: proofUri ? "#DCFCE7" : C.primarySoft,
+                backgroundColor: proofUri ? colors.pinkSoft : colors.primarySoft,
                 borderWidth: 1.5,
-                borderColor: proofUri ? "#86EFAC" : C.primary,
+                borderColor: proofUri ? colors.pink : colors.primary,
               }}
             >
               <Text style={{
                 fontWeight: "900", fontSize: 14,
-                color: proofUri ? "#15803D" : C.primary,
+                color: proofUri ? colors.pink : colors.primary,
               }}>
-                {proofUri ? "تغيير الصورة" : "اختر صورة من المعرض"}
+                {proofUri ? "تغيير الصورة" : "اختر صورة من المعرج"}
               </Text>
             </Pressable>
 
-            <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 8, textAlign: "center" }}>
+            <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 8, textAlign: "center" }}>
               التقط لقطة شاشة لإشعار التحويل ثم ارفعها هنا
             </Text>
           </View>
@@ -428,11 +410,11 @@ export default function Checkout() {
         {/* LOYALTY */}
         <View style={{
           padding: 12, borderRadius: 16, marginTop: 4,
-          backgroundColor: C.pinkSoft, borderWidth: 1, borderColor: C.pink,
+          backgroundColor: colors.pinkSoft, borderWidth: 1, borderColor: colors.pink,
           flexDirection: "row", alignItems: "center", gap: 8,
         }}>
           <Text style={{ fontSize: 16 }}>🎁</Text>
-          <Text style={{ color: C.pink, fontWeight: "700", fontSize: 13 }}>
+          <Text style={{ color: colors.pink, fontWeight: "700", fontSize: 13 }}>
             ستكسب {loyaltyPoints} نقطة ولاء من هذا الطلب
           </Text>
         </View>
@@ -441,34 +423,34 @@ export default function Checkout() {
       {/* CONFIRM BUTTON */}
       <View style={{
         position: "absolute", bottom: 0, left: 0, right: 0,
-        padding: 16, backgroundColor: C.surface,
-        borderTopWidth: 1, borderTopColor: C.border,
+        padding: 16, backgroundColor: colors.surface,
+        borderTopWidth: 1, borderTopColor: colors.border,
       }}>
-        {/* تحذير: الإثبات مطلوب */}
         {needsProof && !proofUri && (
           <View style={{
             flexDirection: "row", alignItems: "center", gap: 6,
-            backgroundColor: "#FEF3C7", borderRadius: 10,
+            backgroundColor: isDarkMode ? "#78350F" : "#FEF3C7", borderRadius: 10,
             paddingVertical: 8, paddingHorizontal: 12, marginBottom: 8,
           }}>
             <Text style={{ fontSize: 14 }}>⚠️</Text>
-            <Text style={{ color: "#92400E", fontSize: 12, fontWeight: "700", flex: 1 }}>
+            <Text style={{ color: isDarkMode ? "#FDE047" : "#92400E", fontSize: 12, fontWeight: "700", flex: 1 }}>
               ارفع صورة إثبات التحويل أولاً
             </Text>
           </View>
         )}
         {error ? (
-          <Text style={{ color: C.danger, fontSize: 12, fontWeight: "700", textAlign: "center", marginBottom: 8 }}>
+          <Text style={{ color: colors.danger, fontSize: 12, fontWeight: "700", textAlign: "center", marginBottom: 8 }}>
             {error}
           </Text>
         ) : null}
         <Pressable
           onPress={handleConfirm}
           disabled={loading || uploadingProof || (needsProof && !proofUri)}
+          {...A11yPresets.button("تأكيد الطلب", `انقر لتأكيد الطلب - المجموع: ${cart.total} جنيه`)}
           style={{
-            backgroundColor: (loading || uploadingProof || (needsProof && !proofUri)) ? C.primarySoft : C.primary,
+            backgroundColor: (loading || uploadingProof || (needsProof && !proofUri)) ? colors.primarySoft : colors.primary,
             paddingVertical: 16, borderRadius: 16, alignItems: "center",
-            shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
+            shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 },
             shadowOpacity: (loading || uploadingProof) ? 0 : 0.3,
             shadowRadius: 12,
             elevation: (loading || uploadingProof) ? 0 : 6,
@@ -477,7 +459,7 @@ export default function Checkout() {
           {(loading || uploadingProof)
             ? <ActivityIndicator color="white" />
             : <Text style={{
-                color: (needsProof && !proofUri) ? C.textMuted : "white",
+                color: (needsProof && !proofUri) ? colors.textMuted : "white",
                 fontWeight: "900", fontSize: 16,
               }}>
                 تأكيد الطلب — {cart.total} ج

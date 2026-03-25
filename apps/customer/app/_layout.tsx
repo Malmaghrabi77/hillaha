@@ -3,6 +3,7 @@ import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { CartProvider } from "../lib/cartStore";
 import { LocaleProvider } from "../lib/i18n";
+import { DarkModeProvider } from "./hooks/useDarkMode";
 
 // ── Prevent auto-hide: we control dismiss timing ──────────────────────────────
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -69,24 +70,26 @@ export default function RootLayout() {
   return (
     <LocaleProvider>
       <CartProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index"                options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)"               options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)"               options={{ headerShown: false }} />
-          <Stack.Screen name="legal/consent"        options={{ headerShown: false }} />
-          <Stack.Screen name="restaurant/[id]"      options={{ headerShown: true,  title: "تفاصيل المتجر" }} />
-          <Stack.Screen name="cart"                 options={{ headerShown: true,  title: "السلة" }} />
-          <Stack.Screen name="checkout"             options={{ headerShown: true,  title: "الدفع" }} />
-          <Stack.Screen name="tracking/[orderId]"   options={{ headerShown: true,  title: "تتبع الطلب" }} />
-          <Stack.Screen name="medical"              options={{ headerShown: true,  title: "الخدمات الطبية" }} />
-          <Stack.Screen name="medical/booking"      options={{ headerShown: true,  title: "حجز موعد طبيب" }} />
-          <Stack.Screen name="medical/prescription" options={{ headerShown: true,  title: "رفع روشتة" }} />
-          <Stack.Screen name="profile/edit"         options={{ headerShown: true,  title: "تعديل البيانات" }} />
-          <Stack.Screen name="loyalty"              options={{ headerShown: true,  title: "نقاط الولاء" }} />
-          <Stack.Screen name="services/cleaning"    options={{ headerShown: false }} />
-          <Stack.Screen name="services/electrical"  options={{ headerShown: false }} />
-          <Stack.Screen name="services/delivery"    options={{ headerShown: false }} />
-        </Stack>
+        <DarkModeProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index"                options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)"               options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)"               options={{ headerShown: false }} />
+            <Stack.Screen name="legal/consent"        options={{ headerShown: false }} />
+            <Stack.Screen name="restaurant/[id]"      options={{ headerShown: true,  title: "تفاصيل المتجر" }} />
+            <Stack.Screen name="cart"                 options={{ headerShown: true,  title: "السلة" }} />
+            <Stack.Screen name="checkout"             options={{ headerShown: true,  title: "الدفع" }} />
+            <Stack.Screen name="tracking/[orderId]"   options={{ headerShown: true,  title: "تتبع الطلب" }} />
+            <Stack.Screen name="medical"              options={{ headerShown: true,  title: "الخدمات الطبية" }} />
+            <Stack.Screen name="medical/booking"      options={{ headerShown: true,  title: "حجز موعد طبيب" }} />
+            <Stack.Screen name="medical/prescription" options={{ headerShown: true,  title: "رفع روشتة" }} />
+            <Stack.Screen name="profile/edit"         options={{ headerShown: true,  title: "تعديل البيانات" }} />
+            <Stack.Screen name="loyalty"              options={{ headerShown: true,  title: "نقاط الولاء" }} />
+            <Stack.Screen name="services/cleaning"    options={{ headerShown: false }} />
+            <Stack.Screen name="services/electrical"  options={{ headerShown: false }} />
+            <Stack.Screen name="services/delivery"    options={{ headerShown: false }} />
+          </Stack>
+        </DarkModeProvider>
       </CartProvider>
     </LocaleProvider>
   );

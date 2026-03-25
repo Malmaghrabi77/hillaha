@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useDarkMode } from "../../hooks/useDarkMode";
+import { useSupabase } from "../../../hooks/useSupabase";
 import { analyticsTracker } from "../../utils/analyticsTracker";
 import { A11yPresets } from "../../hooks/useAccessibility";
 
@@ -14,10 +15,6 @@ const C = {
   border: "#E7E3FF", text: "#1F1B2E",
   textMuted: "#6B6480",
 } as const;
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
 
 interface Message {
   id: string;
@@ -36,13 +33,13 @@ export default function PartnerChat() {
   const [partnerPhone, setPartnerPhone] = useState("");
   const scrollRef = useRef<FlatList>(null);
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
 
   // Fetch messages and partner info
   useEffect(() => {
     analyticsTracker.trackScreenView("partner_chat_screen");
     if (!partnerId) return;
     async function load() {
-      const supabase = getSB();
       if (!supabase) { setLoading(false); return; }
 
       try {
@@ -79,10 +76,8 @@ export default function PartnerChat() {
     load();
 
     // Subscribe to new messages
-    const supabase = getSB();
-    if (supabase) {
-      const channel = supabase
-        .channel(`chat-partner-${partnerId}`)
+    const channel = supabase
+      .channel(`chat-partner-${partnerId}`)
         .on(
           "postgres_changes",
           {
@@ -99,13 +94,11 @@ export default function PartnerChat() {
         .subscribe();
 
       return () => { supabase.removeChannel(channel); };
-    }
-  }, [partnerId]);
+  }, [partnerId, supabase]);
 
   async function sendMessage() {
     if (!newMessage.trim() || !partnerId) return;
 
-    const supabase = getSB();
     if (!supabase) return;
 
     analyticsTracker.trackEvent("send_partner_message", { partnerId });

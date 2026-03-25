@@ -5,12 +5,10 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
+import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
 
 interface FavoritePartner {
   id: string;
@@ -30,11 +28,12 @@ interface FavoritePartner {
 
 export default function Favorites() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const [favorites, setFavorites] = useState<FavoritePartner[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    analyticsTracker.trackScreenView('favorites_screen');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.FAVORITES);
   }, []);
 
   useFocusEffect(
@@ -44,7 +43,6 @@ export default function Favorites() {
   );
 
   async function fetchFavorites() {
-    const supabase = getSB();
     if (!supabase) { setLoading(false); return; }
 
     try {
@@ -70,7 +68,6 @@ export default function Favorites() {
   }
 
   async function removeFavorite(partnerId: string) {
-    const supabase = getSB();
     if (!supabase) return;
 
     try {
@@ -116,7 +113,7 @@ export default function Favorites() {
       }}>
         <Pressable
           onPress={() => {
-            analyticsTracker.trackEvent('back_pressed', { screen: 'favorites' });
+            analyticsTracker.trackEvent(ANALYTICS_EVENTS.NAVIGATION.BACK_PRESSED, { screen: 'favorites' });
             router.back();
           }}
           {...A11yPresets.button()}
@@ -149,7 +146,7 @@ export default function Favorites() {
                 <Pressable
                   key={fav.id}
                   onPress={() => {
-                    analyticsTracker.trackEvent('favorite_pressed', {
+                    analyticsTracker.trackEvent(ANALYTICS_EVENTS.FAVORITES.CARD_PRESSED, {
                       partner_id: p.id,
                       partner_name: p.name,
                     });

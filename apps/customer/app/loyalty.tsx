@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, Pressable, Image, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { useDarkMode } from "./hooks/useDarkMode";
+import { useSupabase } from "./hooks/useSupabase";
 import { analyticsTracker } from "./utils/analyticsTracker";
 import { A11yPresets } from "./hooks/useAccessibility";
 
@@ -14,10 +15,6 @@ const C = {
   warning: "#F59E0B",    danger: "#EF4444",
   deepPurple: "#6D28D9",
 } as const;
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
 
 // 20 نقاط = 20 جنيه | الحد الأدنى للاستبدال 20 نقطة | 1 نقطة لكل 250 جنيه مشتريات
 const POINTS_PER_EGP   = 250;
@@ -68,10 +65,10 @@ export default function Loyalty() {
   const [history,     setHistory]       = useState<{ text: string; points: string; egp: string; date: string; credit: boolean }[]>([]);
   const [loadingData, setLoadingData]   = useState(true);
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
 
   useEffect(() => {
     analyticsTracker.trackScreenView("loyalty_screen");
-    const supabase = getSB();
     if (!supabase) { setLoadingData(false); return; }
 
     supabase.auth.getUser().then(async ({ data }: any) => {

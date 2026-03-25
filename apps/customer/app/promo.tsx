@@ -5,12 +5,10 @@ import {
 } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
+import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
 
 interface Coupon {
   id: string;
@@ -33,13 +31,14 @@ interface UserCoupon {
 
 export default function PromoCode() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const [coupons, setCoupons] = useState<UserCoupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [couponCode, setCouponCode] = useState("");
   const [applying, setApplying] = useState(false);
 
   useEffect(() => {
-    analyticsTracker.trackScreenView('promo_codes_screen');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.PROMO);
   }, []);
 
   useFocusEffect(
@@ -96,7 +95,7 @@ export default function PromoCode() {
         .maybeSingle();
 
       if (!couponData) {
-        analyticsTracker.trackEvent('coupon_invalid', {
+        analyticsTracker.trackEvent(ANALYTICS_EVENTS.PROMO.CODE_INVALID, {
           coupon_code: couponCode.toUpperCase(),
           reason: 'invalid_or_expired',
         });
@@ -114,7 +113,7 @@ export default function PromoCode() {
         .maybeSingle();
 
       if (existingCoupon) {
-        analyticsTracker.trackEvent('coupon_duplicate', {
+        analyticsTracker.trackEvent(ANALYTICS_EVENTS.PROMO.CODE_APPLIED, {
           coupon_code: couponCode.toUpperCase(),
         });
         Alert.alert("تنبيه", "لديك هذا الكود بالفعل!");
@@ -128,7 +127,7 @@ export default function PromoCode() {
         coupon_id: couponData.id,
       });
 
-      analyticsTracker.trackEvent('coupon_applied', {
+      analyticsTracker.trackEvent(ANALYTICS_EVENTS.PROMO.CODE_APPLIED, {
         coupon_code: couponCode.toUpperCase(),
         coupon_id: couponData.id,
         discount_value: couponData.discount_value,
@@ -270,7 +269,7 @@ export default function PromoCode() {
                     {/* Copy Button */}
                     <Pressable
                       onPress={() => {
-                        analyticsTracker.trackEvent('coupon_copied', {
+                        analyticsTracker.trackEvent(ANALYTICS_EVENTS.PROMO.CODE_COPIED, {
                           coupon_code: c.code,
                           coupon_id: c.id,
                         });

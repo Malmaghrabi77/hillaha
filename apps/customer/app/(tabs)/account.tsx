@@ -2,18 +2,16 @@ import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, ScrollView, Image, Linking } from "react-native";
 import { router } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
+import { useSupabase } from "../../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
+import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
 
 // عناوين البريد الإلكتروني الرسمية لمنصة حلّها
 const EMAILS = {
   info: "info@hillaha.com",
   webmaster: "webmaster@hillaha.com",
 } as const;
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
 
 const MENU = [
   { icon: "📦", label: "طلباتي السابقة",    route: "/(tabs)/orders" },
@@ -29,14 +27,14 @@ const MENU = [
 
 export default function Account() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const [userName, setUserName]   = useState("...");
   const [userEmail, setUserEmail] = useState("...");
 
   useEffect(() => {
     // 📊 تتبع عرض الشاشة
-    analyticsTracker.trackScreenView('account');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.ACCOUNT);
 
-    const supabase = getSB();
     if (!supabase) return;
     supabase.auth.getUser().then(({ data }: any) => {
       if (data.user) {
@@ -98,7 +96,7 @@ export default function Account() {
 
         <Pressable
           onPress={() => {
-            analyticsTracker.trackEvent('edit_profile_clicked', {});
+            analyticsTracker.trackEvent(ANALYTICS_EVENTS.PROFILE.EDIT_CLICKED, {});
             router.push("/profile/edit");
           }}
           {...A11yPresets.button("تعديل البيانات الشخصية", "انقر للانتقال إلى صفحة تعديل البيانات")}
@@ -120,7 +118,7 @@ export default function Account() {
             key={i}
             onPress={() => {
               if (item.route) {
-                analyticsTracker.trackEvent('menu_item_clicked', { label: item.label });
+                analyticsTracker.trackEvent(ANALYTICS_EVENTS.NAVIGATION.MENU_ITEM_CLICKED, { label: item.label });
                 router.push(item.route as any);
               }
             }}
@@ -153,7 +151,7 @@ export default function Account() {
           </Text>
           <Pressable
             onPress={() => {
-              analyticsTracker.trackEvent('contact_email_clicked', { type: 'info' });
+              analyticsTracker.trackEvent(ANALYTICS_EVENTS.CONTACT.EMAIL_CLICKED, { type: 'info' });
               Linking.openURL(`mailto:${EMAILS.info}?subject=استفسار من تطبيق حلّها`);
             }}
             {...A11yPresets.button("معلومات واستفسارات", `بريد إلكتروني: ${EMAILS.info}`)}
@@ -170,7 +168,7 @@ export default function Account() {
           <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 6 }} />
           <Pressable
             onPress={() => {
-              analyticsTracker.trackEvent('contact_email_clicked', { type: 'webmaster' });
+              analyticsTracker.trackEvent(ANALYTICS_EVENTS.CONTACT.EMAIL_CLICKED, { type: 'webmaster' });
               Linking.openURL(`mailto:${EMAILS.webmaster}?subject=طلب تسجيل شريك جديد`);
             }}
             {...A11yPresets.button("تسجيل شريك جديد", `بريد إلكتروني: ${EMAILS.webmaster}`)}

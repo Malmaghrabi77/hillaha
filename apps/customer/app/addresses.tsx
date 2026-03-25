@@ -5,12 +5,10 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useDarkMode } from '../hooks/useDarkMode';
+import { useSupabase } from '../hooks/useSupabase';
 import { analyticsTracker } from '../utils/analyticsTracker';
 import { A11yPresets } from '../hooks/useAccessibility';
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
 
 interface Address {
   id: string;
@@ -26,6 +24,7 @@ interface Address {
 
 export default function Addresses() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -41,12 +40,11 @@ export default function Addresses() {
   });
 
   useEffect(() => {
-    analyticsTracker.trackScreenView('addresses_screen');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.ADDRESSES);
     fetchAddresses();
   }, []);
 
   async function fetchAddresses() {
-    const supabase = getSB();
     if (!supabase) { setLoading(false); return; }
 
     try {
@@ -74,11 +72,10 @@ export default function Addresses() {
       return;
     }
 
-    analyticsTracker.trackEvent(editingId ? 'address_updated' : 'address_added', {
+    analyticsTracker.trackEvent(editingId ? ANALYTICS_EVENTS.ADDRESS.UPDATED : ANALYTICS_EVENTS.ADDRESS.ADDED, {
       label: form.label,
     });
 
-    const supabase = getSB();
     if (!supabase) return;
 
     try {
@@ -131,8 +128,7 @@ export default function Addresses() {
         {
           text: "حذف",
           onPress: async () => {
-            analyticsTracker.trackEvent('address_deleted', { address_id: id });
-            const supabase = getSB();
+            analyticsTracker.trackEvent(ANALYTICS_EVENTS.ADDRESS.DELETED, { address_id: id });
             if (!supabase) return;
             await supabase.from("addresses").delete().eq("id", id);
             fetchAddresses();
@@ -144,8 +140,7 @@ export default function Addresses() {
   }
 
   async function setDefault(id: string) {
-    analyticsTracker.trackEvent('address_set_as_default', { address_id: id });
-    const supabase = getSB();
+    analyticsTracker.trackEvent(ANALYTICS_EVENTS.ADDRESS.SET_DEFAULT, { address_id: id });
     if (!supabase) return;
 
     try {
@@ -251,7 +246,7 @@ export default function Addresses() {
                   <View style={{ flexDirection: "row", gap: 8 }}>
                     <Pressable
                       onPress={() => {
-                        analyticsTracker.trackEvent('address_edit_initiated', { address_id: addr.id });
+                        analyticsTracker.trackEvent(ANALYTICS_EVENTS.ADDRESS.EDIT_INITIATED, { address_id: addr.id });
                         setEditingId(addr.id);
                         setForm({
                           label: addr.label,
@@ -308,7 +303,7 @@ export default function Addresses() {
       <View style={{ paddingHorizontal: 16, paddingVertical: 16 }}>
         <Pressable
           onPress={() => {
-            analyticsTracker.trackEvent('address_add_initiated');
+            analyticsTracker.trackEvent(ANALYTICS_EVENTS.ADDRESS.ADD_INITIATED);
             setEditingId(null);
             setForm({ label: "", street: "", building: "", floor: "", apartment: "", notes: "" });
             setShowModal(true);

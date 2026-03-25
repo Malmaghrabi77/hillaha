@@ -6,12 +6,10 @@ import {
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useDarkMode } from '../hooks/useDarkMode';
+import { useSupabase } from '../../hooks/useSupabase';
 import { analyticsTracker } from '../utils/analyticsTracker';
 import { A11yPresets } from '../hooks/useAccessibility';
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
 
 const SERVICES = [
   { id: "basic",   label: "تنظيف أساسي",     desc: "غرفة + حمام",       price: 120, icon: "🧹" },
@@ -26,6 +24,7 @@ const TIMES = ["8:00 ص","10:00 ص","12:00 م","2:00 م","4:00 م","6:00 م"];
 
 export default function CleaningScreen() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedTime, setSelectedTime]       = useState<string | null>(null);
   const [address, setAddress]                 = useState("");
@@ -35,7 +34,7 @@ export default function CleaningScreen() {
   const svc = SERVICES.find(s => s.id === selectedService);
 
   useEffect(() => {
-    analyticsTracker.trackScreenView('cleaning_service');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.SERVICE_CLEANING);
   }, []);
 
   const handleBook = async () => {
@@ -43,11 +42,10 @@ export default function CleaningScreen() {
       Alert.alert("تنبيه", "يرجى اختيار الخدمة والوقت وإدخال العنوان");
       return;
     }
-    analyticsTracker.trackEvent('service_booking_initiated', {
+    analyticsTracker.trackEvent(ANALYTICS_EVENTS.SERVICE.CLEANING_INITIATED, {
       service: selectedService,
       price: svc?.price,
     });
-    const supabase = getSB();
     if (supabase) {
       const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
       await supabase.from("service_bookings").insert({
@@ -115,7 +113,7 @@ export default function CleaningScreen() {
                 key={s.id}
                 onPress={() => {
                   setSelectedService(s.id);
-                  analyticsTracker.trackEvent('service_selected', { service_id: s.id });
+                  analyticsTracker.trackEvent(ANALYTICS_EVENTS.SERVICE.SELECTED, { service_id: s.id });
                 }}
                 style={[
                   styles.serviceCard,
@@ -149,7 +147,7 @@ export default function CleaningScreen() {
                 key={t}
                 onPress={() => {
                   setSelectedTime(t);
-                  analyticsTracker.trackEvent('time_selected', { time: t });
+                  analyticsTracker.trackEvent(ANALYTICS_EVENTS.SERVICE.TIME_SELECTED, { time: t });
                 }}
                 style={[
                   styles.timeChip,

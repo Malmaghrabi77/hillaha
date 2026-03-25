@@ -5,12 +5,10 @@ import {
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
+import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
 
 interface OrderInfo {
   id: string;
@@ -23,6 +21,7 @@ interface OrderInfo {
 
 export default function RateOrder() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
 
   const [order, setOrder] = useState<OrderInfo | null>(null);
@@ -34,12 +33,11 @@ export default function RateOrder() {
   const [comment, setComment] = useState("");
 
   useEffect(() => {
-    analyticsTracker.trackScreenView(`rate_order_${orderId}`);
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.RATE_ORDER);
     loadOrder();
   }, []);
 
   async function loadOrder() {
-    const supabase = getSB();
     if (!supabase) { setLoading(false); return; }
 
     try {
@@ -75,7 +73,7 @@ export default function RateOrder() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      analyticsTracker.trackEvent('order_rating_submitted', {
+      analyticsTracker.trackEvent(ANALYTICS_EVENTS.RATING.SUBMITTED, {
         order_id: orderId,
         partner_rating: partnerRating,
         driver_rating: driverRating,
@@ -158,7 +156,7 @@ export default function RateOrder() {
               <Pressable
                 key={star}
                 onPress={() => {
-                  analyticsTracker.trackEvent('partner_rating_selected', {
+                  analyticsTracker.trackEvent(ANALYTICS_EVENTS.RATING.PARTNER_RATED, {
                     rating: star,
                     order_id: orderId,
                   });
@@ -205,7 +203,7 @@ export default function RateOrder() {
               <Pressable
                 key={star}
                 onPress={() => {
-                  analyticsTracker.trackEvent('driver_rating_selected', {
+                  analyticsTracker.trackEvent(ANALYTICS_EVENTS.RATING.DRIVER_RATED, {
                     rating: star,
                     order_id: orderId,
                   });

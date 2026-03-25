@@ -5,6 +5,7 @@ import { useCart } from "../lib/cartStore";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
+import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
 
 export default function Cart() {
   const { isDarkMode, colors } = useDarkMode();
@@ -14,7 +15,7 @@ export default function Cart() {
   const [discount, setDiscount] = useState(0);
 
   useEffect(() => {
-    analyticsTracker.trackScreenView('cart');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.CART);
   }, []);
 
   const subtotal    = cart.subtotal;
@@ -24,7 +25,7 @@ export default function Cart() {
 
   function applyPromo() {
     if (promo.trim().toUpperCase() === "HILLAHA1") {
-      analyticsTracker.trackEvent('promo_applied', { code: 'HILLAHA1', discount: 15 });
+      analyticsTracker.trackEvent(ANALYTICS_EVENTS.CART.PROMO_APPLIED, { code: 'HILLAHA1', discount: 15 });
       setDiscount(15);
       setPromoOn(false);
     }
@@ -46,7 +47,7 @@ export default function Cart() {
         </Text>
         <Pressable
           onPress={() => {
-            analyticsTracker.trackEvent('browse_stores_from_empty_cart', {});
+            analyticsTracker.trackEvent(ANALYTICS_EVENTS.HOME.BROWSE_STORES, {});
             router.push("/(tabs)/home");
           }}
           {...A11yPresets.button("تصفح المتاجر", "انقر للانتقال إلى صفحة المتاجر")}
@@ -92,7 +93,7 @@ export default function Cart() {
           </View>
           <Pressable
             onPress={() => {
-              analyticsTracker.trackEvent('add_more_items_clicked', {});
+              analyticsTracker.trackEvent(ANALYTICS_EVENTS.CART.ADD_MORE_ITEMS, {});
               router.back();
             }}
             {...A11yPresets.button("إضافة المزيد", "انقر لإضافة منتجات أخرى")}
@@ -143,7 +144,7 @@ export default function Cart() {
               }}>
                 <Pressable
                   onPress={() => {
-                    analyticsTracker.trackEvent('cart_item_removed', { itemId: item.id });
+                    analyticsTracker.trackEvent(ANALYTICS_EVENTS.CART.ITEM_REMOVED, { itemId: item.id });
                     cart.removeItem(item.id);
                   }}
                   {...A11yPresets.button("إزالة", "انقر لإزالة هذا المنتج")}
@@ -162,7 +163,7 @@ export default function Cart() {
                 </Text>
                 <Pressable
                   onPress={() => {
-                    analyticsTracker.trackEvent('cart_item_added', { itemId: item.id });
+                    analyticsTracker.trackEvent(ANALYTICS_EVENTS.CART.ITEM_ADDED, { itemId: item.id });
                     cart.addItem({
                       id: item.id, name: item.name, nameAr: item.nameAr,
                       price: item.price, image: item.image,
@@ -333,7 +334,7 @@ export default function Cart() {
       }}>
         <Pressable
           onPress={() => {
-            analyticsTracker.trackEvent('checkout_initiated', { total, itemCount: cart.totalItems });
+            analyticsTracker.trackEvent(ANALYTICS_EVENTS.CART.CHECKOUT_INITIATED, { total, itemCount: cart.totalItems });
             router.push("/checkout");
           }}
           {...A11yPresets.button("إتمام الطلب", `انقر للانتقال إلى الدفع - المجموع: ${total} جنيه`)}

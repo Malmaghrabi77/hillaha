@@ -6,12 +6,10 @@ import {
 import { router } from "expo-router";
 import { useCart } from "../lib/cartStore";
 import { useDarkMode } from "../hooks/useDarkMode";
+import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
 
 type PayMethod = "cash" | "instapay" | "etisalat" | "vodafone" | "card";
 
@@ -31,6 +29,7 @@ const METHODS: { id: PayMethod; label: string; desc: string; icon: string; soon?
 
 export default function Checkout() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const cart = useCart();
   const [method, setMethod]             = useState<PayMethod>("cash");
   const [address, setAddress]           = useState("");
@@ -49,9 +48,8 @@ export default function Checkout() {
   const needsProof = method === "instapay" || method === "etisalat";
 
   useEffect(() => {
-    analyticsTracker.trackScreenView('checkout');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.CHECKOUT);
 
-    const supabase = getSB();
     if (!supabase) return;
 
     supabase.auth.getUser().then(({ data }: any) => {
@@ -76,7 +74,7 @@ export default function Checkout() {
   }, []);
 
   function handleSetMethod(m: PayMethod) {
-    analyticsTracker.trackEvent('payment_method_changed', { method: m });
+    analyticsTracker.trackEvent(ANALYTICS_EVENTS.CHECKOUT.PAYMENT_METHOD_SELECTED, { method: m });
     setMethod(m);
     setProofUri(null);
     setError("");
@@ -96,7 +94,7 @@ export default function Checkout() {
         quality: 0.8,
       });
       if (!result.canceled && result.assets?.[0]?.uri) {
-        analyticsTracker.trackEvent('payment_proof_uploaded', {});
+        analyticsTracker.trackEvent(ANALYTICS_EVENTS.CHECKOUT.PAYMENT_PROOF_UPLOADED, {});
         setProofUri(result.assets[0].uri);
         setError("");
       }

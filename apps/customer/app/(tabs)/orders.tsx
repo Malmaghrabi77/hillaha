@@ -5,13 +5,11 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
+import { useSupabase } from "../../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { LoadingAnimation, EmptyStateAnimation } from "../hooks/useLottieAnimations";
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
 
 // ── Status config ────────────────────────────────────────────────────────────
 const STATUS: Record<string, { label: string; bg: string; bgDark: string; color: string; colorDark: string }> = {
@@ -37,6 +35,7 @@ interface OrderRow {
 
 export default function Orders() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const [orders,     setOrders]     = useState<OrderRow[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -44,7 +43,6 @@ export default function Orders() {
 
   async function fetchOrders(silent = false) {
     if (!silent) setLoading(true);
-    const supabase = getSB();
     if (!supabase) { setLoading(false); return; }
 
     try {
@@ -67,7 +65,7 @@ export default function Orders() {
 
   useEffect(() => {
     // 📊 تتبع عرض الشاشة
-    analyticsTracker.trackScreenView('orders');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.ORDERS);
   }, []);
 
   useFocusEffect(useCallback(() => { fetchOrders(); }, []));
@@ -87,7 +85,7 @@ export default function Orders() {
         </Text>
         <Pressable
           onPress={() => {
-            analyticsTracker.trackEvent('login_from_orders_clicked', {});
+            analyticsTracker.trackEvent(ANALYTICS_EVENTS.AUTH.LOGIN_FROM_ORDERS_CLICKED, {});
             router.push("/(auth)/login");
           }}
           {...A11yPresets.button("تسجيل الدخول", "انقر لتسجيل الدخول وعرض طلباتك")}
@@ -125,7 +123,7 @@ export default function Orders() {
         </Text>
         <Pressable
           onPress={() => {
-            analyticsTracker.trackEvent('order_now_from_empty_clicked', {});
+            analyticsTracker.trackEvent(ANALYTICS_EVENTS.ORDER.NOW_FROM_EMPTY_CLICKED, {});
             router.push("/(tabs)/home");
           }}
           {...A11yPresets.button("اطلب الآن", "انقر للانتقال إلى صفحة الطلب")}
@@ -192,7 +190,7 @@ function OrderCard({ order, active, isDarkMode, colors }: { order: OrderRow; act
     <Pressable
       onPress={() => {
         if (active) {
-          analyticsTracker.trackEvent('order_card_clicked', { orderId: order.id, status: order.status });
+          analyticsTracker.trackEvent(ANALYTICS_EVENTS.ORDER.CARD_CLICKED, { orderId: order.id, status: order.status });
           router.push(`/tracking/${order.id}`);
         }
       }}
@@ -254,7 +252,7 @@ function OrderCard({ order, active, isDarkMode, colors }: { order: OrderRow; act
         {!active && order.status === "delivered" && (
           <Pressable
             onPress={() => {
-              analyticsTracker.trackEvent('reorder_clicked', { orderId: order.id });
+              analyticsTracker.trackEvent(ANALYTICS_EVENTS.ORDER.REORDER_CLICKED, { orderId: order.id });
               router.push("/(tabs)/home");
             }}
             {...A11yPresets.button("اطلب مجدداً", "انقر لإعادة نفس الطلب")}

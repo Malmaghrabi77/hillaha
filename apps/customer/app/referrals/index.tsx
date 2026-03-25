@@ -5,6 +5,7 @@ import {
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { useDarkMode } from "../hooks/useDarkMode";
+import { useSupabase } from "../../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 
@@ -16,10 +17,6 @@ const C = {
   textMuted: "#6B6480", success: "#34D399",
   warning: "#F59E0B", danger: "#EF4444",
 } as const;
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
 
 interface Referral {
   id: string;
@@ -36,8 +33,7 @@ export default function ReferralsScreen() {
   const [loading, setLoading] = useState(true);
   const [codeGenerated, setCodeGenerated] = useState(false);
   const { isDarkMode, colors } = useDarkMode();
-
-  const supabase = getSB();
+  const supabase = useSupabase();
 
   useEffect(() => {
     analyticsTracker.trackScreenView("referrals_screen");

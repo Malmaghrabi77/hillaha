@@ -6,13 +6,11 @@ import {
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { useSupabase } from '../../hooks/useSupabase';
 import { analyticsTracker } from '../utils/analyticsTracker';
 import { A11yPresets } from '../hooks/useAccessibility';
 import { LoadingAnimation } from '../hooks/useLottieAnimations';
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
 
 interface Doctor {
   id: string;
@@ -36,6 +34,7 @@ const TIME_SLOTS = ['08:00 ص', '09:00 ص', '10:00 ص', '02:00 م', '03:00 م', 
 
 export default function Booking() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const [specialization, setSpecialization] = useState<string | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
@@ -47,7 +46,7 @@ export default function Booking() {
   const [showDoctorModal, setShowDoctorModal] = useState(false);
 
   useEffect(() => {
-    analyticsTracker.trackScreenView('doctor_booking');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.DOCTOR_BOOKING);
   }, []);
 
   const loadDoctors = async (spec: string) => {
@@ -74,7 +73,7 @@ export default function Booking() {
   const handleSpecializationSelect = (spec: string) => {
     setSpecialization(spec);
     loadDoctors(spec);
-    analyticsTracker.trackEvent('doctor_specialization_selected', { specialization: spec });
+    analyticsTracker.trackEvent(ANALYTICS_EVENTS.MEDICAL.SPECIALIZATION_SELECTED, { specialization: spec });
   };
 
   const bookAppointment = async () => {
@@ -103,7 +102,7 @@ export default function Booking() {
 
       if (error) throw error;
 
-      analyticsTracker.trackEvent('doctor_appointment_booked', {
+      analyticsTracker.trackEvent(ANALYTICS_EVENTS.MEDICAL.APPOINTMENT_BOOKED, {
         doctorId: selectedDoctor.id,
         specialization,
         consultationType,

@@ -7,16 +7,15 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { useSupabase } from '../../hooks/useSupabase';
 import { analyticsTracker } from '../utils/analyticsTracker';
 import { A11yPresets } from '../hooks/useAccessibility';
 import { LoadingAnimation, SuccessAnimation } from '../hooks/useLottieAnimations';
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
 
 export default function Prescription() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const [prescriptionImage, setPrescriptionImage] = useState<string | null>(null);
   const [pharmacy, setPharmacy] = useState('');
   const [notes, setNotes] = useState('');
@@ -25,7 +24,7 @@ export default function Prescription() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    analyticsTracker.trackScreenView('prescription_upload');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.PRESCRIPTION);
   }, []);
 
   const pickPrescriptionImage = async () => {
@@ -43,7 +42,7 @@ export default function Prescription() {
       });
 
       if (!result.canceled && result.assets?.[0]?.uri) {
-        analyticsTracker.trackEvent('prescription_image_selected', {});
+        analyticsTracker.trackEvent(ANALYTICS_EVENTS.MEDICAL.PRESCRIPTION_UPLOADED, {});
         setPrescriptionImage(result.assets[0].uri);
       }
     } catch (error) {
@@ -91,7 +90,7 @@ export default function Prescription() {
 
       if (insertErr) throw insertErr;
 
-      analyticsTracker.trackEvent('prescription_uploaded', {
+      analyticsTracker.trackEvent(ANALYTICS_EVENTS.MEDICAL.PRESCRIPTION_UPLOADED, {
         pharmacy,
         hasNotes: !!notes,
       });

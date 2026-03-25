@@ -2,15 +2,14 @@ import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable, ScrollView, StatusBar, Platform, ActivityIndicator, Alert } from "react-native";
 import { router } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
+import { useSupabase } from "../../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
 
 export default function EditProfile() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -19,12 +18,11 @@ export default function EditProfile() {
   const [email, setEmail] = useState("");
 
   useEffect(() => {
-    analyticsTracker.trackScreenView('profile_edit');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.PROFILE_EDIT);
     loadUserData();
   }, []);
 
   async function loadUserData() {
-    const supabase = getSB();
     if (!supabase) { setLoading(false); return; }
 
     try {
@@ -62,7 +60,7 @@ export default function EditProfile() {
 
       if (error) throw error;
 
-      analyticsTracker.trackEvent('profile_updated', { hasPhone: !!phone });
+      analyticsTracker.trackEvent(ANALYTICS_EVENTS.PROFILE.UPDATED, { hasPhone: !!phone });
       setSaved(true);
       setTimeout(() => {
         setSaved(false);

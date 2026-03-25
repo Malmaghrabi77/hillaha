@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, Pressable, Alert, StatusBar, Platform } from "react-native";
 import { router } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
+import { useSupabase } from "../../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 
@@ -13,10 +14,6 @@ const C = {
   textMuted: "#6B6480", success: "#34D399",
   warning: "#F59E0B", danger: "#EF4444",
 } as const;
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
 
 interface Subscription {
   id: string;
@@ -34,8 +31,7 @@ export default function SubscriptionsScreen() {
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const { isDarkMode, colors } = useDarkMode();
-
-  const supabase = getSB();
+  const supabase = useSupabase();
 
   useEffect(() => {
     analyticsTracker.trackScreenView("subscriptions_screen");

@@ -5,12 +5,10 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
+import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
 
 interface Partner {
   id: string;
@@ -33,6 +31,7 @@ const SORT_OPTIONS = [
 
 export default function Search() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,11 +45,10 @@ export default function Search() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    analyticsTracker.trackScreenView('search');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.SEARCH);
   }, []);
 
   async function searchPartners() {
-    const supabase = getSB();
     if (!supabase) return;
 
     setLoading(true);
@@ -200,7 +198,7 @@ export default function Search() {
                 key={tag}
                 onPress={() => {
                   setQuery(tag);
-                  analyticsTracker.trackEvent('search_popular_tag_clicked', { tag });
+                  analyticsTracker.trackEvent(ANALYTICS_EVENTS.SEARCH.POPULAR_TAG_CLICKED, { tag });
                 }}
                 {...A11yPresets.button(tag, `ابحث عن ${tag}`)}
                 style={{
@@ -232,7 +230,7 @@ export default function Search() {
           <Pressable
             key={p.id}
             onPress={() => {
-              analyticsTracker.trackEvent('search_result_clicked', { partnerId: p.id, partnerName: p.name });
+              analyticsTracker.trackEvent(ANALYTICS_EVENTS.SEARCH.RESULT_CLICKED, { partnerId: p.id, partnerName: p.name });
               router.push(`/restaurant/${p.id}`);
             }}
             {...A11yPresets.button(p.name, `اضغط لعرض ${p.name}`)}
@@ -366,7 +364,7 @@ export default function Search() {
                 onPress={() => {
                   setMinRating(0);
                   setMaxDeliveryFee(50);
-                  analyticsTracker.trackEvent('search_filter_reset', {});
+                  analyticsTracker.trackEvent(ANALYTICS_EVENTS.SEARCH.FILTER_RESET, {});
                 }}
                 {...A11yPresets.button("إعادة تعيين", "اضغط لإعادة تعيين كل التصفية")}
                 style={{
@@ -380,7 +378,7 @@ export default function Search() {
               <Pressable
                 onPress={() => {
                   setShowFilters(false);
-                  analyticsTracker.trackEvent('search_filter_applied', { minRating, maxDeliveryFee });
+                  analyticsTracker.trackEvent(ANALYTICS_EVENTS.SEARCH.FILTER_APPLIED, { minRating, maxDeliveryFee });
                 }}
                 {...A11yPresets.button("تطبيق", "اضغط لتطبيق التصفية")}
                 style={{

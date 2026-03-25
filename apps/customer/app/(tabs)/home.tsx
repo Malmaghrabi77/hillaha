@@ -6,14 +6,12 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { useSupabase } from '../../hooks/useSupabase';
 import { analyticsTracker } from '../utils/analyticsTracker';
 import { A11yPresets } from '../hooks/useAccessibility';
+import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
 
 const SCREEN = Dimensions.get("window");
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
 
 // ─── Defaults ──────────────────────────────────────────────────────────────
 
@@ -274,6 +272,7 @@ function PartnerCard({ partner, onPress }: PartnerCardProps) {
 
 export default function Home() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const [activeCategory, setActiveCategory] = useState("all");
   const [bannerIndex, setBannerIndex] = useState(0);
   const [banners, setBanners] = useState<Banner[]>(DEFAULT_BANNERS);
@@ -301,7 +300,6 @@ export default function Home() {
     setIsLoadingMore(true);
 
     try {
-      const supabase = getSB();
       if (!supabase) {
         setIsLoadingMore(false);
         return;
@@ -358,10 +356,9 @@ export default function Home() {
   // ✅ Fetch initial data
   useFocusEffect(
     React.useCallback(() => {
-      analyticsTracker.trackScreenView('home_screen');
+      analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.HOME);
 
       async function fetchData() {
-        const supabase = getSB();
 
         try {
           // ✅ Load cached partners first (instant display)
@@ -438,7 +435,7 @@ export default function Home() {
 
   // ✅ Pull to refresh
   const handleRefresh = async () => {
-    analyticsTracker.trackEvent('home_refresh');
+    analyticsTracker.trackEvent(ANALYTICS_EVENTS.HOME.REFRESH);
     setRefreshing(true);
     try {
       await AsyncStorage.multiRemove([
@@ -450,7 +447,6 @@ export default function Home() {
       setPage(0);
       setHasMorePartners(true);
 
-      const supabase = getSB();
       if (supabase) {
         const { data: partnersData } = await supabase
           .from("partners")
@@ -728,7 +724,7 @@ export default function Home() {
                   </Text>
                   <Pressable
                     onPress={() => {
-                      analyticsTracker.trackEvent('banner_clicked', { bannerId: b.id });
+                      analyticsTracker.trackEvent(ANALYTICS_EVENTS.HOME.BANNER_CLICKED, { bannerId: b.id });
                       router.push(`/restaurant/${b.id}`);
                     }}
                     style={{
@@ -786,7 +782,7 @@ export default function Home() {
               <Pressable
                 key={cat.id}
                 onPress={() => {
-                  analyticsTracker.trackEvent('category_selected', { categoryId: cat.id });
+                  analyticsTracker.trackEvent(ANALYTICS_EVENTS.HOME.CATEGORY_SELECTED, { categoryId: cat.id });
                   if (cat.route) {
                     router.push(cat.route as any);
                     return;
@@ -931,7 +927,7 @@ export default function Home() {
               <Pressable
                 key={srv.id}
                 onPress={() => {
-                  analyticsTracker.trackEvent('service_clicked', { serviceId: srv.id });
+                  analyticsTracker.trackEvent(ANALYTICS_EVENTS.HOME.SERVICE_CLICKED, { serviceId: srv.id });
                   router.push(srv.route as any);
                 }}
                 {...A11yPresets.button()}
@@ -1034,7 +1030,7 @@ export default function Home() {
                 <Pressable
                   key={p.id}
                   onPress={() => {
-                    analyticsTracker.trackEvent('partner_clicked', { partnerId: p.id });
+                    analyticsTracker.trackEvent(ANALYTICS_EVENTS.HOME.PARTNER_CLICKED, { partnerId: p.id });
                     router.push(`/restaurant/${p.id}`);
                   }}
                   {...A11yPresets.button()}
@@ -1189,7 +1185,7 @@ export default function Home() {
           {hasMorePartners && filtered.length > 0 && (
             <Pressable
               onPress={() => {
-                analyticsTracker.trackEvent('load_more_partners', { page });
+                analyticsTracker.trackEvent(ANALYTICS_EVENTS.HOME.LOAD_MORE, { page });
                 loadMorePartners();
               }}
               disabled={isLoadingMore}

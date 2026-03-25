@@ -5,12 +5,10 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useDarkMode } from "../../hooks/useDarkMode";
+import { useSupabase } from "../../../hooks/useSupabase";
 import { analyticsTracker } from "../../utils/analyticsTracker";
 import { A11yPresets } from "../../hooks/useAccessibility";
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from "../../constants/analyticsEvents";
 
 interface Message {
   id: string;
@@ -22,6 +20,7 @@ interface Message {
 
 export default function DriverChat() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -31,14 +30,13 @@ export default function DriverChat() {
   const scrollRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    analyticsTracker.trackScreenView(`driver_chat_${orderId}`);
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.CHAT_DRIVER);
   }, [orderId]);
 
   // Fetch messages and driver info
   useEffect(() => {
     if (!orderId) return;
     async function load() {
-      const supabase = getSB();
       if (!supabase) { setLoading(false); return; }
 
       try {
@@ -109,7 +107,7 @@ export default function DriverChat() {
     if (!supabase) return;
 
     try {
-      analyticsTracker.trackEvent('message_sent', {
+      analyticsTracker.trackEvent(ANALYTICS_EVENTS.CHAT.MESSAGE_SENT, {
         chat_type: 'driver',
         order_id: orderId,
         message_length: newMessage.length,
@@ -153,7 +151,7 @@ export default function DriverChat() {
       }}>
         <Pressable
           onPress={() => {
-            analyticsTracker.trackEvent('back_pressed', { screen: 'driver_chat' });
+            analyticsTracker.trackEvent(ANALYTICS_EVENTS.NAVIGATION.BACK_PRESSED, { screen: 'driver_chat' });
             router.back();
           }}
           {...A11yPresets.button()}
@@ -172,7 +170,7 @@ export default function DriverChat() {
         {driverPhone && (
           <Pressable
             onPress={() => {
-              analyticsTracker.trackEvent('call_driver_pressed', {
+              analyticsTracker.trackEvent(ANALYTICS_EVENTS.CHAT.CALL_INITIATED, {
                 driver_phone: driverPhone,
               });
               try {

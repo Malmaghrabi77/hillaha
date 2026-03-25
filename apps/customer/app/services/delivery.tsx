@@ -6,12 +6,10 @@ import {
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useDarkMode } from '../hooks/useDarkMode';
+import { useSupabase } from '../../hooks/useSupabase';
 import { analyticsTracker } from '../utils/analyticsTracker';
 import { A11yPresets } from '../hooks/useAccessibility';
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
 
 const SIZES = [
   { id: "small",  label: "صغير",   desc: "يحمله بيد واحدة", icon: "📦", note: "مستندات، ملابس" },
@@ -23,6 +21,7 @@ const DELIVERY_FEES: Record<string, number> = { small: 25, medium: 40, large: 60
 
 export default function P2PDeliveryScreen() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const [size, setSize]               = useState<string | null>(null);
   const [fromAddress, setFromAddress] = useState("");
   const [toAddress, setToAddress]     = useState("");
@@ -37,7 +36,7 @@ export default function P2PDeliveryScreen() {
   const fee = size ? DELIVERY_FEES[size] : null;
 
   useEffect(() => {
-    analyticsTracker.trackScreenView('p2p_delivery_service');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.SERVICE_DELIVERY);
   }, []);
 
   const generateTracking = () =>
@@ -49,13 +48,12 @@ export default function P2PDeliveryScreen() {
       Alert.alert("تنبيه", "يرجى ملء جميع البيانات الأساسية (الحجم، العناوين، أرقام الهاتف)");
       return;
     }
-    analyticsTracker.trackEvent('delivery_request_initiated', {
+    analyticsTracker.trackEvent(ANALYTICS_EVENTS.SERVICE.DELIVERY_INITIATED, {
       package_size: size,
       delivery_fee: fee,
     });
     const code = generateTracking();
     setTrackingCode(code);
-    const supabase = getSB();
     if (supabase) {
       const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
       await supabase.from("delivery_requests").insert({
@@ -122,7 +120,7 @@ export default function P2PDeliveryScreen() {
               key={s.id}
               onPress={() => {
                 setSize(s.id);
-                analyticsTracker.trackEvent('package_size_selected', { size: s.id });
+                analyticsTracker.trackEvent(ANALYTICS_EVENTS.SERVICE.PACKAGE_SIZE_SELECTED, { size: s.id });
               }}
               style={[
                 styles.sizeRow,

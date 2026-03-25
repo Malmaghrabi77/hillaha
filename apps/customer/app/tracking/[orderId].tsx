@@ -6,6 +6,7 @@ import {
 import { useLocalSearchParams, router } from "expo-router";
 import MapView, { Marker } from "react-native-maps";
 import { useDarkMode } from "../hooks/useDarkMode";
+import { useSupabase } from "../../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 
@@ -19,9 +20,6 @@ const C = {
   deepPurple: "#6D28D9",
 } as const;
 
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
 const SCREEN = { height: 800 };
 const QENA_DEFAULT = { latitude: 26.1551, longitude: 32.7160 };
 
@@ -115,6 +113,7 @@ function getPartnerIcon(type: string): { icon: string; bgColor: string; borderCo
 export default function Tracking() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
 
   const [orderInfo,   setOrderInfo]   = useState<OrderInfo | null>(null);
   const [step,        setStep]        = useState(0);
@@ -140,9 +139,7 @@ export default function Tracking() {
 
   // Load order + subscribe to realtime
   useEffect(() => {
-    if (!orderId) return;
-    const supabase = getSB();
-    if (!supabase) return;
+    if (!orderId || !supabase) return;
 
     async function loadOrder() {
       setLoading(true);
@@ -242,7 +239,7 @@ export default function Tracking() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [orderId]);
+  }, [orderId, supabase]);
 
   const isDelivered   = step === 3;
   const stepCfg       = STEP_CONFIG[step];

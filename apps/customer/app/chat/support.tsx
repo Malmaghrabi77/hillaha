@@ -5,12 +5,10 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
+import { useSupabase } from "../../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
 
 interface Message {
   id: string;
@@ -22,6 +20,7 @@ interface Message {
 
 export default function SupportChat() {
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -29,13 +28,12 @@ export default function SupportChat() {
   const scrollRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    analyticsTracker.trackScreenView('support_chat_screen');
+    analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.CHAT_SUPPORT);
   }, []);
 
   // Fetch or create support ticket and messages
   useEffect(() => {
     async function load() {
-      const supabase = getSB();
       if (!supabase) { setLoading(false); return; }
 
       try {
@@ -126,7 +124,7 @@ export default function SupportChat() {
     if (!supabase) return;
 
     try {
-      analyticsTracker.trackEvent('support_message_sent', {
+      analyticsTracker.trackEvent(ANALYTICS_EVENTS.CHAT.MESSAGE_SENT, {
         ticket_id: supportTicketId,
         message_length: newMessage.length,
       });
@@ -169,7 +167,7 @@ export default function SupportChat() {
       }}>
         <Pressable
           onPress={() => {
-            analyticsTracker.trackEvent('back_pressed', { screen: 'support_chat' });
+            analyticsTracker.trackEvent(ANALYTICS_EVENTS.NAVIGATION.BACK_PRESSED, { screen: 'support_chat' });
             router.back();
           }}
           {...A11yPresets.button()}

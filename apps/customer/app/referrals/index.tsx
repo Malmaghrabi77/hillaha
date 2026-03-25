@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  View, Text, ScrollView, Pressable, Alert, StatusBar, Platform, Share, TextInput,
+  View, Text, Pressable, Alert, Platform, Share, TextInput,
 } from "react-native";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -8,6 +8,7 @@ import { useDarkMode } from "../hooks/useDarkMode";
 import { useSupabase } from "../../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
+import { SafeAreaScrollView } from "../components";
 
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",
@@ -119,10 +120,7 @@ export default function ReferralsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="light-content" backgroundColor="#4C1D95" />
-
-      {/* Header */}
+    <SafeAreaScrollView variant="page">
       <View style={{
         paddingTop: Platform.OS === "android" ? 18 : 54,
         paddingHorizontal: 18,
@@ -142,7 +140,7 @@ export default function ReferralsScreen() {
         </Pressable>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <View contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {loading ? (
           <View style={{ alignItems: "center", paddingVertical: 40 }}>
             <Text style={{ fontSize: 48 }}>⏳</Text>
@@ -349,7 +347,7 @@ export default function ReferralsScreen() {
             )}
           </>
         )}
-      </ScrollView>
-    </View>
+      </View>
+    </SafeAreaScrollView>
   );
 }

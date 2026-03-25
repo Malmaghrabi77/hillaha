@@ -4,3 +4,4 @@
  */
 
 export { AppHeader } from './AppHeader';
+export { SafeAreaDisplay, SafeAreaScrollView, getFlatListInsets } from './SafeAreaDisplay';

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView, View, Text, Pressable, Image, StatusBar } from "react-native";
+import { ScrollView, View, Text, Pressable, Image } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { analyticsTracker } from "../utils/analyticsTracker";
@@ -55,12 +56,10 @@ export default function ConsentScreen() {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.surface} />
-
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={["top", "left", "right"]}>
       {/* HEADER */}
       <View style={{
-        backgroundColor: C.surface, paddingTop: 52, paddingBottom: 20,
+        backgroundColor: C.surface, paddingBottom: 20,
         paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: C.border,
         alignItems: "center",
       }}>
@@ -157,6 +156,6 @@ export default function ConsentScreen() {
 
         <View style={{ height: 30 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

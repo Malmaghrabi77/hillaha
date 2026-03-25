@@ -1,16 +1,17 @@
 import React from "react";
 import {
   View, Text, Pressable, Image,
-  StatusBar, Dimensions,
+  Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
 const SCREEN = Dimensions.get("window");
 
 export default function AuthIndex() {
   return (
-    <View style={{ flex: 1, backgroundColor: "#0F0A1E" }}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F0A1E" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#0F0A1E" }} edges={["top", "left", "right"]}>
+      <View style={{ flex: 1, backgroundColor: "#0F0A1E" }}>
 
       {/* Background Glows */}
       <View pointerEvents="none" style={{
@@ -137,6 +138,7 @@ export default function AuthIndex() {
         </Text>
         <Text style={{ fontSize: 12, color: "rgba(139,92,246,0.6)" }}>وقريباً في المملكة</Text>
       </View>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }

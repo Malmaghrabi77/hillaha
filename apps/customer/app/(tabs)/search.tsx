@@ -9,7 +9,7 @@ import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
-import { AppHeader } from '../components';
+import { AppHeader, SafeAreaDisplay, SafeAreaScrollView } from '../components';
 
 interface Partner {
   id: string;
@@ -111,7 +111,7 @@ export default function Search() {
   }, [sortBy]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <SafeAreaDisplay variant="page" backgroundColor={colors.bg}>
       <AppHeader
         title="بحث"
         showBackButton={false}
@@ -192,7 +192,7 @@ export default function Search() {
         )}
       </View>
 
-      <ScrollView style={{ padding: 16 }} contentContainerStyle={{ paddingBottom: 80 }}>
+      <SafeAreaScrollView variant="page" style={{ paddingHorizontal: 0, paddingVertical: 0 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 80 }}>
         {query.length === 0 && minRating === 0 && maxDeliveryFee === 50 && (
           <View>
             <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textMuted, marginBottom: 12 }}>
@@ -282,7 +282,7 @@ export default function Search() {
           </Pressable>
         ))}
         <View style={{ height: 20 }} />
-      </ScrollView>
+      </SafeAreaScrollView>
 
       {/* Filter Modal */}
       <Modal visible={showFilters} animationType="slide" transparent>
@@ -398,6 +398,6 @@ export default function Search() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaDisplay>
   );
 }

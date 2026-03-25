@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
 import {
-  View, Text, ScrollView, Pressable, TextInput,
+  View, Text, Pressable, TextInput,
   StyleSheet, Platform, Modal, Alert,
 } from "react-native";
 import { router } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useSupabase } from '../../hooks/useSupabase';
 import { analyticsTracker } from '../utils/analyticsTracker';
 import { A11yPresets } from '../hooks/useAccessibility';
 import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
+import { SafeAreaScrollView } from '../components';
 
 const SERVICES = [
   { id: "ac_service",   label: "صيانة مكيف",       desc: "فحص وتنظيف وإصلاح",  price: 150, icon: "❄️" },
@@ -62,9 +62,7 @@ export default function ElectricalScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <StatusBar style={isDarkMode ? "light" : "dark"} />
-
+    <SafeAreaScrollView variant="page" style={{ backgroundColor: colors.bg }}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: Platform.OS === "android" ? 28 : 58, backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Pressable
@@ -220,7 +218,7 @@ export default function ElectricalScreen() {
           </View>
         </View>
 
-      </ScrollView>
+      </View>
 
       {/* Bottom CTA */}
       <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -266,7 +264,7 @@ export default function ElectricalScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaScrollView>
   );
 }
 

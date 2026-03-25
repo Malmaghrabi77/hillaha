@@ -9,7 +9,7 @@ import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
-import { AppHeader } from '../components';
+import { AppHeader, SafeAreaScrollView } from '../components';
 
 interface FavoritePartner {
   id: string;
@@ -101,7 +101,7 @@ export default function Favorites() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <SafeAreaScrollView variant="page" backgroundColor={colors.bg}>
       <AppHeader
         title="المفضلة"
         subtitle={`${favorites.length} متجر`}
@@ -116,96 +116,94 @@ export default function Favorites() {
           <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>ابدأ بإضافة متاجرك المفضلة</Text>
         </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 20 }}>
-          <View style={{ gap: 12 }}>
-            {favorites.map(fav => {
-              const p = fav.partners;
-              return (
-                <Pressable
-                  key={fav.id}
-                  onPress={() => {
-                    analyticsTracker.trackEvent(ANALYTICS_EVENTS.FAVORITES.CARD_PRESSED, {
-                      partner_id: p.id,
-                      partner_name: p.name,
-                    });
-                    router.push(`/restaurant/${p.id}`);
-                  }}
-                  {...A11yPresets.button()}
-                  style={{
-                    borderRadius: 16, overflow: "hidden",
-                    backgroundColor: colors.surface,
-                    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.08, shadowRadius: 8, elevation: 2,
-                  }}
-                >
-                  {/* Cover Image */}
-                  <View style={{ height: 140, overflow: "hidden", position: "relative" }}>
-                    <Image
-                      source={{ uri: p.cover_image || "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=300&q=80" }}
-                      style={{ width: "100%", height: "100%", resizeMode: "cover" }}
-                    />
+        <View style={{ gap: 12 }}>
+          {favorites.map(fav => {
+            const p = fav.partners;
+            return (
+              <Pressable
+                key={fav.id}
+                onPress={() => {
+                  analyticsTracker.trackEvent(ANALYTICS_EVENTS.FAVORITES.CARD_PRESSED, {
+                    partner_id: p.id,
+                    partner_name: p.name,
+                  });
+                  router.push(`/restaurant/${p.id}`);
+                }}
+                {...A11yPresets.button()}
+                style={{
+                  borderRadius: 16, overflow: "hidden",
+                  backgroundColor: colors.surface,
+                  shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.08, shadowRadius: 8, elevation: 2,
+                }}
+              >
+                {/* Cover Image */}
+                <View style={{ height: 140, overflow: "hidden", position: "relative" }}>
+                  <Image
+                    source={{ uri: p.cover_image || "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=300&q=80" }}
+                    style={{ width: "100%", height: "100%", resizeMode: "cover" }}
+                  />
 
-                    {/* Remove Heart Button */}
-                    <Pressable
-                      onPress={() => removeFavorite(p.id)}
-                      {...A11yPresets.button()}
-                      accessibilityLabel={`إزالة ${p.name} من المفضلة`}
-                      style={{
-                        position: "absolute", top: 12, right: 12,
-                        width: 40, height: 40, borderRadius: 20,
-                        backgroundColor: colors.surface,
-                        justifyContent: "center", alignItems: "center",
-                      }}
-                    >
-                      <Text style={{ fontSize: 20 }}>❤️</Text>
-                    </Pressable>
+                  {/* Remove Heart Button */}
+                  <Pressable
+                    onPress={() => removeFavorite(p.id)}
+                    {...A11yPresets.button()}
+                    accessibilityLabel={`إزالة ${p.name} من المفضلة`}
+                    style={{
+                      position: "absolute", top: 12, right: 12,
+                      width: 40, height: 40, borderRadius: 20,
+                      backgroundColor: colors.surface,
+                      justifyContent: "center", alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ fontSize: 20 }}>❤️</Text>
+                  </Pressable>
+                </View>
+
+                {/* Info */}
+                <View style={{ padding: 12 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: "900", color: colors.text }}>{p.name}</Text>
+                      <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>{p.type}</Text>
+                    </View>
+                    {p.rating && (
+                      <View style={{
+                        flexDirection: "row", alignItems: "center", gap: 2,
+                        backgroundColor: colors.lightBg1,
+                        paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8,
+                      }}>
+                        <Text style={{ fontSize: 12, color: colors.ratingText, fontWeight: "900" }}>★</Text>
+                        <Text style={{ fontSize: 12, fontWeight: "900", color: colors.ratingDark }}>
+                          {p.rating.toFixed(1)}
+                        </Text>
+                      </View>
+                    )}
                   </View>
 
-                  {/* Info */}
-                  <View style={{ padding: 12 }}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 15, fontWeight: "900", color: colors.text }}>{p.name}</Text>
-                        <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>{p.type}</Text>
-                      </View>
-                      {p.rating && (
-                        <View style={{
-                          flexDirection: "row", alignItems: "center", gap: 2,
-                          backgroundColor: colors.lightBg1,
-                          paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8,
-                        }}>
-                          <Text style={{ fontSize: 12, color: colors.ratingText, fontWeight: "900" }}>★</Text>
-                          <Text style={{ fontSize: 12, fontWeight: "900", color: colors.ratingDark }}>
-                            {p.rating.toFixed(1)}
-                          </Text>
-                        </View>
-                      )}
+                  {/* Meta Info */}
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <View style={{
+                      flexDirection: "row", alignItems: "center", gap: 3,
+                      backgroundColor: colors.lightBg2, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8,
+                    }}>
+                      <Text style={{ fontSize: 11 }}>🕐</Text>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSecondary }}>{p.delivery_time}</Text>
                     </View>
-
-                    {/* Meta Info */}
-                    <View style={{ flexDirection: "row", gap: 8 }}>
-                      <View style={{
-                        flexDirection: "row", alignItems: "center", gap: 3,
-                        backgroundColor: colors.lightBg2, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8,
-                      }}>
-                        <Text style={{ fontSize: 11 }}>🕐</Text>
-                        <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSecondary }}>{p.delivery_time}</Text>
-                      </View>
-                      <View style={{
-                        flexDirection: "row", alignItems: "center", gap: 3,
-                        backgroundColor: colors.lightBg2, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8,
-                      }}>
-                        <Text style={{ fontSize: 11 }}>🛵</Text>
-                        <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSecondary }}>{p.delivery_fee} جنيه</Text>
-                      </View>
+                    <View style={{
+                      flexDirection: "row", alignItems: "center", gap: 3,
+                      backgroundColor: colors.lightBg2, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8,
+                    }}>
+                      <Text style={{ fontSize: 11 }}>🛵</Text>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSecondary }}>{p.delivery_fee} جنيه</Text>
                     </View>
                   </View>
-                </Pressable>
-              );
-            })}
-          </View>
-        </ScrollView>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
       )}
-    </View>
+    </SafeAreaScrollView>
   );
 }

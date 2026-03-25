@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, TextInput, Pressable,
-  ScrollView, Image, StatusBar, ActivityIndicator,
+  ScrollView, Image, ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
@@ -139,13 +140,7 @@ export default function Login() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
-
-      {/* BG CIRCLES */}
-      <View style={{ position: "absolute", top: -80, right: -60, width: 220, height: 220, borderRadius: 110, backgroundColor: C.primarySoft, opacity: 0.7 }} />
-      <View style={{ position: "absolute", bottom: 100, left: -50, width: 160, height: 160, borderRadius: 80, backgroundColor: C.pinkSoft, opacity: 0.5 }} />
-
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={["top", "left", "right"]}>
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}
         keyboardShouldPersistTaps="handled"
@@ -286,6 +281,10 @@ export default function Login() {
           <Text style={{ color: C.primary, fontWeight: "900", fontSize: 15 }}>إنشاء حساب جديد</Text>
         </Pressable>
       </ScrollView>
-    </View>
+
+      {/* BG CIRCLES */}
+      <View style={{ position: "absolute", top: -80, right: -60, width: 220, height: 220, borderRadius: 110, backgroundColor: C.primarySoft, opacity: 0.7 }} />
+      <View style={{ position: "absolute", bottom: 100, left: -50, width: 160, height: 160, borderRadius: 80, backgroundColor: C.pinkSoft, opacity: 0.5 }} />
+    </SafeAreaView>
   );
 }

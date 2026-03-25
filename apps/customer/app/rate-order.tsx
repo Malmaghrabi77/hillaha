@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  View, Text, Pressable, ScrollView, TextInput,
+  View, Text, Pressable, TextInput,
   ActivityIndicator, Alert,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
@@ -9,7 +9,7 @@ import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
-import { AppHeader } from '../components';
+import { AppHeader, SafeAreaScrollView } from '../components';
 
 interface OrderInfo {
   id: string;
@@ -127,7 +127,7 @@ export default function RateOrder() {
         showBackButton={false}
       />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 20 }}>
+      <SafeAreaScrollView variant="page" contentContainerStyle={{ padding: 16, paddingBottom: 20 }}>
         {/* Partner Rating */}
         <View style={{
           backgroundColor: colors.surface,
@@ -260,7 +260,7 @@ export default function RateOrder() {
             💡 تقييمك يساعد على تحسين الخدمة وتقديم تجربة أفضل للجميع
           </Text>
         </View>
-      </ScrollView>
+      </SafeAreaScrollView>
 
       {/* Submit Button */}
       <View style={{ padding: 16, borderTopWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>

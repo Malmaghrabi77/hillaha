@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  View, Text, Pressable, ScrollView, TextInput,
+  View, Text, Pressable, TextInput,
   Alert, ActivityIndicator,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
@@ -9,7 +9,7 @@ import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
-import { AppHeader } from '../components';
+import { AppHeader, SafeAreaScrollView } from '../components';
 
 interface Coupon {
   id: string;
@@ -156,7 +156,7 @@ export default function PromoCode() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+      <SafeAreaScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
         <AppHeader
           title="الرموز الترويجية"
           icon="🎁"
@@ -287,7 +287,7 @@ export default function PromoCode() {
             </View>
           )}
         </View>
-      </ScrollView>
+      </SafeAreaScrollView>
     </View>
   );
 }

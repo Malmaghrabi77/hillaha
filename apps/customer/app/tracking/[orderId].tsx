@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  View, Text, Pressable, ScrollView,
-  StatusBar, Animated, Platform,
+  View, Text, Pressable, Animated, Platform,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import MapView, { Marker } from "react-native-maps";
@@ -9,6 +8,7 @@ import { useDarkMode } from "../hooks/useDarkMode";
 import { useSupabase } from "../../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
+import { SafeAreaDisplay, SafeAreaScrollView } from "../components";
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -246,17 +246,17 @@ export default function Tracking() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.lightBg2, justifyContent: "center", alignItems: "center" }}>
-        <StatusBar barStyle="dark-content" />
-        <Text style={{ fontSize: 36, marginBottom: 12 }}>🛵</Text>
-        <Text style={{ fontSize: 14, color: colors.textMuted, fontWeight: "700" }}>جاري تحميل بيانات الطلب…</Text>
-      </View>
+      <SafeAreaDisplay variant="page">
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <Text style={{ fontSize: 36, marginBottom: 12 }}>🛵</Text>
+          <Text style={{ fontSize: 14, color: colors.textMuted, fontWeight: "700" }}>جاري تحميل بيانات الطلب…</Text>
+        </View>
+      </SafeAreaDisplay>
     );
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <StatusBar barStyle={step < 2 ? "dark-content" : "light-content"} translucent backgroundColor="transparent" />
+    <SafeAreaDisplay variant="fullscreen" safeTop={false} safeBottom={false}>
 
       {/* ── GOOGLE MAPS (top 58%) ─────────────────────────────────── */}
       {step >= 2 && orderInfo && driverCoord ? (
@@ -666,6 +666,6 @@ export default function Tracking() {
           )}
         </ScrollView>
       </View>
-    </View>
+    </SafeAreaDisplay>
   );
 }

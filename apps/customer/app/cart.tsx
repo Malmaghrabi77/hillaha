@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Pressable, ScrollView, TextInput, Image } from "react-native";
+import { View, Text, Pressable, TextInput, Image } from "react-native";
 import { router } from "expo-router";
 import { useCart } from "../lib/cartStore";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
+import { SafeAreaScrollView, SafeAreaDisplay } from "../components";
 
 export default function Cart() {
   const { isDarkMode, colors } = useDarkMode();
@@ -65,8 +66,7 @@ export default function Cart() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 130 }}>
+    <SafeAreaScrollView variant="page">
 
         {/* ── RESTAURANT HEADER ──────────────────────────── */}
         <View style={{
@@ -324,7 +324,7 @@ export default function Cart() {
             </View>
           </View>
         </View>
-      </ScrollView>
+      </SafeAreaScrollView>
 
       {/* ── CHECKOUT BUTTON ───────────────────────────────– */}
       <View style={{

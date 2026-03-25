@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, Pressable, Image, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, Image, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { useDarkMode } from "./hooks/useDarkMode";
 import { useSupabase } from "./hooks/useSupabase";
 import { analyticsTracker } from "./utils/analyticsTracker";
 import { A11yPresets } from "./hooks/useAccessibility";
+import { SafeAreaScrollView } from "./components";
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -126,10 +127,8 @@ export default function Loyalty() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-
-        {/* ── HERO CARD ──────────────────────────────────── */}
+    <SafeAreaScrollView variant="page">
+      {/* ── HERO CARD ──────────────────────────────────── */}
         <View style={{
           margin: 16, borderRadius: 28, overflow: "hidden",
           shadowColor: "#7C3AED", shadowOffset: { width: 0, height: 10 },
@@ -425,7 +424,7 @@ export default function Loyalty() {
           ))}
         </View>
 
-      </ScrollView>
-    </View>
-  );
+      </SafeAreaScrollView>
+    );
+  }
 }

@@ -10,6 +10,7 @@ import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { LoadingAnimation, EmptyStateAnimation } from "../hooks/useLottieAnimations";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
+import { SafeAreaScrollView } from '../components';
 
 // ── Status config ────────────────────────────────────────────────────────────
 const STATUS: Record<string, { label: string; bg: string; bgDark: string; color: string; colorDark: string }> = {
@@ -144,35 +145,38 @@ export default function Orders() {
   const past   = orders.filter(o => !ACTIVE_STATUSES.includes(o.status));
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.bg }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-      {...A11yPresets.listItem("قائمة الطلبات", 0, 1)}
-    >
-      <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, marginBottom: 16 }}>طلباتي</Text>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <SafeAreaScrollView
+        variant="page"
+        style={{ backgroundColor: colors.bg }}
+        contentContainerStyle={{ paddingBottom: 80 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        {...A11yPresets.listItem("قائمة الطلبات", 0, 1)}
+      >
+        <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, marginBottom: 16 }}>طلباتي</Text>
 
-      if (active.length > 0 && (
-        <>
-          <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textMuted, marginBottom: 10 }}>
-            الطلبات الجارية
-          </Text>
-          {active.map(o => <OrderCard key={o.id} order={o} active isDarkMode={isDarkMode} colors={colors} />)}
-        </>
-      )}
+        {active.length > 0 && (
+          <>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textMuted, marginBottom: 10 }}>
+              الطلبات الجارية
+            </Text>
+            {active.map(o => <OrderCard key={o.id} order={o} active isDarkMode={isDarkMode} colors={colors} />)}
+          </>
+        )}
 
-      {past.length > 0 && (
-        <>
-          <Text style={{
-            fontSize: 13, fontWeight: "700", color: colors.textMuted,
-            marginBottom: 10, marginTop: active.length > 0 ? 16 : 0,
-          }}>
-            الطلبات السابقة
-          </Text>
-          {past.map(o => <OrderCard key={o.id} order={o} active={false} isDarkMode={isDarkMode} colors={colors} />)}
-        </>
-      )}
-    </ScrollView>
+        {past.length > 0 && (
+          <>
+            <Text style={{
+              fontSize: 13, fontWeight: "700", color: colors.textMuted,
+              marginBottom: 10, marginTop: active.length > 0 ? 16 : 0,
+            }}>
+              الطلبات السابقة
+            </Text>
+            {past.map(o => <OrderCard key={o.id} order={o} active={false} isDarkMode={isDarkMode} colors={colors} />)}
+          </>
+        )}
+      </SafeAreaScrollView>
+    </View>
   );
 }
 

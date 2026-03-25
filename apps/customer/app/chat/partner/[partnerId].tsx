@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  View, Text, TextInput, Pressable, ScrollView, FlatList,
-  KeyboardAvoidingView, Platform, StatusBar, ActivityIndicator,
+  View, Text, TextInput, Pressable, FlatList,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useDarkMode } from "../../hooks/useDarkMode";
 import { useSupabase } from "../../../hooks/useSupabase";
 import { analyticsTracker } from "../../utils/analyticsTracker";
 import { A11yPresets } from "../../hooks/useAccessibility";
+import { SafeAreaDisplay } from "../../components";
 
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",
@@ -126,13 +127,12 @@ export default function PartnerChat() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1, backgroundColor: C.bg }}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
-
-      {/* Header */}
+    <SafeAreaDisplay variant="page">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        {/* Header */}
       <View style={{
         backgroundColor: C.surface,
         paddingTop: Platform.OS === "android" ? 18 : 54,
@@ -258,6 +258,7 @@ export default function PartnerChat() {
           <Text style={{ fontSize: 18 }}>📤</Text>
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaDisplay>
   );
 }

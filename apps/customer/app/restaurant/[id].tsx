@@ -1,13 +1,13 @@
 import React, { useRef } from "react";
 import {
-  View, Text, Pressable, ScrollView,
-  StatusBar, Animated, Alert, Image,
+  View, Text, Pressable, Animated, Alert, Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCart } from "../../lib/cartStore";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
+import { SafeAreaScrollView, SafeAreaDisplay } from "../components";
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -241,9 +241,7 @@ export default function Restaurant() {
   });
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-
+    <SafeAreaDisplay variant="fullscreen" safeTop={false} safeBottom={false}>
       {/* ── IMMERSIVE COVER ──────────────────────────────────── */}
       <View style={{ height: 240, overflow: "hidden" }}>
         <Image
@@ -365,7 +363,7 @@ export default function Restaurant() {
       </View>
 
       {/* ── MENU ITEMS ──────────────────────────────────────── */}
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
+      <SafeAreaScrollView variant="page" contentContainerStyle={{ paddingBottom: 120 }}>
         {data.menu[activeTab].items.map((item) => (
           <View key={item.id} style={{
             flexDirection: "row", alignItems: "center",
@@ -452,7 +450,7 @@ export default function Restaurant() {
             )}
           </View>
         ))}
-      </ScrollView>
+      </SafeAreaScrollView>
 
       {/* ── FLOATING CART BAR ───────────────────────────────── */}
       {totalItems > 0 && (
@@ -488,6 +486,6 @@ export default function Restaurant() {
           </Pressable>
         </Animated.View>
       )}
-    </View>
+    </SafeAreaDisplay>
   );
 }

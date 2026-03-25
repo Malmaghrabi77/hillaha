@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import {
   View, Text, TextInput, Pressable,
-  ScrollView, Image, StatusBar, ActivityIndicator,
+  ScrollView, Image, ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { getSupabase } from "@hillaha/core";
 const C = {
@@ -115,9 +116,7 @@ export default function Register() {
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
-
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={["top", "left", "right"]}>
       <View style={{
         position: "absolute", top: -60, left: -50,
         width: 180, height: 180, borderRadius: 90,
@@ -296,6 +295,6 @@ export default function Register() {
 
         <View style={{ height: 30 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

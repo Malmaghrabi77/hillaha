@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  View, Text, TextInput, Pressable, ScrollView, FlatList,
+  View, Text, TextInput, Pressable, FlatList,
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
@@ -9,7 +9,7 @@ import { useSupabase } from "../../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
-import { AppHeader } from '../components';
+import { AppHeader, SafeAreaDisplay } from '../components';
 
 interface Message {
   id: string;
@@ -152,18 +152,19 @@ export default function SupportChat() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1, backgroundColor: colors.bg }}
-    >
-      <AppHeader
-        title="فريق الدعم"
-        subtitle="الدعم الفني"
-        icon="🎧"
-        trackingScreen="chat_support"
-      />
+    <SafeAreaDisplay variant="page">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <AppHeader
+          title="فريق الدعم"
+          subtitle="الدعم الفني"
+          icon="🎧"
+          trackingScreen="chat_support"
+        />
 
-      {/* Messages */}
+        {/* Messages */}
       <FlatList
         ref={scrollRef}
         data={messages}
@@ -251,6 +252,7 @@ export default function SupportChat() {
           <Text style={{ fontSize: 18 }}>📤</Text>
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaDisplay>
   );
 }

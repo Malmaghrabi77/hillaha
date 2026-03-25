@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, Pressable, ScrollView, Animated, FlatList,
-  StatusBar, Platform, Image, Dimensions, ActivityIndicator, RefreshControl, ImageBackground,
+  Image, Dimensions, ActivityIndicator, RefreshControl, ImageBackground,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,6 +10,7 @@ import { useSupabase } from '../../hooks/useSupabase';
 import { analyticsTracker } from '../utils/analyticsTracker';
 import { A11yPresets } from '../hooks/useAccessibility';
 import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
+import { SafeAreaDisplay } from '../components';
 
 const SCREEN = Dimensions.get("window");
 
@@ -499,15 +500,13 @@ export default function Home() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.primary} />
-
+    <SafeAreaDisplay variant="page" backgroundColor={colors.bg}>
       {/* ── HEADER ─────────────────────────────────────────── */}
       <View style={{
-        paddingTop: Platform.OS === "android" ? 18 : 54,
-        paddingHorizontal: 18,
         paddingBottom: 14,
         backgroundColor: colors.deepPurple,
+        marginHorizontal: -16,
+        paddingHorizontal: 18,
       }}>
         {/* Top row */}
         <View style={{
@@ -1212,6 +1211,6 @@ export default function Home() {
           )}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaDisplay>
   );
 }

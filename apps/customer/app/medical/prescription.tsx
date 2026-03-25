@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, Pressable, ScrollView, Modal,
+  View, Text, Pressable, Modal,
   Platform, TextInput, Image, ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useSupabase } from '../../hooks/useSupabase';
@@ -12,6 +11,7 @@ import { analyticsTracker } from '../utils/analyticsTracker';
 import { A11yPresets } from '../hooks/useAccessibility';
 import { LoadingAnimation, SuccessAnimation } from '../hooks/useLottieAnimations';
 import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
+import { SafeAreaScrollView } from '../components';
 
 export default function Prescription() {
   const { isDarkMode, colors } = useDarkMode();
@@ -122,9 +122,7 @@ export default function Prescription() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-
+    <SafeAreaScrollView variant="page" style={{ backgroundColor: colors.bg }}>
       {/* Header */}
       <View style={{
         backgroundColor: colors.primary,
@@ -261,18 +259,6 @@ export default function Prescription() {
           </Text>
         </View>
       </ScrollView>
-
-      {/* Submit Button */}
-      <View style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: 16,
-        backgroundColor: colors.surface,
-        borderTopWidth: 1,
-        borderTopColor: colors.border,
-      }}>
         <Pressable
           onPress={uploadPrescription}
           disabled={loading || !prescriptionImage || !pharmacy.trim()}
@@ -302,6 +288,6 @@ export default function Prescription() {
           )}
         </Pressable>
       </View>
-    </View>
+    </SafeAreaScrollView>
   );
 }

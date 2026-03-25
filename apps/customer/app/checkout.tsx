@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  View, Text, Pressable, ScrollView, TextInput,
+  View, Text, Pressable, TextInput,
   ActivityIndicator, Image,
 } from "react-native";
 import { router } from "expo-router";
@@ -10,6 +10,7 @@ import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
+import { SafeAreaScrollView } from "../components";
 
 type PayMethod = "cash" | "instapay" | "etisalat" | "vodafone" | "card";
 
@@ -179,10 +180,8 @@ export default function Checkout() {
     : FALLBACK_ACCOUNTS;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140 }}>
-
-        {/* ORDER SUMMARY */}
+    <SafeAreaScrollView variant="modal">
+      {/* ORDER SUMMARY */}
         <View style={{
           padding: 16, borderRadius: 16, marginBottom: 16,
           backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
@@ -416,7 +415,7 @@ export default function Checkout() {
             ستكسب {loyaltyPoints} نقطة ولاء من هذا الطلب
           </Text>
         </View>
-      </ScrollView>
+      </SafeAreaScrollView>
 
       {/* CONFIRM BUTTON */}
       <View style={{
@@ -465,6 +464,6 @@ export default function Checkout() {
           }
         </Pressable>
       </View>
-    </View>
+    </SafeAreaScrollView>
   );
 }

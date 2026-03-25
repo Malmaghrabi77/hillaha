@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, Pressable, ScrollView, Modal, FlatList,
+  View, Text, Pressable, Modal, FlatList,
   Platform, TextInput, ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useSupabase } from '../../hooks/useSupabase';
 import { analyticsTracker } from '../utils/analyticsTracker';
 import { A11yPresets } from '../hooks/useAccessibility';
 import { LoadingAnimation } from '../hooks/useLottieAnimations';
 import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
+import { SafeAreaScrollView } from '../components';
 
 interface Doctor {
   id: string;
@@ -119,9 +119,7 @@ export default function Booking() {
 
   if (!specialization) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.bg }}>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-
+      <SafeAreaScrollView variant="page" style={{ backgroundColor: colors.bg }}>
         {/* Header */}
         <View style={{
           backgroundColor: colors.primary,
@@ -143,7 +141,7 @@ export default function Booking() {
         </View>
 
         {/* Specializations Grid */}
-        <ScrollView style={{ padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
+        <View style={{ padding: 16, paddingBottom: 40 }}>
           {SPECIALIZATIONS.map((spec) => (
             <Pressable
               key={spec.id}
@@ -173,15 +171,13 @@ export default function Booking() {
               <Text style={{ color: colors.textMuted, marginLeft: 'auto' }}>→</Text>
             </Pressable>
           ))}
-        </ScrollView>
-      </View>
+        </View>
+      </SafeAreaScrollView>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-
+    <SafeAreaScrollView variant="page" style={{ backgroundColor: colors.bg }}>
       {/* Header */}
       <View style={{
         backgroundColor: colors.primary,
@@ -206,7 +202,7 @@ export default function Booking() {
           <LoadingAnimation />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+        <View contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
           {/* Doctors List */}
           <Text style={{ fontSize: 15, fontWeight: '900', color: colors.text, marginBottom: 12 }}>
             الأطباء المتاحون ({doctors.length})
@@ -248,7 +244,7 @@ export default function Booking() {
               </View>
             </Pressable>
           ))}
-        </ScrollView>
+        </View>
       )}
 
       {/* Doctor Modal */}
@@ -407,6 +403,6 @@ export default function Booking() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaScrollView>
   );
 }

@@ -8,6 +8,7 @@ import {
   StyleSheet,
   I18nManager,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useDarkMode } from "./hooks/useDarkMode";
@@ -66,7 +67,7 @@ export default function AppEntry() {
   }, []);
 
   return (
-    <View style={styles.root}>
+    <SafeAreaView style={styles.root} edges={["top", "left", "right"]}>
       <StatusBar style="light" />
 
       {/* ── Splash ── */}
@@ -163,7 +164,7 @@ export default function AppEntry() {
           </Text>
         </Text>
       </Animated.View>
-    </View>
+    </SafeAreaView>
   );
 }
 

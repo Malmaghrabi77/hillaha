@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  View, Text, TextInput, Pressable, ScrollView, FlatList,
+  View, Text, TextInput, Pressable, FlatList,
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -9,7 +9,7 @@ import { useSupabase } from "../../../hooks/useSupabase";
 import { analyticsTracker } from "../../utils/analyticsTracker";
 import { A11yPresets } from "../../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../../constants/analyticsEvents";
-import { AppHeader } from '../../components';
+import { AppHeader, SafeAreaDisplay } from '../../components';
 
 interface Message {
   id: string;
@@ -136,10 +136,11 @@ export default function DriverChat() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1, backgroundColor: colors.bg }}
-    >
+    <SafeAreaDisplay variant="page">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
       <AppHeader
         title={driverName}
         subtitle="المندوب"
@@ -251,6 +252,7 @@ export default function DriverChat() {
           <Text style={{ fontSize: 18 }}>📤</Text>
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaDisplay>
   );
 }

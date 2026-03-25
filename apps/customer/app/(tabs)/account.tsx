@@ -6,6 +6,7 @@ import { useSupabase } from "../../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
+import { SafeAreaScrollView } from '../components';
 
 // عناوين البريد الإلكتروني الرسمية لمنصة حلّها
 const EMAILS = {
@@ -46,20 +47,20 @@ export default function Account() {
   }, []);
 
   async function handleLogout() {
-    const supabase = getSB();
     if (!supabase) return;
     await supabase.auth.signOut();
     router.replace("/(auth)");
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-
+    <SafeAreaScrollView variant="page" backgroundColor={colors.bg} contentContainerStyle={{ paddingBottom: 80 }}>
       {/* HEADER */}
       <View style={{
         backgroundColor: colors.surface,
         borderBottomWidth: 1, borderBottomColor: colors.border,
-        paddingBottom: 24, paddingTop: 52,
+        paddingBottom: 24,
+        marginHorizontal: -16,
+        paddingHorizontal: 16,
       }}>
         <View style={{ alignItems: "center", marginBottom: 16 }}>
           <Image
@@ -112,7 +113,7 @@ export default function Account() {
       </View>
 
       {/* MENU */}
-      <ScrollView style={{ padding: 16 }} contentContainerStyle={{ paddingBottom: 80 }}>
+      <View style={{ padding: 16 }}>
         {MENU.map((item, i) => (
           <Pressable
             key={i}
@@ -185,20 +186,20 @@ export default function Account() {
         </View>
 
         {/* LOGOUT */}
-          <Pressable
-            onPress={handleLogout}
-            {...A11yPresets.button("تسجيل الخروج", "انقر لتسجيل الخروج من حسابك")}
-            style={{
-              marginTop: 8, padding: 16, borderRadius: 16,
-              backgroundColor: isDarkMode ? colors.dangerSoft : "#FEF2F2",
-              borderWidth: 1.5, borderColor: isDarkMode ? colors.danger : "#FECACA",
-              alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8,
-            }}
-          >
-            <Text style={{ fontSize: 18 }}>🚪</Text>
-            <Text style={{ fontWeight: "900", color: colors.danger, fontSize: 15 }}>تسجيل الخروج</Text>
-          </Pressable>
-      </ScrollView>
-    </View>
+        <Pressable
+          onPress={handleLogout}
+          {...A11yPresets.button("تسجيل الخروج", "انقر لتسجيل الخروج من حسابك")}
+          style={{
+            marginTop: 8, padding: 16, borderRadius: 16,
+            backgroundColor: isDarkMode ? colors.dangerSoft : "#FEF2F2",
+            borderWidth: 1.5, borderColor: isDarkMode ? colors.danger : "#FECACA",
+            alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8,
+          }}
+        >
+          <Text style={{ fontSize: 18 }}>🚪</Text>
+          <Text style={{ fontWeight: "900", color: colors.danger, fontSize: 15 }}>تسجيل الخروج</Text>
+        </Pressable>
+      </View>
+    </SafeAreaScrollView>
   );
 }

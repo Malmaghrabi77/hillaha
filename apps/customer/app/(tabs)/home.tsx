@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  View, Text, Pressable, ScrollView, Animated,
-  StatusBar, Platform, Image, Dimensions,
+  View, Text, Pressable, ScrollView, Animated, FlatList,
+  StatusBar, Platform, Image, Dimensions, ActivityIndicator, RefreshControl, ImageBackground,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
   pink: "#EC4899",       pinkSoft: "#FCE7F3",
@@ -49,14 +51,14 @@ const DEFAULT_BANNERS = [
 ];
 
 const DEFAULT_CATEGORIES = [
-  { id: "all",       label: "الكل",           icon: "🏠",  color: "#7C3AED", route: null },
-  { id: "restaurant", label: "مطاعم",        icon: "🍽️", color: "#F97316", route: null },
-  { id: "pharmacy",  label: "صيدلية",        icon: "💊",  color: "#059669", route: null },
-  { id: "clinic",    label: "عيادات",        icon: "🏥", color: "#2563EB", route: null },
-  { id: "store",     label: "محلات",         icon: "🏪", color: "#EAB308", route: null },
-  { id: "cleaning",  label: "تنظيف",         icon: "🧹",  color: "#0891B2", route: "/services/cleaning" },
-  { id: "electrical",label: "كهرباء وصيانة", icon: "⚡",  color: "#D97706", route: "/services/electrical" },
-  { id: "delivery",  label: "توصيل أغراض",   icon: "📦",  color: "#7C3AED", route: "/services/delivery" },
+  { id: "all", label: "الكل", icon: "🏠", color: "#7C3AED", route: null },
+  { id: "restaurant", label: "مطاعم", icon: "🍽️", color: "#F97316", route: null },
+  { id: "pharmacy", label: "صيدلية", icon: "💊", color: "#059669", route: null },
+  { id: "clinic", label: "عيادات", icon: "🏥", color: "#2563EB", route: null },
+  { id: "store", label: "محلات", icon: "🏪", color: "#EAB308", route: null },
+  { id: "cleaning", label: "تنظيف", icon: "🧹", color: "#0891B2", route: "/services/cleaning" },
+  { id: "electrical", label: "كهرباء وصيانة", icon: "⚡", color: "#D97706", route: "/services/electrical" },
+  { id: "delivery", label: "توصيل أغراض", icon: "📦", color: "#7C3AED", route: "/services/delivery" },
 ];
 
 const DEFAULT_SERVICES = [
@@ -95,18 +97,22 @@ const DEFAULT_SERVICES = [
   },
 ];
 
-// Fallback data for initial render
 const FALLBACK_PARTNERS = [
   {
     id: "10000000-0000-0000-0000-000000000001",
-    name: "الشرقاوي",     type: "restaurant",
+    name: "الشرقاوي",
+    type: "restaurant",
     cover_image: "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=700&q=85",
-    delivery_time: "20-30 دقيقة", delivery_fee: 10, rating: 4.8,
-    review_count: 1850, tag: "الأكثر طلباً", tagColor: "#7C3AED",
+    delivery_time: "20-30 دقيقة",
+    delivery_fee: 10,
+    rating: 4.8,
+    review_count: 1850,
+    tag: "الأكثر طلباً",
+    tagColor: "#7C3AED",
   },
 ];
 
-// ─── Component ──────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────
 
 interface Partner {
   id: string;
@@ -149,33 +155,231 @@ interface Service {
   badgeBg: string;
 }
 
+// ─── PartnerCard Component with Lazy Loading ────────────────────────────────────
+
+interface PartnerCardProps {
+  partner: Partner;
+  onPress: () => void;
+}
+
+function PartnerCard({ partner, onPress }: PartnerCardProps) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  useEffect(() => {
+    // ✅ Prefetch the image
+    if (partner?.cover_image) {
+      Image.prefetch(partner.cover_image).catch(() => {});
+    }
+  }, [partner?.cover_image]);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        marginBottom: 16,
+        borderRadius: 22,
+        overflow: "hidden",
+        backgroundColor: C.surface,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.09,
+        shadowRadius: 14,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: "#F3F4F6",
+      }}
+    >
+      {/* ✅ Lazy Loaded Cover Image */}
+      <View style={{ height: 155, overflow: "hidden", backgroundColor: "#f0f0f0" }}>
+        {!imageLoaded && (
+          <View style={{ width: "100%", height: "100%", backgroundColor: "#f0f0f0" }} />
+        )}
+        <Image
+          source={{ uri: partner.cover_image || "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=700&q=85" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            resizeMode: "cover",
+            opacity: imageLoaded ? 1 : 0,
+          }}
+          onLoad={() => setImageLoaded(true)}
+        />
+        {/* Gradient overlay bottom */}
+        <View style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 70,
+          backgroundColor: "rgba(0,0,0,0.22)",
+        }} />
+      </View>
+
+      {/* Info */}
+      <View style={{ padding: 14, gap: 4 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <Text style={{ fontSize: 17, fontWeight: "900", color: C.text }}>{partner.name}</Text>
+          {partner.rating && (
+            <View style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 3,
+              backgroundColor: "#FFF7ED",
+              paddingVertical: 4,
+              paddingHorizontal: 9,
+              borderRadius: 10,
+            }}>
+              <Text style={{ fontSize: 13, color: "#F59E0B", fontWeight: "900" }}>★</Text>
+              <Text style={{ fontSize: 13, fontWeight: "900", color: "#92400E" }}>
+                {partner.rating.toFixed(1)}
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>
+          {partner.type} • {partner.review_count}+ تقييم
+        </Text>
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
+          <View style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+            backgroundColor: "#F9FAFB",
+            paddingVertical: 5,
+            paddingHorizontal: 10,
+            borderRadius: 10,
+          }}>
+            <Text style={{ fontSize: 12 }}>🕐</Text>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: "#374151" }}>
+              {partner.delivery_time}
+            </Text>
+          </View>
+          <View style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+            backgroundColor: "#F9FAFB",
+            paddingVertical: 5,
+            paddingHorizontal: 10,
+            borderRadius: 10,
+          }}>
+            <Text style={{ fontSize: 12 }}>🛵</Text>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: "#374151" }}>
+              {partner.delivery_fee} جنيه
+            </Text>
+          </View>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+// ─── Main Home Component ────────────────────────────────────────────────────────────
+
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("all");
-  const [bannerIndex, setBannerIndex]       = useState(0);
-  const [banners, setBanners]               = useState<Banner[]>(DEFAULT_BANNERS);
-  const [categories, setCategories]         = useState<Category[]>(DEFAULT_CATEGORIES);
-  const [services, setServices]             = useState<Service[]>(DEFAULT_SERVICES);
-  const [partners, setPartners]             = useState<Partner[]>(FALLBACK_PARTNERS);
-  const [loading, setLoading]               = useState(true);
-  const bannerRef  = useRef<ScrollView>(null);
-  const pulseAnim  = useRef(new Animated.Value(1)).current;
-  const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const [banners, setBanners] = useState<Banner[]>(DEFAULT_BANNERS);
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [services, setServices] = useState<Service[]>(DEFAULT_SERVICES);
 
-  // Fetch all data from Supabase
+  // ✅ Pagination states
+  const [allPartners, setAllPartners] = useState<Partner[]>(FALLBACK_PARTNERS);
+  const [page, setPage] = useState(0);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMorePartners, setHasMorePartners] = useState(true);
+  const pageSize = 20;
+
+  // Loading states
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const bannerRef = useRef<ScrollView>(null);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ✅ Load more partners with pagination
+  const loadMorePartners = async (pageNum: number = page) => {
+    if (isLoadingMore || !hasMorePartners) return;
+    setIsLoadingMore(true);
+
+    try {
+      const supabase = getSB();
+      if (!supabase) {
+        setIsLoadingMore(false);
+        return;
+      }
+
+      const start = pageNum * pageSize;
+      const end = start + pageSize;
+
+      const { data: partnersData } = await supabase
+        .from("partners")
+        .select("id, name, type, cover_image, delivery_time, delivery_fee, rating, review_count")
+        .eq("is_approved", true)
+        .range(start, end - 1)
+        .order("rating", { ascending: false });
+
+      if (partnersData && partnersData.length > 0) {
+        setAllPartners(prev => [...prev, ...(partnersData as Partner[])]);
+        setPage(pageNum + 1);
+
+        // ✅ Save to cache
+        const cacheKey = `partners_page_${pageNum}`;
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(partnersData));
+
+        if (partnersData.length < pageSize) {
+          setHasMorePartners(false);
+        }
+      } else {
+        setHasMorePartners(false);
+      }
+    } catch (error) {
+      console.error("Error loading more partners:", error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // ✅ Load cached partners on app start
+  const loadCachedPartners = async () => {
+    try {
+      for (let p = 0; p < 3; p++) {
+        const cacheKey = `partners_page_${p}`;
+        const cached = await AsyncStorage.getItem(cacheKey);
+        if (cached) {
+          const data = JSON.parse(cached);
+          setAllPartners(prev => [...prev, ...data]);
+          setPage(p + 1);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading cached partners:", error);
+    }
+  };
+
+  // ✅ Fetch initial data
   useFocusEffect(
     React.useCallback(() => {
       async function fetchData() {
         const supabase = getSB();
-        if (!supabase) { setLoading(false); return; }
 
         try {
-          // Fetch partners
+          // ✅ Load cached partners first (instant display)
+          await loadCachedPartners();
+
+          if (!supabase) {
+            setLoading(false);
+            return;
+          }
+
+          // ✅ Load first page with pagination
           const { data: partnersData } = await supabase
             .from("partners")
             .select("id, name, type, cover_image, delivery_time, delivery_fee, rating, review_count")
             .eq("is_approved", true)
-            .order("rating", { ascending: false })
-            .limit(20);
+            .range(0, pageSize - 1)
+            .order("rating", { ascending: false });
 
           // Fetch banners
           const { data: bannersData } = await supabase
@@ -200,7 +404,10 @@ export default function Home() {
             .order("position", { ascending: true });
 
           if (partnersData && partnersData.length > 0) {
-            setPartners(partnersData as Partner[]);
+            setAllPartners(partnersData as Partner[]);
+            setPage(1);
+            // ✅ Cache the first page
+            await AsyncStorage.setItem("partners_page_0", JSON.stringify(partnersData));
           }
 
           if (bannersData && bannersData.length > 0) {
@@ -230,6 +437,41 @@ export default function Home() {
     }, [])
   );
 
+  // ✅ Pull to refresh
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await AsyncStorage.multiRemove([
+        "partners_page_0",
+        "partners_page_1",
+        "partners_page_2",
+      ]);
+      setAllPartners(FALLBACK_PARTNERS);
+      setPage(0);
+      setHasMorePartners(true);
+
+      const supabase = getSB();
+      if (supabase) {
+        const { data: partnersData } = await supabase
+          .from("partners")
+          .select("id, name, type, cover_image, delivery_time, delivery_fee, rating, review_count")
+          .eq("is_approved", true)
+          .range(0, pageSize - 1)
+          .order("rating", { ascending: false });
+
+        if (partnersData && partnersData.length > 0) {
+          setAllPartners(partnersData as Partner[]);
+          setPage(1);
+          await AsyncStorage.setItem("partners_page_0", JSON.stringify(partnersData));
+        }
+      }
+    } catch (error) {
+      console.error("Error refreshing:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   // Auto-scroll carousel
   useEffect(() => {
     timerRef.current = setInterval(() => {
@@ -239,7 +481,9 @@ export default function Home() {
         return next;
       });
     }, 3500);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [banners.length]);
 
   // Loyalty pulse
@@ -247,14 +491,14 @@ export default function Home() {
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.06, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1,    duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
       ])
     );
     loop.start();
     return () => loop.stop();
   }, []);
 
-  const filtered = partners.filter(p =>
+  const filtered = allPartners.filter(p =>
     activeCategory === "all" || p.type === activeCategory
   );
 
@@ -265,30 +509,48 @@ export default function Home() {
       {/* ── HEADER ─────────────────────────────────────────── */}
       <View style={{
         paddingTop: Platform.OS === "android" ? 18 : 54,
-        paddingHorizontal: 18, paddingBottom: 14,
+        paddingHorizontal: 18,
+        paddingBottom: 14,
         backgroundColor: "#4C1D95",
       }}>
         {/* Top row */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <View style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 14,
+        }}>
           <View>
-            <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: "600" }}>توصيل إلى</Text>
+            <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: "600" }}>
+              توصيل إلى
+            </Text>
             <Pressable style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
-              <Text style={{ fontSize: 15, fontWeight: "900", color: "white" }}>📍 قنا، وسط المدينة</Text>
+              <Text style={{ fontSize: 15, fontWeight: "900", color: "white" }}>
+                📍 قنا، وسط المدينة
+              </Text>
               <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12 }}>▾</Text>
             </Pressable>
           </View>
           <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
             <Pressable style={{
-              width: 38, height: 38, borderRadius: 19,
+              width: 38,
+              height: 38,
+              borderRadius: 19,
               backgroundColor: "rgba(255,255,255,0.15)",
-              justifyContent: "center", alignItems: "center",
+              justifyContent: "center",
+              alignItems: "center",
             }}>
               <Text style={{ fontSize: 17 }}>🔔</Text>
               <View style={{
-                position: "absolute", top: 6, right: 6,
-                width: 8, height: 8, borderRadius: 4,
+                position: "absolute",
+                top: 6,
+                right: 6,
+                width: 8,
+                height: 8,
+                borderRadius: 4,
                 backgroundColor: "#EC4899",
-                borderWidth: 1.5, borderColor: "#4C1D95",
+                borderWidth: 1.5,
+                borderColor: "#4C1D95",
               }} />
             </Pressable>
             <View style={{ alignItems: "center", gap: 2 }}>
@@ -297,15 +559,13 @@ export default function Home() {
                 style={{ width: 38, height: 38, resizeMode: "contain" }}
               />
               <View style={{ alignItems: "center", gap: 1 }}>
-                <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.95)", fontWeight: "800" }}>حلها يحلها</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                  <Text style={{ fontSize: 7, color: "rgba(255,255,255,0.85)", fontWeight: "700" }}>7illaha</Text>
-                  <Image
-                    source={require("../../assets/hillaha-logo.png")}
-                    style={{ width: 10, height: 10 }}
-                  />
-                  <Text style={{ fontSize: 7, color: "rgba(255,255,255,0.85)", fontWeight: "700" }}>7illaha</Text>
-                </View>
+                <Text style={{
+                  fontSize: 9,
+                  color: "rgba(255,255,255,0.95)",
+                  fontWeight: "800",
+                }}>
+                  حلها يحلها
+                </Text>
               </View>
             </View>
           </View>
@@ -315,32 +575,47 @@ export default function Home() {
         <Pressable
           onPress={() => router.push("/(tabs)/search")}
           style={{
-            flexDirection: "row", alignItems: "center", gap: 10,
-            backgroundColor: "white", borderRadius: 16,
-            paddingHorizontal: 14, paddingVertical: 12,
-            shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            backgroundColor: "white",
+            borderRadius: 16,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 4,
           }}
         >
           <Text style={{ fontSize: 16, opacity: 0.5 }}>🔍</Text>
-          <Text style={{ flex: 1, fontSize: 14, color: "#9CA3AF", textAlign: "right" }}>
+          <Text style={{
+            flex: 1,
+            fontSize: 14,
+            color: "#9CA3AF",
+            textAlign: "right",
+          }}>
             ابحث عن مطعم، صيدلية، طبيب...
           </Text>
-          <View style={{
-            backgroundColor: "#F3F0FF", paddingVertical: 4, paddingHorizontal: 10, borderRadius: 10,
-          }}>
-            <Text style={{ fontSize: 11, color: "#7C3AED", fontWeight: "700" }}>بحث</Text>
-          </View>
         </Pressable>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} bounces contentContainerStyle={{ paddingBottom: 80 }}>
-
+      {/* ✅ Main ScrollView with RefreshControl */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        bounces
+        contentContainerStyle={{ paddingBottom: 80 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+      >
         {/* ── BANNER CAROUSEL ────────────────────────────────── */}
         <View>
           <ScrollView
             ref={bannerRef}
-            horizontal pagingEnabled
+            horizontal
+            pagingEnabled
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={e => {
               const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN.width);
@@ -351,67 +626,119 @@ export default function Home() {
               <View
                 key={b.id}
                 style={{
-                  width: SCREEN.width, height: 170,
+                  width: SCREEN.width,
+                  height: 170,
                   backgroundColor: b.bg,
                   overflow: "hidden",
                 }}
               >
                 {/* Decorative circles */}
                 <View style={{
-                  position: "absolute", top: -50, left: -30,
-                  width: 180, height: 180, borderRadius: 90,
+                  position: "absolute",
+                  top: -50,
+                  left: -30,
+                  width: 180,
+                  height: 180,
+                  borderRadius: 90,
                   backgroundColor: "rgba(255,255,255,0.07)",
                 }} />
                 <View style={{
-                  position: "absolute", bottom: -40, right: 80,
-                  width: 140, height: 140, borderRadius: 70,
-                  backgroundColor: b.accent, opacity: 0.3,
+                  position: "absolute",
+                  bottom: -40,
+                  right: 80,
+                  width: 140,
+                  height: 140,
+                  borderRadius: 70,
+                  backgroundColor: b.accent,
+                  opacity: 0.3,
                 }} />
 
-                {/* Real food image on the right */}
+                {/* Banner image */}
                 <View style={{
-                  position: "absolute", top: 16, right: 16,
-                  width: 128, height: 128, borderRadius: 20,
+                  position: "absolute",
+                  top: 16,
+                  right: 16,
+                  width: 128,
+                  height: 128,
+                  borderRadius: 20,
                   overflow: "hidden",
-                  shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3, shadowRadius: 8,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
                 }}>
                   <Image
-                    source={{ uri: b.image || "https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=300&q=80" }}
+                    source={{
+                      uri: b.image || "https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=300&q=80"
+                    }}
                     style={{ width: "100%", height: "100%", resizeMode: "cover" }}
                   />
-                  {/* Slight overlay so image blends with banner bg */}
                   <View style={{
-                    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
                     backgroundColor: `${b.bg}25`,
                   }} />
                 </View>
 
                 {/* Text section */}
-                <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 20, paddingRight: 160 }}>
+                <View style={{
+                  flex: 1,
+                  justifyContent: "center",
+                  paddingHorizontal: 20,
+                  paddingRight: 160,
+                }}>
                   <View style={{
                     alignSelf: "flex-start",
                     backgroundColor: "rgba(255,255,255,0.22)",
-                    paddingVertical: 3, paddingHorizontal: 10, borderRadius: 20, marginBottom: 8,
+                    paddingVertical: 3,
+                    paddingHorizontal: 10,
+                    borderRadius: 20,
+                    marginBottom: 8,
                   }}>
-                    <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>عرض محدود</Text>
+                    <Text style={{
+                      color: "white",
+                      fontSize: 10,
+                      fontWeight: "700",
+                    }}>
+                      عرض محدود
+                    </Text>
                   </View>
-                  <Text style={{ fontSize: 17, fontWeight: "900", color: "white", lineHeight: 23 }}>
+                  <Text style={{
+                    fontSize: 17,
+                    fontWeight: "900",
+                    color: "white",
+                    lineHeight: 23,
+                  }}>
                     {b.title}
                   </Text>
-                  <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>
+                  <Text style={{
+                    fontSize: 12,
+                    color: "rgba(255,255,255,0.8)",
+                    marginTop: 4,
+                  }}>
                     {b.sub}
                   </Text>
                   <Pressable
                     onPress={() => router.push(`/restaurant/${b.id}`)}
                     style={{
-                      marginTop: 10, alignSelf: "flex-start",
+                      marginTop: 10,
+                      alignSelf: "flex-start",
                       backgroundColor: "white",
-                      paddingVertical: 7, paddingHorizontal: 16,
+                      paddingVertical: 7,
+                      paddingHorizontal: 16,
                       borderRadius: 22,
                     }}
                   >
-                    <Text style={{ fontWeight: "900", color: b.bg, fontSize: 12 }}>{b.cta}</Text>
+                    <Text style={{
+                      fontWeight: "900",
+                      color: b.bg,
+                      fontSize: 12,
+                    }}>
+                      {b.cta}
+                    </Text>
                   </Pressable>
                 </View>
               </View>
@@ -419,20 +746,30 @@ export default function Home() {
           </ScrollView>
 
           {/* Dots */}
-          <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, paddingVertical: 10 }}>
+          <View style={{
+            flexDirection: "row",
+            justifyContent: "center",
+            gap: 6,
+            paddingVertical: 10,
+          }}>
             {banners.map((_, i) => (
-              <View key={i} style={{
-                width: bannerIndex === i ? 20 : 6,
-                height: 6, borderRadius: 3,
-                backgroundColor: bannerIndex === i ? C.primary : "#D1D5DB",
-              }} />
+              <View
+                key={i}
+                style={{
+                  width: bannerIndex === i ? 20 : 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: bannerIndex === i ? C.primary : "#D1D5DB",
+                }}
+              />
             ))}
           </View>
         </View>
 
         {/* ── CATEGORIES ─────────────────────────────────────── */}
         <ScrollView
-          horizontal showsHorizontalScrollIndicator={false}
+          horizontal
+          showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: 6 }}
         >
           {categories.map(cat => {
@@ -441,26 +778,36 @@ export default function Home() {
               <Pressable
                 key={cat.id}
                 onPress={() => {
-                  if (cat.route) { router.push(cat.route as any); return; }
+                  if (cat.route) {
+                    router.push(cat.route as any);
+                    return;
+                  }
                   setActiveCategory(cat.id);
                 }}
                 style={{ alignItems: "center", gap: 6, minWidth: 64 }}
               >
                 <View style={{
-                  width: 60, height: 60, borderRadius: 20,
+                  width: 60,
+                  height: 60,
+                  borderRadius: 20,
                   backgroundColor: isActive ? cat.color : "#F3F4F6",
-                  justifyContent: "center", alignItems: "center",
+                  justifyContent: "center",
+                  alignItems: "center",
                   shadowColor: isActive ? cat.color : "transparent",
                   shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.35, shadowRadius: 6, elevation: isActive ? 4 : 0,
+                  shadowOpacity: 0.35,
+                  shadowRadius: 6,
+                  elevation: isActive ? 4 : 0,
                   borderWidth: isActive ? 0 : 1.5,
                   borderColor: "#E5E7EB",
                 }}>
                   <Text style={{ fontSize: 26 }}>{cat.icon}</Text>
                 </View>
                 <Text style={{
-                  fontSize: 11, fontWeight: isActive ? "900" : "600",
+                  fontSize: 11,
+                  fontWeight: isActive ? "900" : "600",
                   color: isActive ? cat.color : "#6B7280",
+                  textAlign: "center",
                 }}>
                   {cat.label}
                 </Text>
@@ -470,41 +817,79 @@ export default function Home() {
         </ScrollView>
 
         {/* ── LOYALTY CARD ───────────────────────────────────── */}
-        <Animated.View style={{ transform: [{ scale: pulseAnim }], marginHorizontal: 16, marginTop: 18 }}>
+        <Animated.View style={{
+          transform: [{ scale: pulseAnim }],
+          marginHorizontal: 16,
+          marginTop: 18,
+        }}>
           <Pressable
             onPress={() => router.push("/loyalty")}
             style={{
-              borderRadius: 20, overflow: "hidden",
-              flexDirection: "row", alignItems: "center",
-              backgroundColor: "#4C1D95", padding: 16, gap: 14,
+              borderRadius: 20,
+              overflow: "hidden",
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: "#4C1D95",
+              padding: 16,
+              gap: 14,
             }}
           >
             <View style={{
-              position: "absolute", top: -20, left: -20,
-              width: 100, height: 100, borderRadius: 50,
+              position: "absolute",
+              top: -20,
+              left: -20,
+              width: 100,
+              height: 100,
+              borderRadius: 50,
               backgroundColor: "rgba(236,72,153,0.2)",
             }} />
             <View style={{
-              width: 50, height: 50, borderRadius: 25,
+              width: 50,
+              height: 50,
+              borderRadius: 25,
               backgroundColor: "rgba(255,255,255,0.15)",
-              justifyContent: "center", alignItems: "center",
+              justifyContent: "center",
+              alignItems: "center",
             }}>
               <Text style={{ fontSize: 24 }}>🎁</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: "700" }}>نقاط الولاء</Text>
-              <Text style={{ color: "white", fontSize: 16, fontWeight: "900", marginTop: 2 }}>
+              <Text style={{
+                color: "rgba(255,255,255,0.7)",
+                fontSize: 11,
+                fontWeight: "700",
+              }}>
+                نقاط الولاء
+              </Text>
+              <Text style={{
+                color: "white",
+                fontSize: 16,
+                fontWeight: "900",
+                marginTop: 2,
+              }}>
                 47 نقطة = 47 جنيه خصم
               </Text>
-              <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 2 }}>
+              <Text style={{
+                color: "rgba(255,255,255,0.6)",
+                fontSize: 11,
+                marginTop: 2,
+              }}>
                 1 نقطة لكل 250 جنيه • حد أدنى 20 نقطة
               </Text>
             </View>
             <View style={{
               backgroundColor: "#EC4899",
-              paddingVertical: 6, paddingHorizontal: 12, borderRadius: 12,
+              paddingVertical: 6,
+              paddingHorizontal: 12,
+              borderRadius: 12,
             }}>
-              <Text style={{ color: "white", fontWeight: "900", fontSize: 12 }}>استبدل</Text>
+              <Text style={{
+                color: "white",
+                fontWeight: "900",
+                fontSize: 12,
+              }}>
+                استبدل
+              </Text>
             </View>
           </Pressable>
         </Animated.View>
@@ -512,13 +897,23 @@ export default function Home() {
         {/* ── HOME SERVICES ──────────────────────────────────── */}
         <View style={{ marginTop: 24 }}>
           <View style={{
-            flexDirection: "row", justifyContent: "space-between",
-            alignItems: "center", paddingHorizontal: 16, marginBottom: 14,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            paddingHorizontal: 16,
+            marginBottom: 14,
           }}>
-            <Text style={{ fontSize: 17, fontWeight: "900", color: C.text }}>🏠 خدمات المنزل والتوصيل</Text>
+            <Text style={{
+              fontSize: 17,
+              fontWeight: "900",
+              color: C.text,
+            }}>
+              🏠 خدمات المنزل والتوصيل
+            </Text>
           </View>
           <ScrollView
-            horizontal showsHorizontalScrollIndicator={false}
+            horizontal
+            showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
           >
             {services.map(srv => (
@@ -526,34 +921,61 @@ export default function Home() {
                 key={srv.id}
                 onPress={() => router.push(srv.route as any)}
                 style={{
-                  width: 175, borderRadius: 20, overflow: "hidden",
+                  width: 175,
+                  borderRadius: 20,
+                  overflow: "hidden",
                   backgroundColor: srv.bgColor,
-                  borderWidth: 1.5, borderColor: `${srv.color}30`,
-                  padding: 16, gap: 8,
+                  borderWidth: 1.5,
+                  borderColor: `${srv.color}30`,
+                  padding: 16,
+                  gap: 8,
                   shadowColor: srv.color,
                   shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.18, shadowRadius: 10, elevation: 3,
+                  shadowOpacity: 0.18,
+                  shadowRadius: 10,
+                  elevation: 3,
                 }}
               >
                 <View style={{
-                  width: 52, height: 52, borderRadius: 16,
+                  width: 52,
+                  height: 52,
+                  borderRadius: 16,
                   backgroundColor: "rgba(255,255,255,0.7)",
-                  justifyContent: "center", alignItems: "center",
+                  justifyContent: "center",
+                  alignItems: "center",
                 }}>
                   <Text style={{ fontSize: 28 }}>{srv.icon}</Text>
                 </View>
-                <Text style={{ fontSize: 14, fontWeight: "900", color: srv.color, lineHeight: 20 }}>
+                <Text style={{
+                  fontSize: 14,
+                  fontWeight: "900",
+                  color: srv.color,
+                  lineHeight: 20,
+                }}>
                   {srv.title}
                 </Text>
-                <Text style={{ fontSize: 11, color: "#6B7280", lineHeight: 16 }}>
+                <Text style={{
+                  fontSize: 11,
+                  color: "#6B7280",
+                  lineHeight: 16,
+                }}>
                   {srv.subtitle}
                 </Text>
                 <View style={{
                   alignSelf: "flex-start",
                   backgroundColor: srv.badgeBg,
-                  paddingVertical: 4, paddingHorizontal: 10, borderRadius: 10, marginTop: 4,
+                  paddingVertical: 4,
+                  paddingHorizontal: 10,
+                  borderRadius: 10,
+                  marginTop: 4,
                 }}>
-                  <Text style={{ color: "white", fontSize: 11, fontWeight: "800" }}>{srv.badge}</Text>
+                  <Text style={{
+                    color: "white",
+                    fontSize: 11,
+                    fontWeight: "800",
+                  }}>
+                    {srv.badge}
+                  </Text>
                 </View>
               </Pressable>
             ))}
@@ -564,57 +986,130 @@ export default function Home() {
         {activeCategory === "all" && (
           <View style={{ marginTop: 24 }}>
             <View style={{
-              flexDirection: "row", justifyContent: "space-between",
-              alignItems: "center", paddingHorizontal: 16, marginBottom: 14,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              paddingHorizontal: 16,
+              marginBottom: 14,
             }}>
-              <Text style={{ fontSize: 17, fontWeight: "900", color: C.text }}>⚡ عروض مميزة</Text>
+              <Text style={{
+                fontSize: 17,
+                fontWeight: "900",
+                color: C.text,
+              }}>
+                ⚡ عروض مميزة
+              </Text>
               <Pressable>
-                <Text style={{ color: C.primary, fontWeight: "700", fontSize: 13 }}>عرض الكل</Text>
+                <Text style={{
+                  color: C.primary,
+                  fontWeight: "700",
+                  fontSize: 13,
+                }}>
+                  عرض الكل
+                </Text>
               </Pressable>
             </View>
             <ScrollView
-              horizontal showsHorizontalScrollIndicator={false}
+              horizontal
+              showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
             >
-              {partners.slice(0, 5).map(p => (
+              {allPartners.slice(0, 5).map(p => (
                 <Pressable
                   key={p.id}
                   onPress={() => router.push(`/restaurant/${p.id}`)}
                   style={{
-                    width: 170, borderRadius: 20, overflow: "hidden",
+                    width: 170,
+                    borderRadius: 20,
+                    overflow: "hidden",
                     backgroundColor: C.surface,
-                    shadowColor: "#000", shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: 0.1, shadowRadius: 8, elevation: 3,
-                    borderWidth: 1, borderColor: "#F3F4F6",
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 8,
+                    elevation: 3,
+                    borderWidth: 1,
+                    borderColor: "#F3F4F6",
                   }}
                 >
-                  {/* Real cover image */}
-                  <View style={{ height: 110, overflow: "hidden" }}>
+                  {/* Cover image */}
+                  <View style={{ height: 110, overflow: "hidden", backgroundColor: "#f0f0f0" }}>
                     <Image
-                      source={{ uri: p.cover_image || "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=200&q=80" }}
-                      style={{ width: "100%", height: "100%", resizeMode: "cover" }}
+                      source={{
+                        uri: p.cover_image || "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=200&q=80"
+                      }}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        resizeMode: "cover",
+                      }}
                     />
-                    {/* Dark gradient overlay */}
                     <View style={{
-                      position: "absolute", bottom: 0, left: 0, right: 0, height: 50,
+                      position: "absolute",
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: 50,
                       backgroundColor: "rgba(0,0,0,0.18)",
                     }} />
                   </View>
                   {/* Info */}
                   <View style={{ padding: 12 }}>
-                    <Text style={{ fontSize: 14, fontWeight: "900", color: C.text }} numberOfLines={1}>
+                    <Text style={{
+                      fontSize: 14,
+                      fontWeight: "900",
+                      color: C.text,
+                    }} numberOfLines={1}>
                       {p.name}
                     </Text>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}>
-                      <Text style={{ fontSize: 11, color: "#F59E0B", fontWeight: "900" }}>★ {p.rating?.toFixed(1)}</Text>
-                      <Text style={{ fontSize: 10, color: "#9CA3AF" }}>({p.review_count})</Text>
+                    <View style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                      marginTop: 4,
+                    }}>
+                      <Text style={{
+                        fontSize: 11,
+                        color: "#F59E0B",
+                        fontWeight: "900",
+                      }}>
+                        ★ {p.rating?.toFixed(1)}
+                      </Text>
+                      <Text style={{
+                        fontSize: 10,
+                        color: "#9CA3AF",
+                      }}>
+                        ({p.review_count})
+                      </Text>
                     </View>
                     <View style={{ flexDirection: "row", gap: 8, marginTop: 6 }}>
-                      <View style={{ backgroundColor: "#F3F4F6", paddingVertical: 3, paddingHorizontal: 7, borderRadius: 8 }}>
-                        <Text style={{ fontSize: 10, color: "#6B7280", fontWeight: "600" }}>🕐 {p.delivery_time}</Text>
+                      <View style={{
+                        backgroundColor: "#F3F4F6",
+                        paddingVertical: 3,
+                        paddingHorizontal: 7,
+                        borderRadius: 8,
+                      }}>
+                        <Text style={{
+                          fontSize: 10,
+                          color: "#6B7280",
+                          fontWeight: "600",
+                        }}>
+                          🕐 {p.delivery_time}
+                        </Text>
                       </View>
-                      <View style={{ backgroundColor: "#F3F4F6", paddingVertical: 3, paddingHorizontal: 7, borderRadius: 8 }}>
-                        <Text style={{ fontSize: 10, color: "#6B7280", fontWeight: "600" }}>🛵 {p.delivery_fee}</Text>
+                      <View style={{
+                        backgroundColor: "#F3F4F6",
+                        paddingVertical: 3,
+                        paddingHorizontal: 7,
+                        borderRadius: 8,
+                      }}>
+                        <Text style={{
+                          fontSize: 10,
+                          color: "#6B7280",
+                          fontWeight: "600",
+                        }}>
+                          🛵 {p.delivery_fee}
+                        </Text>
                       </View>
                     </View>
                   </View>
@@ -624,16 +1119,27 @@ export default function Home() {
           </View>
         )}
 
-        {/* ── ALL PARTNERS (vertical) ─────────────────────────── */}
+        {/* ── ALL PARTNERS (vertical with pagination) ───────── */}
         <View style={{ paddingHorizontal: 16, marginTop: 24 }}>
           <View style={{
-            flexDirection: "row", justifyContent: "space-between",
-            alignItems: "center", marginBottom: 14,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 14,
           }}>
-            <Text style={{ fontSize: 17, fontWeight: "900", color: C.text }}>
-              {activeCategory === "all" ? "🏪 جميع الشركاء" : categories.find(c => c.id === activeCategory)?.label}
+            <Text style={{
+              fontSize: 17,
+              fontWeight: "900",
+              color: C.text,
+            }}>
+              {activeCategory === "all"
+                ? "🏪 جميع الشركاء"
+                : categories.find(c => c.id === activeCategory)?.label}
             </Text>
-            <Text style={{ fontSize: 12, color: "#9CA3AF" }}>
+            <Text style={{
+              fontSize: 12,
+              color: "#9CA3AF",
+            }}>
               {filtered.length} متجر
             </Text>
           </View>
@@ -641,74 +1147,50 @@ export default function Home() {
           {filtered.length === 0 && (
             <View style={{ alignItems: "center", paddingVertical: 40 }}>
               <Text style={{ fontSize: 48 }}>🔍</Text>
-              <Text style={{ color: C.textMuted, marginTop: 12, fontWeight: "700" }}>لا توجد نتائج</Text>
+              <Text style={{
+                color: C.textMuted,
+                marginTop: 12,
+                fontWeight: "700",
+              }}>
+                لا توجد نتائج
+              </Text>
             </View>
           )}
 
           {filtered.map(p => (
-            <Pressable
+            <PartnerCard
               key={p.id}
+              partner={p}
               onPress={() => router.push(`/restaurant/${p.id}`)}
+            />
+          ))}
+
+          {/* ✅ Load More Button */}
+          {hasMorePartners && filtered.length > 0 && (
+            <Pressable
+              onPress={() => loadMorePartners()}
+              disabled={isLoadingMore}
               style={{
-                marginBottom: 16, borderRadius: 22, overflow: "hidden",
-                backgroundColor: C.surface,
-                shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.09, shadowRadius: 14, elevation: 4,
-                borderWidth: 1, borderColor: "#F3F4F6",
+                paddingVertical: 16,
+                alignItems: "center",
+                marginBottom: 20,
+                opacity: isLoadingMore ? 0.5 : 1,
               }}
             >
-              {/* Real Cover Image */}
-              <View style={{ height: 155, overflow: "hidden" }}>
-                <Image
-                  source={{ uri: p.cover_image || "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=700&q=85" }}
-                  style={{ width: "100%", height: "100%", resizeMode: "cover" }}
-                />
-                {/* Gradient overlay bottom */}
-                <View style={{
-                  position: "absolute", bottom: 0, left: 0, right: 0, height: 70,
-                  backgroundColor: "rgba(0,0,0,0.22)",
-                }} />
-              </View>
-
-              {/* Info */}
-              <View style={{ padding: 14, gap: 4 }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <Text style={{ fontSize: 17, fontWeight: "900", color: C.text }}>{p.name}</Text>
-                  {p.rating && (
-                    <View style={{
-                      flexDirection: "row", alignItems: "center", gap: 3,
-                      backgroundColor: "#FFF7ED",
-                      paddingVertical: 4, paddingHorizontal: 9, borderRadius: 10,
-                    }}>
-                      <Text style={{ fontSize: 13, color: "#F59E0B", fontWeight: "900" }}>★</Text>
-                      <Text style={{ fontSize: 13, fontWeight: "900", color: "#92400E" }}>{p.rating.toFixed(1)}</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>
-                  {p.type}  •  {p.review_count}+ تقييم
+              {isLoadingMore ? (
+                <ActivityIndicator size="large" color={C.primary} />
+              ) : (
+                <Text style={{
+                  color: C.primary,
+                  fontWeight: "900",
+                  fontSize: 16,
+                }}>
+                  ↓ تحميل المزيد
                 </Text>
-                <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
-                  <View style={{
-                    flexDirection: "row", alignItems: "center", gap: 4,
-                    backgroundColor: "#F9FAFB", paddingVertical: 5, paddingHorizontal: 10, borderRadius: 10,
-                  }}>
-                    <Text style={{ fontSize: 12 }}>🕐</Text>
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: "#374151" }}>{p.delivery_time}</Text>
-                  </View>
-                  <View style={{
-                    flexDirection: "row", alignItems: "center", gap: 4,
-                    backgroundColor: "#F9FAFB", paddingVertical: 5, paddingHorizontal: 10, borderRadius: 10,
-                  }}>
-                    <Text style={{ fontSize: 12 }}>🛵</Text>
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: "#374151" }}>{p.delivery_fee} جنيه</Text>
-                  </View>
-                </View>
-              </View>
+              )}
             </Pressable>
-          ))}
+          )}
         </View>
-
       </ScrollView>
     </View>
   );

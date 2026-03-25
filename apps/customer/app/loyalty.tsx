@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, Pressable, Image, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
+import { useDarkMode } from "./hooks/useDarkMode";
+import { analyticsTracker } from "./utils/analyticsTracker";
+import { A11yPresets } from "./hooks/useAccessibility";
+
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
   pink: "#EC4899",       pinkSoft: "#FCE7F3",
@@ -63,8 +67,10 @@ export default function Loyalty() {
   const [myPoints,    setMyPoints]      = useState(0);
   const [history,     setHistory]       = useState<{ text: string; points: string; egp: string; date: string; credit: boolean }[]>([]);
   const [loadingData, setLoadingData]   = useState(true);
+  const { isDarkMode, colors } = useDarkMode();
 
   useEffect(() => {
+    analyticsTracker.trackScreenView("loyalty_screen");
     const supabase = getSB();
     if (!supabase) { setLoadingData(false); return; }
 
@@ -109,6 +115,7 @@ export default function Loyalty() {
   function handleRedeem(reward: typeof REWARDS[0]) {
     if (!reward.available) return;
     if (myPoints < reward.points) return;
+    analyticsTracker.trackEvent("redeem_reward", { rewardId: reward.id, points: reward.points });
     setRedeemTried(reward.id);
     setTimeout(() => setRedeemTried(null), 2000);
   }
@@ -338,6 +345,7 @@ export default function Loyalty() {
                 <Pressable
                   disabled={!canRedeem}
                   onPress={() => handleRedeem(r)}
+                  {...A11yPresets.pressable}
                   style={{
                     paddingVertical: 10, paddingHorizontal: 16, borderRadius: 14,
                     backgroundColor: isRedeemed ? "#059669" : canRedeem ? "#7C3AED" : "#E5E7EB",

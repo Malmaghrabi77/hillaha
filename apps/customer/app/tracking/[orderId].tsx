@@ -5,6 +5,10 @@ import {
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import MapView, { Marker } from "react-native-maps";
+import { useDarkMode } from "../hooks/useDarkMode";
+import { analyticsTracker } from "../utils/analyticsTracker";
+import { A11yPresets } from "../hooks/useAccessibility";
+
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
   pink: "#EC4899",       pinkSoft: "#FCE7F3",
@@ -110,6 +114,7 @@ function getPartnerIcon(type: string): { icon: string; bgColor: string; borderCo
 
 export default function Tracking() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
+  const { isDarkMode, colors } = useDarkMode();
 
   const [orderInfo,   setOrderInfo]   = useState<OrderInfo | null>(null);
   const [step,        setStep]        = useState(0);
@@ -122,6 +127,7 @@ export default function Tracking() {
 
   // Pulse for active step
   useEffect(() => {
+    analyticsTracker.trackScreenView("tracking_screen", { orderId });
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.18, duration: 650, useNativeDriver: true }),
@@ -377,7 +383,11 @@ export default function Tracking() {
 
       {/* Back button overlay */}
       <Pressable
-        onPress={() => router.back()}
+        onPress={() => {
+          analyticsTracker.trackEvent("tracking_back");
+          router.back();
+        }}
+        {...A11yPresets.pressable}
         style={{
           position: "absolute", top: Platform.OS === "android" ? 28 : 54,
           right: 16,
@@ -568,12 +578,14 @@ export default function Tracking() {
                 <View style={{ gap: 8 }}>
                   <Pressable
                     onPress={() => {
+                      analyticsTracker.trackEvent("call_driver", { orderId, driverPhone: orderInfo?.driverPhone });
                       if (orderInfo?.driverPhone) {
                         try {
                           require("react-native").Linking.openURL(`tel:${orderInfo.driverPhone}`);
                         } catch (e) {}
                       }
                     }}
+                    {...A11yPresets.pressable}
                     style={{
                       width: 44, height: 44, borderRadius: 14,
                       backgroundColor: "#D1FAE5",
@@ -583,7 +595,11 @@ export default function Tracking() {
                     <Text style={{ fontSize: 20 }}>📞</Text>
                   </Pressable>
                   <Pressable
-                    onPress={() => router.push(`/chat/driver/${orderId}`)}
+                    onPress={() => {
+                      analyticsTracker.trackEvent("chat_driver", { orderId });
+                      router.push(`/chat/driver/${orderId}`);
+                    }}
+                    {...A11yPresets.pressable}
                     style={{
                       width: 44, height: 44, borderRadius: 14,
                       backgroundColor: "#EDE9FE",
@@ -617,18 +633,28 @@ export default function Tracking() {
           {/* DELIVERED ACTIONS */}
           {isDelivered && (
             <View style={{ gap: 12 }}>
-              <Pressable style={{
-                backgroundColor: "#7C3AED", borderRadius: 18,
-                paddingVertical: 16, alignItems: "center",
-                shadowColor: "#7C3AED", shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.4, shadowRadius: 12, elevation: 6,
-              }}>
+              <Pressable
+                onPress={() => {
+                  analyticsTracker.trackEvent("rate_order", { orderId });
+                }}
+                {...A11yPresets.pressable}
+                style={{
+                  backgroundColor: "#7C3AED", borderRadius: 18,
+                  paddingVertical: 16, alignItems: "center",
+                  shadowColor: "#7C3AED", shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: 0.4, shadowRadius: 12, elevation: 6,
+                }}
+              >
                 <Text style={{ color: "white", fontWeight: "900", fontSize: 16 }}>
                   ⭐ قيّم طلبك واكسب 2 نقطة
                 </Text>
               </Pressable>
               <Pressable
-                onPress={() => router.replace("/(tabs)/home")}
+                onPress={() => {
+                  analyticsTracker.trackEvent("home_after_delivery");
+                  router.replace("/(tabs)/home");
+                }}
+                {...A11yPresets.pressable}
                 style={{
                   paddingVertical: 14, borderRadius: 18,
                   borderWidth: 1.5, borderColor: "#E5E7EB",

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, Pressable, Alert, StatusBar, Platform } from "react-native";
 import { router } from "expo-router";
+import { useDarkMode } from "../hooks/useDarkMode";
+import { analyticsTracker } from "../utils/analyticsTracker";
+import { A11yPresets } from "../hooks/useAccessibility";
 
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",
@@ -30,10 +33,12 @@ export default function SubscriptionsScreen() {
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const { isDarkMode, colors } = useDarkMode();
 
   const supabase = getSB();
 
   useEffect(() => {
+    analyticsTracker.trackScreenView("subscriptions_screen");
     loadPlans();
   }, []);
 
@@ -81,6 +86,7 @@ export default function SubscriptionsScreen() {
       return;
     }
 
+    analyticsTracker.trackEvent("subscribe_plan", { planId });
     setSubscribing(planId);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -132,7 +138,11 @@ export default function SubscriptionsScreen() {
         backgroundColor: "#4C1D95",
       }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => {
+            analyticsTracker.trackEvent("subscriptions_back");
+            router.back();
+          }}
+          {...A11yPresets.pressable}
           style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
         >
           <Text style={{ fontSize: 20, color: "white" }}>←</Text>
@@ -223,6 +233,7 @@ export default function SubscriptionsScreen() {
               <Pressable
                 onPress={() => subscribePlan(plan.id)}
                 disabled={currentSubscription?.subscription_id === plan.id || subscribing === plan.id}
+                {...A11yPresets.pressable}
                 style={{
                   backgroundColor: currentSubscription?.subscription_id === plan.id ? "#D1D5DB" : C.primary,
                   paddingVertical: 12,

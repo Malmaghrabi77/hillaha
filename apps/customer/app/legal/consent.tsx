@@ -1,6 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ScrollView, View, Text, Pressable, Image, StatusBar } from "react-native";
 import { router } from "expo-router";
+import { useDarkMode } from "../hooks/useDarkMode";
+import { analyticsTracker } from "../utils/analyticsTracker";
+import { A11yPresets } from "../hooks/useAccessibility";
+
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
   pink: "#EC4899",       pinkSoft: "#FCE7F3",
@@ -44,6 +48,11 @@ const TERMS_SECTIONS = [
 
 export default function ConsentScreen() {
   const [accepted, setAccepted] = useState(false);
+  const { isDarkMode, colors } = useDarkMode();
+
+  useEffect(() => {
+    analyticsTracker.trackScreenView("consent_screen");
+  }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -82,7 +91,11 @@ export default function ConsentScreen() {
 
         {/* CHECKBOX */}
         <Pressable
-          onPress={() => setAccepted(v => !v)}
+          onPress={() => {
+            setAccepted(v => !v);
+            analyticsTracker.trackEvent("toggle_consent");
+          }}
+          {...A11yPresets.pressable}
           style={{
             flexDirection: "row", alignItems: "center", gap: 12,
             padding: 16, borderRadius: 16, marginTop: 8,
@@ -110,7 +123,11 @@ export default function ConsentScreen() {
         {/* CONTINUE BUTTON */}
         <Pressable
           disabled={!accepted}
-          onPress={() => router.replace("/(tabs)/home")}
+          onPress={() => {
+            analyticsTracker.trackEvent("consent_accepted");
+            router.replace("/(tabs)/home");
+          }}
+          {...A11yPresets.pressable}
           style={{
             paddingVertical: 16, borderRadius: 16,
             backgroundColor: accepted ? C.primary : C.border,
@@ -127,7 +144,14 @@ export default function ConsentScreen() {
           </Text>
         </Pressable>
 
-        <Pressable onPress={() => router.back()} style={{ marginTop: 14, alignItems: "center" }}>
+        <Pressable
+          onPress={() => {
+            analyticsTracker.trackEvent("consent_back");
+            router.back();
+          }}
+          {...A11yPresets.pressable}
+          style={{ marginTop: 14, alignItems: "center" }}
+        >
           <Text style={{ color: C.textMuted, fontSize: 13 }}>رجوع للصفحة السابقة</Text>
         </Pressable>
 

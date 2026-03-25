@@ -5,6 +5,10 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCart } from "../../lib/cartStore";
+import { useDarkMode } from "../hooks/useDarkMode";
+import { analyticsTracker } from "../utils/analyticsTracker";
+import { A11yPresets } from "../hooks/useAccessibility";
+
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
   pink: "#EC4899",       pinkSoft: "#FCE7F3",
@@ -173,15 +177,21 @@ export default function Restaurant() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const partnerId = id ?? FALLBACK_ID;
   const data = RESTAURANTS[partnerId] ?? RESTAURANTS[FALLBACK_ID];
+  const { isDarkMode, colors } = useDarkMode();
 
   const [activeTab, setActiveTab] = React.useState(0);
   const cartBarAnim = useRef(new Animated.Value(0)).current;
   const cartStore = useCart();
 
+  React.useEffect(() => {
+    analyticsTracker.trackScreenView("restaurant_screen", { partnerId });
+  }, [partnerId]);
+
   const totalItems = cartStore.totalItems;
   const totalPrice = cartStore.subtotal;
 
   function addItem(item: { id: string; nameAr: string; price: number; image: string }) {
+    analyticsTracker.trackEvent("add_item_to_cart", { itemId: item.id, itemName: item.nameAr, price: item.price, partnerId });
     if (cartStore.hasConflict(partnerId)) {
       Alert.alert(
         "سلة من متجر آخر",
@@ -218,6 +228,7 @@ export default function Restaurant() {
   }
 
   function removeItem(itemId: string) {
+    analyticsTracker.trackEvent("remove_item_from_cart", { itemId, partnerId });
     const qty = cartStore.items[itemId]?.qty ?? 0;
     cartStore.removeItem(itemId);
     if (qty <= 1 && totalItems <= 1) {
@@ -249,7 +260,11 @@ export default function Restaurant() {
         }} />
 
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => {
+            analyticsTracker.trackEvent("restaurant_close");
+            router.back();
+          }}
+          {...A11yPresets.pressable}
           style={{
             position: "absolute", top: 52, right: 16,
             width: 38, height: 38, borderRadius: 19,
@@ -327,7 +342,11 @@ export default function Restaurant() {
           {data.menu.map((section, i) => (
             <Pressable
               key={i}
-              onPress={() => setActiveTab(i)}
+              onPress={() => {
+                analyticsTracker.trackEvent("change_menu_tab", { category: section.category });
+                setActiveTab(i);
+              }}
+              {...A11yPresets.pressable}
               style={{
                 paddingVertical: 10, paddingHorizontal: 16,
                 borderBottomWidth: 2.5,
@@ -394,6 +413,7 @@ export default function Restaurant() {
               }}>
                 <Pressable
                   onPress={() => removeItem(item.id)}
+                  {...A11yPresets.pressable}
                   style={{
                     width: 32, height: 32, borderRadius: 10, backgroundColor: "white",
                     justifyContent: "center", alignItems: "center",
@@ -407,6 +427,7 @@ export default function Restaurant() {
                 </Text>
                 <Pressable
                   onPress={() => addItem(item)}
+                  {...A11yPresets.pressable}
                   style={{
                     width: 32, height: 32, borderRadius: 10, backgroundColor: C.primary,
                     justifyContent: "center", alignItems: "center",
@@ -418,6 +439,7 @@ export default function Restaurant() {
             ) : (
               <Pressable
                 onPress={() => addItem(item)}
+                {...A11yPresets.pressable}
                 style={{
                   width: 38, height: 38, borderRadius: 12, backgroundColor: C.primary,
                   justifyContent: "center", alignItems: "center",
@@ -439,7 +461,11 @@ export default function Restaurant() {
           transform: [{ translateY: cartBarTranslate }],
         }}>
           <Pressable
-            onPress={() => router.push("/cart")}
+            onPress={() => {
+              analyticsTracker.trackEvent("view_cart", { totalItems, totalPrice });
+              router.push("/cart");
+            }}
+            {...A11yPresets.pressable}
             style={{
               backgroundColor: C.primary, borderRadius: 20,
               flexDirection: "row", alignItems: "center", justifyContent: "space-between",

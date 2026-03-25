@@ -4,6 +4,9 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
+import { useDarkMode } from "../hooks/useDarkMode";
+import { analyticsTracker } from "../utils/analyticsTracker";
+import { A11yPresets } from "../hooks/useAccessibility";
 
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",
@@ -32,10 +35,12 @@ export default function ReferralsScreen() {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
   const [codeGenerated, setCodeGenerated] = useState(false);
+  const { isDarkMode, colors } = useDarkMode();
 
   const supabase = getSB();
 
   useEffect(() => {
+    analyticsTracker.trackScreenView("referrals_screen");
     loadReferralData();
   }, []);
 
@@ -96,6 +101,7 @@ export default function ReferralsScreen() {
 
   const shareReferral = async () => {
     try {
+      analyticsTracker.trackEvent("share_referral_code", { code: referralCode });
       const message = `🎁 شارك معك كود الإحالة: ${referralCode}\n\n💰 احصل على 50 ج.م عند الاشتراك!\n\nحمّل التطبيق الآن: [رابط التطبيق]`;
       await Share.share({
         message,
@@ -108,6 +114,7 @@ export default function ReferralsScreen() {
 
   const copyToClipboard = async () => {
     try {
+      analyticsTracker.trackEvent("copy_referral_code");
       await Clipboard.setStringAsync(referralCode);
       Alert.alert("✓", "تم نسخ الكود إلى الحافظة");
     } catch (error) {
@@ -127,7 +134,11 @@ export default function ReferralsScreen() {
         backgroundColor: "#4C1D95",
       }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => {
+            analyticsTracker.trackEvent("referrals_back");
+            router.back();
+          }}
+          {...A11yPresets.pressable}
           style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
         >
           <Text style={{ fontSize: 20, color: "white" }}>←</Text>
@@ -178,6 +189,7 @@ export default function ReferralsScreen() {
 
                 <Pressable
                   onPress={copyToClipboard}
+                  {...A11yPresets.pressable}
                   style={{
                     backgroundColor: C.primary,
                     paddingVertical: 8,
@@ -192,6 +204,7 @@ export default function ReferralsScreen() {
               {/* Share Button */}
               <Pressable
                 onPress={shareReferral}
+                {...A11yPresets.pressable}
                 style={{
                   backgroundColor: C.primary,
                   paddingVertical: 12,

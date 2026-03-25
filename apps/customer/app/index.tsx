@@ -10,6 +10,9 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useDarkMode } from "./hooks/useDarkMode";
+import { analyticsTracker } from "./utils/analyticsTracker";
+import { A11yPresets } from "./hooks/useAccessibility";
 
 // ── Force RTL ─────────────────────────────────────────────────────────────────
 I18nManager.allowRTL(true);
@@ -31,6 +34,7 @@ const C = {
 // ── This screen is pure UI — all auth routing is handled in _layout.tsx ───────
 export default function AppEntry() {
   const [showAuth, setShowAuth] = useState(false);
+  const { isDarkMode, colors } = useDarkMode();
 
   const logoScale      = useRef(new Animated.Value(0.8)).current;
   const logoOpacity    = useRef(new Animated.Value(0)).current;
@@ -39,6 +43,7 @@ export default function AppEntry() {
   const authSlide      = useRef(new Animated.Value(28)).current;
 
   useEffect(() => {
+    analyticsTracker.trackScreenView("entry_splash_screen");
     let mounted = true;
 
     // Animate logo in
@@ -124,14 +129,22 @@ export default function AppEntry() {
         <View style={styles.buttons}>
           <Pressable
             style={({ pressed }) => [styles.btnPrimary, pressed && { opacity: 0.85 }]}
-            onPress={() => router.push("/(auth)/register")}
+            {...A11yPresets.pressable}
+            onPress={() => {
+              analyticsTracker.trackEvent("entry_register");
+              router.push("/(auth)/register");
+            }}
           >
             <Text style={styles.btnPrimaryText}>إنشاء حساب جديد</Text>
           </Pressable>
 
           <Pressable
             style={({ pressed }) => [styles.btnSecondary, pressed && { backgroundColor: "rgba(139,92,246,0.1)" }]}
-            onPress={() => router.push("/(auth)/login")}
+            {...A11yPresets.pressable}
+            onPress={() => {
+              analyticsTracker.trackEvent("entry_login");
+              router.push("/(auth)/login");
+            }}
           >
             <Text style={styles.btnSecondaryText}>تسجيل الدخول</Text>
           </Pressable>
@@ -139,7 +152,13 @@ export default function AppEntry() {
 
         <Text style={styles.terms}>
           بالمتابعة أنت توافق على{" "}
-          <Text style={styles.termsLink} onPress={() => router.push("/legal/consent")}>
+          <Text
+            style={styles.termsLink}
+            onPress={() => {
+              analyticsTracker.trackEvent("entry_terms_view");
+              router.push("/legal/consent");
+            }}
+          >
             شروط الاستخدام وسياسة الخصوصية
           </Text>
         </Text>

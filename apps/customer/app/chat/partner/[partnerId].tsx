@@ -4,6 +4,9 @@ import {
   KeyboardAvoidingView, Platform, StatusBar, ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { useDarkMode } from "../../hooks/useDarkMode";
+import { analyticsTracker } from "../../utils/analyticsTracker";
+import { A11yPresets } from "../../hooks/useAccessibility";
 
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",
@@ -32,9 +35,11 @@ export default function PartnerChat() {
   const [partnerName, setPartnerName] = useState("المتجر");
   const [partnerPhone, setPartnerPhone] = useState("");
   const scrollRef = useRef<FlatList>(null);
+  const { isDarkMode, colors } = useDarkMode();
 
   // Fetch messages and partner info
   useEffect(() => {
+    analyticsTracker.trackScreenView("partner_chat_screen");
     if (!partnerId) return;
     async function load() {
       const supabase = getSB();
@@ -103,6 +108,8 @@ export default function PartnerChat() {
     const supabase = getSB();
     if (!supabase) return;
 
+    analyticsTracker.trackEvent("send_partner_message", { partnerId });
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       await supabase.from("messages").insert({
@@ -141,7 +148,11 @@ export default function PartnerChat() {
         flexDirection: "row", alignItems: "center", gap: 12,
       }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => {
+            analyticsTracker.trackEvent("chat_back");
+            router.back();
+          }}
+          {...A11yPresets.pressable}
           style={{
             width: 40, height: 40, borderRadius: 12,
             backgroundColor: C.primarySoft,
@@ -157,10 +168,12 @@ export default function PartnerChat() {
         {partnerPhone && (
           <Pressable
             onPress={() => {
+              analyticsTracker.trackEvent("call_partner", { partnerId });
               try {
                 require("react-native").Linking.openURL(`tel:${partnerPhone}`);
               } catch (e) {}
             }}
+            {...A11yPresets.pressable}
             style={{
               width: 40, height: 40, borderRadius: 12,
               backgroundColor: "#D1FAE5",
@@ -242,6 +255,7 @@ export default function PartnerChat() {
         <Pressable
           onPress={sendMessage}
           disabled={!newMessage.trim()}
+          {...A11yPresets.pressable}
           style={{
             width: 40, height: 40, borderRadius: 20,
             backgroundColor: newMessage.trim() ? C.primary : C.primarySoft,

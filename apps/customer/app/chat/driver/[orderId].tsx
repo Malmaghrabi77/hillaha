@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, TextInput, Pressable, ScrollView, FlatList,
-  KeyboardAvoidingView, Platform, StatusBar, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useDarkMode } from "../../hooks/useDarkMode";
@@ -9,6 +9,7 @@ import { useSupabase } from "../../../hooks/useSupabase";
 import { analyticsTracker } from "../../utils/analyticsTracker";
 import { A11yPresets } from "../../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../../constants/analyticsEvents";
+import { AppHeader } from '../../components';
 
 interface Message {
   id: string;
@@ -139,56 +140,35 @@ export default function DriverChat() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={{ flex: 1, backgroundColor: colors.bg }}
     >
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
-
-      {/* Header */}
-      <View style={{
-        backgroundColor: colors.surface,
-        paddingTop: Platform.OS === "android" ? 18 : 54,
-        paddingHorizontal: 16, paddingBottom: 16,
-        borderBottomWidth: 1, borderColor: colors.border,
-        flexDirection: "row", alignItems: "center", gap: 12,
-      }}>
-        <Pressable
-          onPress={() => {
-            analyticsTracker.trackEvent(ANALYTICS_EVENTS.NAVIGATION.BACK_PRESSED, { screen: 'driver_chat' });
-            router.back();
-          }}
-          {...A11yPresets.button()}
-          style={{
-            width: 40, height: 40, borderRadius: 12,
-            backgroundColor: colors.primarySoft,
-            justifyContent: "center", alignItems: "center",
-          }}
-        >
-          <Text style={{ fontSize: 18 }}>←</Text>
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>💬 {driverName}</Text>
-          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>المندوب</Text>
-        </View>
-        {driverPhone && (
-          <Pressable
-            onPress={() => {
-              analyticsTracker.trackEvent(ANALYTICS_EVENTS.CHAT.CALL_INITIATED, {
-                driver_phone: driverPhone,
-              });
-              try {
-                require("react-native").Linking.openURL(`tel:${driverPhone}`);
-              } catch (e) {}
-            }}
-            {...A11yPresets.button()}
-            accessibilityLabel={`اتصل بـ ${driverName}`}
-            style={{
-              width: 40, height: 40, borderRadius: 12,
-              backgroundColor: "#D1FAE5",
-              justifyContent: "center", alignItems: "center",
-            }}
-          >
-            <Text style={{ fontSize: 18 }}>📞</Text>
-          </Pressable>
-        )}
-      </View>
+      <AppHeader
+        title={driverName}
+        subtitle="المندوب"
+        icon="💬"
+        trackingScreen="chat_driver"
+        rightContent={
+          driverPhone && (
+            <Pressable
+              onPress={() => {
+                analyticsTracker.trackEvent(ANALYTICS_EVENTS.CHAT.CALL_INITIATED, {
+                  driver_phone: driverPhone,
+                });
+                try {
+                  require("react-native").Linking.openURL(`tel:${driverPhone}`);
+                } catch (e) {}
+              }}
+              {...A11yPresets.button()}
+              accessibilityLabel={`اتصل بـ ${driverName}`}
+              style={{
+                width: 40, height: 40, borderRadius: 12,
+                backgroundColor: "#D1FAE5",
+                justifyContent: "center", alignItems: "center",
+              }}
+            >
+              <Text style={{ fontSize: 18 }}>📞</Text>
+            </Pressable>
+          )
+        }
+      />
 
       {/* Messages */}
       <FlatList

@@ -9,6 +9,7 @@ import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
+import { AppHeader } from '../components';
 
 interface Partner {
   id: string;
@@ -111,12 +112,16 @@ export default function Search() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <AppHeader
+        title="بحث"
+        showBackButton={false}
+        trackingScreen="search"
+      />
+
       <View style={{
         padding: 16, backgroundColor: colors.surface,
         borderBottomWidth: 1, borderBottomColor: colors.border,
-        paddingTop: 52,
       }}>
-        <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, marginBottom: 12 }}>بحث</Text>
 
         {/* Search Bar */}
         <View style={{

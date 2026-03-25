@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, Pressable, ScrollView, TextInput,
-  StatusBar, Platform, ActivityIndicator, Alert,
+  Alert, ActivityIndicator,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
@@ -9,6 +9,7 @@ import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
+import { AppHeader } from '../components';
 
 interface Coupon {
   id: string;
@@ -155,19 +156,13 @@ export default function PromoCode() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
-
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-        {/* Header */}
-        <View style={{
-          paddingTop: Platform.OS === "android" ? 18 : 54,
-          paddingHorizontal: 16, paddingBottom: 16,
-          backgroundColor: colors.surface,
-          borderBottomWidth: 1, borderColor: colors.border,
-        }}>
-          <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text }}>🎟️ أكود الخصم</Text>
-          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>استخدم أكوادك للحصول على خصومات</Text>
-        </View>
+        <AppHeader
+          title="الرموز الترويجية"
+          icon="🎁"
+          trackingScreen="promo"
+          showBackButton={false}
+        />
 
         <View style={{ padding: 16 }}>
           {/* Apply Coupon Card */}

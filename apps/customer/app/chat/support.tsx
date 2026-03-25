@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, TextInput, Pressable, ScrollView, FlatList,
-  KeyboardAvoidingView, Platform, StatusBar, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
@@ -9,6 +9,7 @@ import { useSupabase } from "../../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
+import { AppHeader } from '../components';
 
 interface Message {
   id: string;
@@ -155,35 +156,12 @@ export default function SupportChat() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={{ flex: 1, backgroundColor: colors.bg }}
     >
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
-
-      {/* Header */}
-      <View style={{
-        backgroundColor: colors.surface,
-        paddingTop: Platform.OS === "android" ? 18 : 54,
-        paddingHorizontal: 16, paddingBottom: 16,
-        borderBottomWidth: 1, borderColor: colors.border,
-        flexDirection: "row", alignItems: "center", gap: 12,
-      }}>
-        <Pressable
-          onPress={() => {
-            analyticsTracker.trackEvent(ANALYTICS_EVENTS.NAVIGATION.BACK_PRESSED, { screen: 'support_chat' });
-            router.back();
-          }}
-          {...A11yPresets.button()}
-          style={{
-            width: 40, height: 40, borderRadius: 12,
-            backgroundColor: colors.primarySoft,
-            justifyContent: "center", alignItems: "center",
-          }}
-        >
-          <Text style={{ fontSize: 18 }}>←</Text>
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>🎧 فريق الدعم</Text>
-          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>الدعم الفني</Text>
-        </View>
-      </View>
+      <AppHeader
+        title="فريق الدعم"
+        subtitle="الدعم الفني"
+        icon="🎧"
+        trackingScreen="chat_support"
+      />
 
       {/* Messages */}
       <FlatList

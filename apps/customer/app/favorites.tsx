@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, Pressable, ScrollView, Image,
-  StatusBar, Platform, ActivityIndicator,
+  ActivityIndicator,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
@@ -9,6 +9,7 @@ import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
+import { AppHeader } from '../components';
 
 interface FavoritePartner {
   id: string;
@@ -101,35 +102,12 @@ export default function Favorites() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
-
-      {/* Header */}
-      <View style={{
-        paddingTop: Platform.OS === "android" ? 18 : 54,
-        paddingHorizontal: 16, paddingBottom: 16,
-        backgroundColor: colors.surface,
-        borderBottomWidth: 1, borderColor: colors.border,
-        flexDirection: "row", alignItems: "center", gap: 12,
-      }}>
-        <Pressable
-          onPress={() => {
-            analyticsTracker.trackEvent(ANALYTICS_EVENTS.NAVIGATION.BACK_PRESSED, { screen: 'favorites' });
-            router.back();
-          }}
-          {...A11yPresets.button()}
-          style={{
-            width: 40, height: 40, borderRadius: 12,
-            backgroundColor: colors.primarySoft,
-            justifyContent: "center", alignItems: "center",
-          }}
-        >
-          <Text style={{ fontSize: 18 }}>←</Text>
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text }}>❤️ المفضلة</Text>
-          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>{favorites.length} متجر</Text>
-        </View>
-      </View>
+      <AppHeader
+        title="المفضلة"
+        subtitle={`${favorites.length} متجر`}
+        icon="❤️"
+        trackingScreen="favorites"
+      />
 
       {favorites.length === 0 ? (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>

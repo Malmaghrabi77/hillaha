@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, Pressable, ScrollView, TextInput,
-  StatusBar, Platform, ActivityIndicator, Alert,
+  ActivityIndicator, Alert,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useDarkMode } from "../hooks/useDarkMode";
@@ -9,6 +9,7 @@ import { useSupabase } from "../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
+import { AppHeader } from '../components';
 
 interface OrderInfo {
   id: string;
@@ -119,18 +120,12 @@ export default function RateOrder() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
-
-      {/* Header */}
-      <View style={{
-        paddingTop: Platform.OS === "android" ? 18 : 54,
-        paddingHorizontal: 16, paddingBottom: 16,
-        backgroundColor: colors.surface,
-        borderBottomWidth: 1, borderColor: colors.border,
-      }}>
-        <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text }}>⭐ قيّم طلبك</Text>
-        <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>مساعدتك تساعد الآخرين على الاختيار الأفضل</Text>
-      </View>
+      <AppHeader
+        title="تقييم الطلب"
+        icon="⭐"
+        trackingScreen="rate_order"
+        showBackButton={false}
+      />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 20 }}>
         {/* Partner Rating */}

@@ -268,7 +268,7 @@ export default function Restaurant() {
           style={{
             position: "absolute", top: 52, right: 16,
             width: 38, height: 38, borderRadius: 19,
-            backgroundColor: "rgba(255,255,255,0.9)",
+            backgroundColor: colors.surface,
             justifyContent: "center", alignItems: "center",
             shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.2, shadowRadius: 6, elevation: 4,
@@ -292,9 +292,9 @@ export default function Restaurant() {
 
       {/* ── RESTAURANT INFO ──────────────────────────────────── */}
       <View style={{
-        backgroundColor: "white",
+        backgroundColor: colors.surface,
         paddingTop: 14, paddingHorizontal: 18, paddingBottom: 0,
-        borderBottomWidth: 1, borderBottomColor: "#F3F4F6",
+        borderBottomWidth: 1, borderBottomColor: colors.border,
       }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <View style={{ flexDirection: "row", gap: 10 }}>
@@ -305,32 +305,32 @@ export default function Restaurant() {
             ].map((m, i) => (
               <View key={i} style={{
                 flexDirection: "row", alignItems: "center", gap: 4,
-                backgroundColor: "#F9FAFB", paddingVertical: 5, paddingHorizontal: 9, borderRadius: 10,
-                borderWidth: 1, borderColor: "#F3F4F6",
+                backgroundColor: colors.lightBg2, paddingVertical: 5, paddingHorizontal: 9, borderRadius: 10,
+                borderWidth: 1, borderColor: colors.lightBg3,
               }}>
                 <Text style={{ fontSize: 11 }}>{m.icon}</Text>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: "#374151" }}>{m.label}</Text>
+                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSecondary }}>{m.label}</Text>
               </View>
             ))}
           </View>
           <View style={{
-            backgroundColor: "#FFF7ED", paddingVertical: 5, paddingHorizontal: 10, borderRadius: 12,
+            backgroundColor: colors.lightBg1, paddingVertical: 5, paddingHorizontal: 10, borderRadius: 12,
             flexDirection: "row", alignItems: "center", gap: 4,
           }}>
-            <Text style={{ fontSize: 13, color: "#F59E0B", fontWeight: "900" }}>★</Text>
-            <Text style={{ fontSize: 14, fontWeight: "900", color: "#92400E" }}>{data.rating}</Text>
-            <Text style={{ fontSize: 11, color: "#9CA3AF" }}>({data.reviewCount})</Text>
+            <Text style={{ fontSize: 13, color: colors.ratingText, fontWeight: "900" }}>★</Text>
+            <Text style={{ fontSize: 14, fontWeight: "900", color: colors.ratingDark }}>{data.rating}</Text>
+            <Text style={{ fontSize: 11, color: colors.textMuted }}>({data.reviewCount})</Text>
           </View>
         </View>
 
         {data.promo && (
           <View style={{
             marginBottom: 12, padding: 10, borderRadius: 12,
-            backgroundColor: "#F0FDF4", borderWidth: 1, borderColor: "#86EFAC",
+            backgroundColor: isDarkMode ? "#064E3B" : colors.lightBg1, borderWidth: 1, borderColor: isDarkMode ? colors.success : colors.ratingText,
             flexDirection: "row", alignItems: "center", gap: 8,
           }}>
             <Text style={{ fontSize: 16 }}>🎁</Text>
-            <Text style={{ flex: 1, fontSize: 12, color: "#166534", fontWeight: "700" }}>{data.promo}</Text>
+            <Text style={{ flex: 1, fontSize: 12, color: isDarkMode ? colors.success : colors.ratingDark, fontWeight: "700" }}>{data.promo}</Text>
           </View>
         )}
 
@@ -355,7 +355,7 @@ export default function Restaurant() {
             >
               <Text style={{
                 fontSize: 13, fontWeight: activeTab === i ? "900" : "600",
-                color: activeTab === i ? C.primary : "#9CA3AF",
+                color: activeTab === i ? C.primary : colors.textMuted,
               }}>
                 {section.category}
               </Text>
@@ -370,10 +370,10 @@ export default function Restaurant() {
           <View key={item.id} style={{
             flexDirection: "row", alignItems: "center",
             padding: 14, borderRadius: 18, marginBottom: 12,
-            backgroundColor: "white",
+            backgroundColor: colors.surface,
             shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
-            borderWidth: 1, borderColor: "#F9FAFB",
+            borderWidth: 1, borderColor: colors.lightBg2,
           }}>
             <View style={{
               width: 78, height: 78, borderRadius: 18, overflow: "hidden",
@@ -388,7 +388,7 @@ export default function Restaurant() {
               {item.popular && (
                 <View style={{
                   position: "absolute", top: 0, right: 0,
-                  backgroundColor: "#EF4444", paddingVertical: 3, paddingHorizontal: 6,
+                  backgroundColor: colors.danger, paddingVertical: 3, paddingHorizontal: 6,
                   borderBottomLeftRadius: 10,
                 }}>
                   <Text style={{ color: "white", fontSize: 8, fontWeight: "900" }}>شائع</Text>
@@ -397,8 +397,8 @@ export default function Restaurant() {
             </View>
 
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "900", color: "#111827", fontSize: 15 }}>{item.nameAr}</Text>
-              <Text style={{ color: "#9CA3AF", fontSize: 12, marginTop: 3, lineHeight: 17 }} numberOfLines={2}>
+              <Text style={{ fontWeight: "900", color: colors.text, fontSize: 15 }}>{item.nameAr}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 3, lineHeight: 17 }} numberOfLines={2}>
                 {item.desc}
               </Text>
               <Text style={{ color: C.primary, fontWeight: "900", fontSize: 16, marginTop: 6 }}>
@@ -409,13 +409,13 @@ export default function Restaurant() {
             {cartStore.items[item.id]?.qty ? (
               <View style={{
                 flexDirection: "row", alignItems: "center", gap: 8,
-                backgroundColor: "#F3F0FF", borderRadius: 14, padding: 4,
+                backgroundColor: colors.primarySoft, borderRadius: 14, padding: 4,
               }}>
                 <Pressable
                   onPress={() => removeItem(item.id)}
                   {...A11yPresets.pressable}
                   style={{
-                    width: 32, height: 32, borderRadius: 10, backgroundColor: "white",
+                    width: 32, height: 32, borderRadius: 10, backgroundColor: colors.surface,
                     justifyContent: "center", alignItems: "center",
                     shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 1,
                   }}

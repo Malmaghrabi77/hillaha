@@ -152,7 +152,7 @@ export default function Orders() {
     >
       <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, marginBottom: 16 }}>طلباتي</Text>
 
-      {active.length > 0 && (
+      if (active.length > 0 && (
         <>
           <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textMuted, marginBottom: 10 }}>
             الطلبات الجارية

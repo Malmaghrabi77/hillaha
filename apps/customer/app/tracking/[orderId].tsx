@@ -246,10 +246,10 @@ export default function Tracking() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#F9FAFB", justifyContent: "center", alignItems: "center" }}>
+      <View style={{ flex: 1, backgroundColor: colors.lightBg2, justifyContent: "center", alignItems: "center" }}>
         <StatusBar barStyle="dark-content" />
         <Text style={{ fontSize: 36, marginBottom: 12 }}>🛵</Text>
-        <Text style={{ fontSize: 14, color: "#6B7280", fontWeight: "700" }}>جاري تحميل بيانات الطلب…</Text>
+        <Text style={{ fontSize: 14, color: colors.textMuted, fontWeight: "700" }}>جاري تحميل بيانات الطلب…</Text>
       </View>
     );
   }

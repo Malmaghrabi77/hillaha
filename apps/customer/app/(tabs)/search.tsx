@@ -260,7 +260,7 @@ export default function Search() {
               <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{p.type}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 }}>
                 {p.rating ? (
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#F59E0B" }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.ratingText }}>
                     ★ {p.rating.toFixed(1)} ({p.review_count})
                   </Text>
                 ) : null}
@@ -281,7 +281,7 @@ export default function Search() {
 
       {/* Filter Modal */}
       <Modal visible={showFilters} animationType="slide" transparent>
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}>
+        <View style={{ flex: 1, backgroundColor: colors.overlay }}>
           <View style={{
             marginTop: "auto",
             backgroundColor: colors.bg,
@@ -290,7 +290,7 @@ export default function Search() {
           }}>
             <View style={{
               width: 44, height: 5, borderRadius: 3,
-              backgroundColor: "#E5E7EB",
+              backgroundColor: colors.border,
               alignSelf: "center", marginBottom: 20,
             }} />
 

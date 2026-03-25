@@ -184,9 +184,9 @@ function PartnerCard({ partner, onPress }: PartnerCardProps) {
       }}
     >
       {/* ✅ Lazy Loaded Cover Image */}
-      <View style={{ height: 155, overflow: "hidden", backgroundColor: "#f0f0f0" }}>
+      <View style={{ height: 155, overflow: "hidden", backgroundColor: colors.lightBg3 }}>
         {!imageLoaded && (
-          <View style={{ width: "100%", height: "100%", backgroundColor: "#f0f0f0" }} />
+          <View style={{ width: "100%", height: "100%", backgroundColor: colors.lightBg3 }} />
         )}
         <Image
           source={{ uri: partner.cover_image || "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=700&q=85" }}
@@ -205,7 +205,7 @@ function PartnerCard({ partner, onPress }: PartnerCardProps) {
           left: 0,
           right: 0,
           height: 70,
-          backgroundColor: "rgba(0,0,0,0.22)",
+          backgroundColor: colors.overlayLight,
         }} />
       </View>
 
@@ -218,19 +218,19 @@ function PartnerCard({ partner, onPress }: PartnerCardProps) {
               flexDirection: "row",
               alignItems: "center",
               gap: 3,
-              backgroundColor: "#FFF7ED",
+              backgroundColor: colors.lightBg1,
               paddingVertical: 4,
               paddingHorizontal: 9,
               borderRadius: 10,
             }}>
-              <Text style={{ fontSize: 13, color: "#F59E0B", fontWeight: "900" }}>★</Text>
-              <Text style={{ fontSize: 13, fontWeight: "900", color: "#92400E" }}>
+              <Text style={{ fontSize: 13, color: colors.ratingText, fontWeight: "900" }}>★</Text>
+              <Text style={{ fontSize: 13, fontWeight: "900", color: colors.ratingDark }}>
                 {partner.rating.toFixed(1)}
               </Text>
             </View>
           )}
         </View>
-        <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>
+        <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
           {partner.type} • {partner.review_count}+ تقييم
         </Text>
         <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
@@ -238,13 +238,13 @@ function PartnerCard({ partner, onPress }: PartnerCardProps) {
             flexDirection: "row",
             alignItems: "center",
             gap: 4,
-            backgroundColor: "#F9FAFB",
+            backgroundColor: colors.lightBg2,
             paddingVertical: 5,
             paddingHorizontal: 10,
             borderRadius: 10,
           }}>
             <Text style={{ fontSize: 12 }}>🕐</Text>
-            <Text style={{ fontSize: 12, fontWeight: "700", color: "#374151" }}>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textSecondary }}>
               {partner.delivery_time}
             </Text>
           </View>
@@ -252,13 +252,13 @@ function PartnerCard({ partner, onPress }: PartnerCardProps) {
             flexDirection: "row",
             alignItems: "center",
             gap: 4,
-            backgroundColor: "#F9FAFB",
+            backgroundColor: colors.lightBg2,
             paddingVertical: 5,
             paddingHorizontal: 10,
             borderRadius: 10,
           }}>
             <Text style={{ fontSize: 12 }}>🛵</Text>
-            <Text style={{ fontSize: 12, fontWeight: "700", color: "#374151" }}>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textSecondary }}>
               {partner.delivery_fee} جنيه
             </Text>
           </View>
@@ -539,7 +539,7 @@ export default function Home() {
               backgroundColor: "rgba(255,255,255,0.15)",
               justifyContent: "center",
               alignItems: "center",
-            }}>
+            }} >
               <Text style={{ fontSize: 17 }}>🔔</Text>
               <View style={{
                 position: "absolute",
@@ -763,7 +763,7 @@ export default function Home() {
                   width: bannerIndex === i ? 20 : 6,
                   height: 6,
                   borderRadius: 3,
-                  backgroundColor: bannerIndex === i ? colors.primary : "#D1D5DB",
+                  backgroundColor: bannerIndex === i ? colors.primary : colors.border,
                 }}
               />
             ))}
@@ -796,7 +796,7 @@ export default function Home() {
                   width: 60,
                   height: 60,
                   borderRadius: 20,
-                  backgroundColor: isActive ? cat.color : "#F3F4F6",
+                  backgroundColor: isActive ? cat.color : colors.lightBg3,
                   justifyContent: "center",
                   alignItems: "center",
                   shadowColor: isActive ? cat.color : "transparent",
@@ -805,14 +805,14 @@ export default function Home() {
                   shadowRadius: 6,
                   elevation: isActive ? 4 : 0,
                   borderWidth: isActive ? 0 : 1.5,
-                  borderColor: "#E5E7EB",
+                  borderColor: colors.border,
                 }}>
                   <Text style={{ fontSize: 26 }}>{cat.icon}</Text>
                 </View>
                 <Text style={{
                   fontSize: 11,
                   fontWeight: isActive ? "900" : "600",
-                  color: isActive ? cat.color : "#6B7280",
+                  color: isActive ? cat.color : colors.textMuted,
                   textAlign: "center",
                 }}>
                   {cat.label}
@@ -1093,35 +1093,35 @@ export default function Home() {
                       </Text>
                       <Text style={{
                         fontSize: 10,
-                        color: "#9CA3AF",
+                        color: colors.textMuted,
                       }}>
                         ({p.review_count})
                       </Text>
                     </View>
                     <View style={{ flexDirection: "row", gap: 8, marginTop: 6 }}>
                       <View style={{
-                        backgroundColor: "#F3F4F6",
+                        backgroundColor: colors.lightBg3,
                         paddingVertical: 3,
                         paddingHorizontal: 7,
                         borderRadius: 8,
                       }}>
                         <Text style={{
                           fontSize: 10,
-                          color: "#6B7280",
+                          color: colors.textMuted,
                           fontWeight: "600",
                         }}>
                           🕐 {p.delivery_time}
                         </Text>
                       </View>
                       <View style={{
-                        backgroundColor: "#F3F4F6",
+                        backgroundColor: colors.lightBg3,
                         paddingVertical: 3,
                         paddingHorizontal: 7,
                         borderRadius: 8,
                       }}>
                         <Text style={{
                           fontSize: 10,
-                          color: "#6B7280",
+                          color: colors.textMuted,
                           fontWeight: "600",
                         }}>
                           🛵 {p.delivery_fee}

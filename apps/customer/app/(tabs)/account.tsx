@@ -185,19 +185,19 @@ export default function Account() {
         </View>
 
         {/* LOGOUT */}
-        <Pressable
-          onPress={handleLogout}
-          {...A11yPresets.button("تسجيل الخروج", "انقر لتسجيل الخروج من حسابك")}
-          style={{
-            marginTop: 8, padding: 16, borderRadius: 16,
-            backgroundColor: isDarkMode ? "#7F1D1D" : "#FEF2F2",
-            borderWidth: 1.5, borderColor: isDarkMode ? "#DC2626" : "#FECACA",
-            alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8,
-          }}
-        >
-          <Text style={{ fontSize: 18 }}>🚪</Text>
-          <Text style={{ fontWeight: "900", color: colors.danger, fontSize: 15 }}>تسجيل الخروج</Text>
-        </Pressable>
+          <Pressable
+            onPress={handleLogout}
+            {...A11yPresets.button("تسجيل الخروج", "انقر لتسجيل الخروج من حسابك")}
+            style={{
+              marginTop: 8, padding: 16, borderRadius: 16,
+              backgroundColor: isDarkMode ? colors.dangerSoft : "#FEF2F2",
+              borderWidth: 1.5, borderColor: isDarkMode ? colors.danger : "#FECACA",
+              alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8,
+            }}
+          >
+            <Text style={{ fontSize: 18 }}>🚪</Text>
+            <Text style={{ fontWeight: "900", color: colors.danger, fontSize: 15 }}>تسجيل الخروج</Text>
+          </Pressable>
       </ScrollView>
     </View>
   );

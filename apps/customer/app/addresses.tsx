@@ -323,7 +323,7 @@ export default function Addresses() {
 
       {/* Modal */}
       <Modal visible={showModal} animationType="slide" transparent>
-        <View style={{ flex: 1, backgroundColor: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.5)" }}>
+        <View style={{ flex: 1, backgroundColor: isDarkMode ? "rgba(0,0,0,0.8)" : colors.overlay }}>
           <View style={{
             marginTop: "auto",
             backgroundColor: colors.bg,

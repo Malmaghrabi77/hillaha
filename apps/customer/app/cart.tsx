@@ -211,14 +211,14 @@ export default function Cart() {
         {/* ── PROMO CODE ────────────────────────────────– */}
         {discount > 0 ? (
           <View style={{
-            backgroundColor: isDarkMode ? "#064E3B" : "#F0FDF4", borderRadius: 16, padding: 14,
-            borderWidth: 1.5, borderColor: isDarkMode ? "#10B981" : "#86EFAC",
+            backgroundColor: isDarkMode ? colors.surfaceSecondary : colors.lightBg1, borderRadius: 16, padding: 14,
+            borderWidth: 1.5, borderColor: isDarkMode ? colors.success : colors.ratingText,
             flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14,
           }}>
             <Text style={{ fontSize: 20 }}>✅</Text>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "900", color: isDarkMode ? "#6EE7B7" : "#166534", fontSize: 14 }}>تم تطبيق الكود!</Text>
-              <Text style={{ color: isDarkMode ? "#10B981" : "#16A34A", fontSize: 12, marginTop: 2 }}>خصم 15 جنيه على طلبك</Text>
+              <Text style={{ fontWeight: "900", color: isDarkMode ? colors.success : colors.ratingDark, fontSize: 14 }}>تم تطبيق الكود!</Text>
+              <Text style={{ color: isDarkMode ? colors.success : colors.ratingDark, fontSize: 12, marginTop: 2 }}>خصم 15 جنيه على طلبك</Text>
             </View>
             <Pressable onPress={() => setDiscount(0)}>
               <Text style={{ color: colors.textMuted, fontSize: 20 }}>✕</Text>

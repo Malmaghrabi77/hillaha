@@ -309,20 +309,20 @@ export default function Checkout() {
           return (
             <View style={{
               padding: 16, borderRadius: 16, marginBottom: 12,
-              backgroundColor: isDarkMode ? "#064E3B" : "#F0FDF4",
-              borderWidth: 1.5, borderColor: isDarkMode ? "#10B981" : "#86EFAC",
+              backgroundColor: isDarkMode ? "#064E3B" : colors.lightBg1,
+              borderWidth: 1.5, borderColor: isDarkMode ? colors.success : colors.ratingText,
             }}>
-              <Text style={{ fontWeight: "900", color: isDarkMode ? "#6EE7B7" : "#15803D", fontSize: 13, marginBottom: 6 }}>
+              <Text style={{ fontWeight: "900", color: isDarkMode ? colors.success : colors.ratingDark, fontSize: 13, marginBottom: 6 }}>
                 📋 تعليمات التحويل
               </Text>
-              <Text style={{ color: isDarkMode ? "#10B981" : "#166534", fontSize: 13, marginBottom: 10, lineHeight: 20 }}>
+              <Text style={{ color: isDarkMode ? colors.success : colors.ratingDark, fontSize: 13, marginBottom: 10, lineHeight: 20 }}>
                 {acct.instructions}
               </Text>
               <View style={{
-                backgroundColor: isDarkMode ? "#0F766E" : "#DCFCE7", borderRadius: 10,
+                backgroundColor: isDarkMode ? "#0F766E" : colors.lightBg3, borderRadius: 10,
                 paddingVertical: 10, paddingHorizontal: 14, alignItems: "center",
               }}>
-                <Text style={{ color: isDarkMode ? "#CCFBF1" : "#14532D", fontWeight: "900", fontSize: 20, letterSpacing: 1, textAlign: "center" }}>
+                <Text style={{ color: isDarkMode ? "#CCFBF1" : colors.textSecondary, fontWeight: "900", fontSize: 20, letterSpacing: 1, textAlign: "center" }}>
                   {value}
                 </Text>
               </View>
@@ -427,11 +427,11 @@ export default function Checkout() {
         {needsProof && !proofUri && (
           <View style={{
             flexDirection: "row", alignItems: "center", gap: 6,
-            backgroundColor: isDarkMode ? "#78350F" : "#FEF3C7", borderRadius: 10,
+            backgroundColor: isDarkMode ? "#78350F" : colors.lightBg1, borderRadius: 10,
             paddingVertical: 8, paddingHorizontal: 12, marginBottom: 8,
           }}>
             <Text style={{ fontSize: 14 }}>⚠️</Text>
-            <Text style={{ color: isDarkMode ? "#FDE047" : "#92400E", fontSize: 12, fontWeight: "700", flex: 1 }}>
+            <Text style={{ color: isDarkMode ? colors.ratingText : colors.ratingDark, fontSize: 12, fontWeight: "700", flex: 1 }}>
               ارفع صورة إثبات التحويل أولاً
             </Text>
           </View>

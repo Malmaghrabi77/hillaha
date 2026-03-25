@@ -175,7 +175,7 @@ export default function Favorites() {
                       style={{
                         position: "absolute", top: 12, right: 12,
                         width: 40, height: 40, borderRadius: 20,
-                        backgroundColor: "rgba(255,255,255,0.95)",
+                        backgroundColor: colors.surface,
                         justifyContent: "center", alignItems: "center",
                       }}
                     >
@@ -193,11 +193,11 @@ export default function Favorites() {
                       {p.rating && (
                         <View style={{
                           flexDirection: "row", alignItems: "center", gap: 2,
-                          backgroundColor: "#FEF3C7",
+                          backgroundColor: colors.lightBg1,
                           paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8,
                         }}>
-                          <Text style={{ fontSize: 12, color: "#F59E0B", fontWeight: "900" }}>★</Text>
-                          <Text style={{ fontSize: 12, fontWeight: "900", color: "#92400E" }}>
+                          <Text style={{ fontSize: 12, color: colors.ratingText, fontWeight: "900" }}>★</Text>
+                          <Text style={{ fontSize: 12, fontWeight: "900", color: colors.ratingDark }}>
                             {p.rating.toFixed(1)}
                           </Text>
                         </View>
@@ -208,17 +208,17 @@ export default function Favorites() {
                     <View style={{ flexDirection: "row", gap: 8 }}>
                       <View style={{
                         flexDirection: "row", alignItems: "center", gap: 3,
-                        backgroundColor: "#F9FAFB", paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8,
+                        backgroundColor: colors.lightBg2, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8,
                       }}>
                         <Text style={{ fontSize: 11 }}>🕐</Text>
-                        <Text style={{ fontSize: 11, fontWeight: "700", color: "#374151" }}>{p.delivery_time}</Text>
+                        <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSecondary }}>{p.delivery_time}</Text>
                       </View>
                       <View style={{
                         flexDirection: "row", alignItems: "center", gap: 3,
-                        backgroundColor: "#F9FAFB", paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8,
+                        backgroundColor: colors.lightBg2, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8,
                       }}>
                         <Text style={{ fontSize: 11 }}>🛵</Text>
-                        <Text style={{ fontSize: 11, fontWeight: "700", color: "#374151" }}>{p.delivery_fee} جنيه</Text>
+                        <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSecondary }}>{p.delivery_fee} جنيه</Text>
                       </View>
                     </View>
                   </View>

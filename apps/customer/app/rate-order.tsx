@@ -243,7 +243,7 @@ export default function RateOrder() {
             multiline
             numberOfLines={4}
             style={{
-              backgroundColor: "#F9FAFB",
+              backgroundColor: colors.lightBg2,
               borderRadius: 12, borderWidth: 1, borderColor: colors.border,
               paddingHorizontal: 12, paddingVertical: 12,
               fontSize: 14, color: colors.text, textAlign: "right",
@@ -256,12 +256,12 @@ export default function RateOrder() {
 
         {/* Info Box */}
         <View style={{
-          backgroundColor: "#F0FDF4",
+          backgroundColor: isDarkMode ? "#064E3B" : colors.lightBg1,
           borderRadius: 12, padding: 12,
-          borderWidth: 1, borderColor: "#A7F3D0",
+          borderWidth: 1, borderColor: isDarkMode ? colors.success : colors.ratingText,
           marginBottom: 16,
         }}>
-          <Text style={{ fontSize: 12, color: "#065F46", fontWeight: "600", textAlign: "right" }}>
+          <Text style={{ fontSize: 12, color: isDarkMode ? colors.success : colors.ratingDark, fontWeight: "600", textAlign: "right" }}>
             💡 تقييمك يساعد على تحسين الخدمة وتقديم تجربة أفضل للجميع
           </Text>
         </View>

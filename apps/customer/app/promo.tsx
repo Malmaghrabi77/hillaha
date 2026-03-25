@@ -188,7 +188,7 @@ export default function PromoCode() {
                 placeholderTextColor={colors.textMuted}
                 style={{
                   flex: 1,
-                  backgroundColor: "#F9FAFB",
+                  backgroundColor: colors.lightBg2,
                   borderRadius: 12, borderWidth: 1, borderColor: colors.border,
                   paddingHorizontal: 12, paddingVertical: 12,
                   fontSize: 14, color: colors.text, textAlign: "right",

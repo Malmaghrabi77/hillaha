@@ -42,6 +42,7 @@ export class AnalyticsTracker {
   private trackingEnabled = true;
   private analyticsKey = 'analytics_events';
   private metricsKey = 'analytics_metrics';
+  private readonly MAX_LOCAL_EVENTS = 500; // حد أقصى للأحداث المحفوظة محلياً
 
   private supabase = (() => {
     try {
@@ -75,27 +76,40 @@ export class AnalyticsTracker {
 
     this.events.push(event);
 
-    // ✅ Save locally
-    await this.saveEvents();
+    // ✅ Enforce maximum local events limit
+    if (this.events.length > this.MAX_LOCAL_EVENTS) {
+      this.events = this.events.slice(-this.MAX_LOCAL_EVENTS);
+    }
 
-    // ✅ Send to server if available
+    // ✅ Save locally (non-blocking)
+    this.saveEvents().catch(err => console.error("Failed to save events:", err));
+
+    // ✅ Send to server if available (non-blocking)
     if (this.supabase) {
-      try {
-        const { data: { user } } = await this.supabase.auth.getUser();
-        if (user) {
-          await this.supabase.from('analytics_events').insert({
-            user_id: user.id,
-            event_name: eventName,
-            event_data: data,
-            created_at: event.timestamp,
-          });
-        }
-      } catch (error) {
-        console.log("Analytics server tracking error:", error);
-      }
+      this.sendToServer(eventName, data).catch(err =>
+        console.log("Analytics server tracking error:", err)
+      );
     }
 
     console.log(`📊 Event tracked: ${eventName}`, data);
+  }
+
+  // ✅ Helper: Send event to server (non-blocking)
+  private async sendToServer(eventName: string, data?: Record<string, any>) {
+    try {
+      const { data: { user } } = await this.supabase.auth.getUser();
+      if (user) {
+        await this.supabase.from('analytics_events').insert({
+          user_id: user.id,
+          event_name: eventName,
+          event_data: data,
+          created_at: new Date().toISOString(),
+        });
+      }
+    } catch (error) {
+      // Silent catch - non-blocking operation
+      console.log("Server tracking skipped:", error);
+    }
   }
 
   // ✅ Save events locally

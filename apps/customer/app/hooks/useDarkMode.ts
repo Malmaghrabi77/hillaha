@@ -24,15 +24,24 @@ export interface DarkModeColors {
   pink: string;
   pinkSoft: string;
   border: string;
+  deepPurple: string;
 
   // Status
   success: string;
   warning: string;
   danger: string;
+  dangerSoft: string;
 
-  // Additional
+  // Additional utility colors
   overlay: string;
+  overlayLight: string;
   shadow: string;
+  lightBg1: string;  // #FFF7ED (rating bg)
+  lightBg2: string;  // #F9FAFB (info bg)
+  lightBg3: string;  // #F3F4F6 (secondary bg)
+  ratingBg: string;
+  ratingText: string;
+  ratingDark: string;
 }
 
 const LIGHT_COLORS: DarkModeColors = {
@@ -49,13 +58,22 @@ const LIGHT_COLORS: DarkModeColors = {
   pink: "#EC4899",
   pinkSoft: "#FCE7F3",
   border: "#E7E3FF",
+  deepPurple: "#6D28D9",
 
   success: "#34D399",
   warning: "#F59E0B",
   danger: "#EF4444",
+  dangerSoft: "#FEE2E2",
 
   overlay: "rgba(0,0,0,0.5)",
+  overlayLight: "rgba(0,0,0,0.22)",
   shadow: "#000000",
+  lightBg1: "#FFF7ED",  // rating bg
+  lightBg2: "#F9FAFB",  // info bg
+  lightBg3: "#F3F4F6",  // secondary bg
+  ratingBg: "#FEF3C7",
+  ratingText: "#F59E0B",
+  ratingDark: "#92400E",
 };
 
 const DARK_COLORS: DarkModeColors = {
@@ -72,13 +90,22 @@ const DARK_COLORS: DarkModeColors = {
   pink: "#EC4899",
   pinkSoft: "#831843",
   border: "#2D2245",
+  deepPurple: "#7C3AED",
 
   success: "#10B981",
   warning: "#F59E0B",
   danger: "#EF4444",
+  dangerSoft: "#7F1D1D",
 
   overlay: "rgba(0,0,0,0.8)",
+  overlayLight: "rgba(0,0,0,0.5)",
   shadow: "#000000",
+  lightBg1: "#3D2817",    // darkened rating bg
+  lightBg2: "#2D2D2D",    // darkened info bg
+  lightBg3: "#383838",    // darkened secondary bg
+  ratingBg: "#713F12",
+  ratingText: "#FBBF24",
+  ratingDark: "#FCD34D",
 };
 
 interface DarkModeContextType {

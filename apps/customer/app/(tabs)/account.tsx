@@ -10,8 +10,9 @@ import { SafeAreaScrollView } from '../components';
 
 // عناوين البريد الإلكتروني الرسمية لمنصة حلّها
 const EMAILS = {
-  info: "info@hillaha.com",
-  webmaster: "webmaster@hillaha.com",
+  legal: "legal@hillaha.com",
+  business: "business@hillaha.com",
+  support: "support@hillaha.com",
 } as const;
 
 const MENU = [

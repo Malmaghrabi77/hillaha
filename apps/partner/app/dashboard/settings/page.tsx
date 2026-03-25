@@ -4,8 +4,9 @@ import { getSupabase } from "@hillaha/core";
 
 // عناوين البريد الإلكتروني لمنصة حلّها
 const EMAILS = {
-  admin: "admin1@hillaha.com",           // مدير التطبيق المفوَّض من السوبرادمن
-  masterAdmin: "masteradmin@hillaha.com", // السوبرادمن — طلبات الشركاء الرسمية
+  legal: "legal@hillaha.com",           // الاستفسارات القانونية
+  business: "business@hillaha.com",     // الشراكات والتعاون التجاري
+  support: "support@hillaha.com",       // الدعم الفني والتقني
 } as const;
 
 const C = {

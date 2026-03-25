@@ -4,13 +4,9 @@ import {
   StatusBar, Platform, ActivityIndicator,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-
-const C = {
-  primary: "#8B5CF6", primarySoft: "#EDE9FE",
-  bg: "#FAFAFF", surface: "#FFFFFF",
-  border: "#E7E3FF", text: "#1F1B2E",
-  textMuted: "#6B6480", danger: "#EF4444",
-} as const;
+import { useDarkMode } from "../hooks/useDarkMode";
+import { analyticsTracker } from "../utils/analyticsTracker";
+import { A11yPresets } from "../hooks/useAccessibility";
 
 function getSB() {
   try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
@@ -33,8 +29,13 @@ interface FavoritePartner {
 }
 
 export default function Favorites() {
+  const { isDarkMode, colors } = useDarkMode();
   const [favorites, setFavorites] = useState<FavoritePartner[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    analyticsTracker.trackScreenView('favorites_screen');
+  }, []);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -76,6 +77,11 @@ export default function Favorites() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      analyticsTracker.trackEvent('favorite_removed', {
+        partner_id: partnerId,
+        timestamp: new Date().toISOString(),
+      });
+
       await supabase
         .from("favorites")
         .delete()
@@ -90,45 +96,49 @@ export default function Favorites() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color={C.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
       {/* Header */}
       <View style={{
         paddingTop: Platform.OS === "android" ? 18 : 54,
         paddingHorizontal: 16, paddingBottom: 16,
-        backgroundColor: C.surface,
-        borderBottomWidth: 1, borderColor: C.border,
+        backgroundColor: colors.surface,
+        borderBottomWidth: 1, borderColor: colors.border,
         flexDirection: "row", alignItems: "center", gap: 12,
       }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => {
+            analyticsTracker.trackEvent('back_pressed', { screen: 'favorites' });
+            router.back();
+          }}
+          {...A11yPresets.button()}
           style={{
             width: 40, height: 40, borderRadius: 12,
-            backgroundColor: C.primarySoft,
+            backgroundColor: colors.primarySoft,
             justifyContent: "center", alignItems: "center",
           }}
         >
           <Text style={{ fontSize: 18 }}>←</Text>
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 18, fontWeight: "900", color: C.text }}>❤️ المفضلة</Text>
-          <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{favorites.length} متجر</Text>
+          <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text }}>❤️ المفضلة</Text>
+          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>{favorites.length} متجر</Text>
         </View>
       </View>
 
       {favorites.length === 0 ? (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <Text style={{ fontSize: 48, marginBottom: 12 }}>❤️</Text>
-          <Text style={{ color: C.textMuted, fontSize: 14, fontWeight: "700" }}>لم تضف أي متجر للمفضلة</Text>
-          <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>ابدأ بإضافة متاجرك المفضلة</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 14, fontWeight: "700" }}>لم تضف أي متجر للمفضلة</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>ابدأ بإضافة متاجرك المفضلة</Text>
         </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 20 }}>
@@ -138,10 +148,17 @@ export default function Favorites() {
               return (
                 <Pressable
                   key={fav.id}
-                  onPress={() => router.push(`/restaurant/${p.id}`)}
+                  onPress={() => {
+                    analyticsTracker.trackEvent('favorite_pressed', {
+                      partner_id: p.id,
+                      partner_name: p.name,
+                    });
+                    router.push(`/restaurant/${p.id}`);
+                  }}
+                  {...A11yPresets.button()}
                   style={{
                     borderRadius: 16, overflow: "hidden",
-                    backgroundColor: C.surface,
+                    backgroundColor: colors.surface,
                     shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.08, shadowRadius: 8, elevation: 2,
                   }}
@@ -156,6 +173,8 @@ export default function Favorites() {
                     {/* Remove Heart Button */}
                     <Pressable
                       onPress={() => removeFavorite(p.id)}
+                      {...A11yPresets.button()}
+                      accessibilityLabel={`إزالة ${p.name} من المفضلة`}
                       style={{
                         position: "absolute", top: 12, right: 12,
                         width: 40, height: 40, borderRadius: 20,
@@ -171,8 +190,8 @@ export default function Favorites() {
                   <View style={{ padding: 12 }}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 15, fontWeight: "900", color: C.text }}>{p.name}</Text>
-                        <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{p.type}</Text>
+                        <Text style={{ fontSize: 15, fontWeight: "900", color: colors.text }}>{p.name}</Text>
+                        <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>{p.type}</Text>
                       </View>
                       {p.rating && (
                         <View style={{

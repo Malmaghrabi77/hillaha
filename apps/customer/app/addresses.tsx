@@ -4,13 +4,9 @@ import {
   StatusBar, Platform, Alert, Modal, ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
-
-const C = {
-  primary: "#8B5CF6", primarySoft: "#EDE9FE",
-  bg: "#FAFAFF", surface: "#FFFFFF",
-  border: "#E7E3FF", text: "#1F1B2E",
-  textMuted: "#6B6480", danger: "#EF4444",
-} as const;
+import { useDarkMode } from '../hooks/useDarkMode';
+import { analyticsTracker } from '../utils/analyticsTracker';
+import { A11yPresets } from '../hooks/useAccessibility';
 
 function getSB() {
   try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
@@ -29,6 +25,7 @@ interface Address {
 }
 
 export default function Addresses() {
+  const { isDarkMode, colors } = useDarkMode();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -44,6 +41,7 @@ export default function Addresses() {
   });
 
   useEffect(() => {
+    analyticsTracker.trackScreenView('addresses_screen');
     fetchAddresses();
   }, []);
 
@@ -75,6 +73,10 @@ export default function Addresses() {
       Alert.alert("خطأ", "الرجاء ملء جميع الحقول المطلوبة");
       return;
     }
+
+    analyticsTracker.trackEvent(editingId ? 'address_updated' : 'address_added', {
+      label: form.label,
+    });
 
     const supabase = getSB();
     if (!supabase) return;
@@ -129,6 +131,7 @@ export default function Addresses() {
         {
           text: "حذف",
           onPress: async () => {
+            analyticsTracker.trackEvent('address_deleted', { address_id: id });
             const supabase = getSB();
             if (!supabase) return;
             await supabase.from("addresses").delete().eq("id", id);
@@ -141,6 +144,7 @@ export default function Addresses() {
   }
 
   async function setDefault(id: string) {
+    analyticsTracker.trackEvent('address_set_as_default', { address_id: id });
     const supabase = getSB();
     if (!supabase) return;
 
@@ -168,36 +172,37 @@ export default function Addresses() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color={C.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.bg} />
 
       {/* Header */}
       <View style={{
         paddingTop: Platform.OS === "android" ? 18 : 54,
         paddingHorizontal: 16, paddingBottom: 16,
-        backgroundColor: C.surface,
-        borderBottomWidth: 1, borderColor: C.border,
+        backgroundColor: colors.surface,
+        borderBottomWidth: 1, borderColor: colors.border,
         flexDirection: "row", alignItems: "center", gap: 12,
       }}>
         <Pressable
           onPress={() => router.back()}
           style={{
             width: 40, height: 40, borderRadius: 12,
-            backgroundColor: C.primarySoft,
+            backgroundColor: colors.primarySoft,
             justifyContent: "center", alignItems: "center",
           }}
+          {...A11yPresets.button}
         >
           <Text style={{ fontSize: 18 }}>←</Text>
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 18, fontWeight: "900", color: C.text }}>📍 عناويني</Text>
+          <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text }}>📍 عناويني</Text>
         </View>
       </View>
 
@@ -206,8 +211,8 @@ export default function Addresses() {
           {addresses.length === 0 ? (
             <View style={{ alignItems: "center", marginVertical: 40 }}>
               <Text style={{ fontSize: 48, marginBottom: 12 }}>📍</Text>
-              <Text style={{ color: C.textMuted, fontSize: 14, fontWeight: "700" }}>لا توجد عناوين محفوظة</Text>
-              <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>أضف عنوانك الأول الآن</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 14, fontWeight: "700" }}>لا توجد عناوين محفوظة</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>أضف عنوانك الأول الآن</Text>
             </View>
           ) : (
             <View style={{ gap: 12 }}>
@@ -215,28 +220,28 @@ export default function Addresses() {
                 <View
                   key={addr.id}
                   style={{
-                    backgroundColor: C.surface,
+                    backgroundColor: colors.surface,
                     borderRadius: 16,
                     padding: 14,
                     borderWidth: 2,
-                    borderColor: addr.is_default ? C.primary : C.border,
+                    borderColor: addr.is_default ? colors.primary : colors.border,
                   }}
                 >
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                     <View style={{ flex: 1, gap: 2 }}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                        <Text style={{ fontSize: 16, fontWeight: "900", color: C.text }}>{addr.label}</Text>
+                        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>{addr.label}</Text>
                         {addr.is_default && (
-                          <View style={{ backgroundColor: C.primary, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 8 }}>
+                          <View style={{ backgroundColor: colors.primary, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 8 }}>
                             <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>افتراضي</Text>
                           </View>
                         )}
                       </View>
-                      <Text style={{ fontSize: 12, color: C.textMuted }}>
+                      <Text style={{ fontSize: 12, color: colors.textMuted }}>
                         {addr.street} • البناء: {addr.building} • الدور: {addr.floor} • الشقة: {addr.apartment}
                       </Text>
                       {addr.notes && (
-                        <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 4, fontStyle: "italic" }}>
+                        <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 4, fontStyle: "italic" }}>
                           ملاحظات: {addr.notes}
                         </Text>
                       )}
@@ -246,6 +251,7 @@ export default function Addresses() {
                   <View style={{ flexDirection: "row", gap: 8 }}>
                     <Pressable
                       onPress={() => {
+                        analyticsTracker.trackEvent('address_edit_initiated', { address_id: addr.id });
                         setEditingId(addr.id);
                         setForm({
                           label: addr.label,
@@ -258,32 +264,35 @@ export default function Addresses() {
                         setShowModal(true);
                       }}
                       style={{
-                        flex: 1, backgroundColor: C.primarySoft,
+                        flex: 1, backgroundColor: colors.primarySoft,
                         paddingVertical: 8, borderRadius: 10,
                         alignItems: "center",
                       }}
+                      {...A11yPresets.button}
                     >
-                      <Text style={{ color: C.primary, fontWeight: "700", fontSize: 12 }}>تعديل</Text>
+                      <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 12 }}>تعديل</Text>
                     </Pressable>
                     {!addr.is_default && (
                       <Pressable
                         onPress={() => setDefault(addr.id)}
                         style={{
-                          flex: 1, borderWidth: 1.5, borderColor: C.primary,
+                          flex: 1, borderWidth: 1.5, borderColor: colors.primary,
                           paddingVertical: 8, borderRadius: 10,
                           alignItems: "center",
                         }}
+                        {...A11yPresets.button}
                       >
-                        <Text style={{ color: C.primary, fontWeight: "700", fontSize: 12 }}>اجعله افتراضياً</Text>
+                        <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 12 }}>اجعله افتراضياً</Text>
                       </Pressable>
                     )}
                     <Pressable
                       onPress={() => deleteAddress(addr.id)}
                       style={{
                         width: 40, height: 40, borderRadius: 10,
-                        backgroundColor: "#FEE2E4",
+                        backgroundColor: colors.dangerSoft || "rgba(239, 68, 68, 0.15)",
                         justifyContent: "center", alignItems: "center",
                       }}
+                      {...A11yPresets.button}
                     >
                       <Text style={{ fontSize: 16 }}>🗑️</Text>
                     </Pressable>
@@ -299,17 +308,19 @@ export default function Addresses() {
       <View style={{ paddingHorizontal: 16, paddingVertical: 16 }}>
         <Pressable
           onPress={() => {
+            analyticsTracker.trackEvent('address_add_initiated');
             setEditingId(null);
             setForm({ label: "", street: "", building: "", floor: "", apartment: "", notes: "" });
             setShowModal(true);
           }}
           style={{
-            backgroundColor: C.primary,
+            backgroundColor: colors.primary,
             paddingVertical: 16, borderRadius: 16,
             alignItems: "center",
-            shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
+            shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
           }}
+          {...A11yPresets.button}
         >
           <Text style={{ color: "white", fontWeight: "900", fontSize: 16 }}>+ إضافة عنوان جديد</Text>
         </Pressable>
@@ -317,20 +328,20 @@ export default function Addresses() {
 
       {/* Modal */}
       <Modal visible={showModal} animationType="slide" transparent>
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}>
+        <View style={{ flex: 1, backgroundColor: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.5)" }}>
           <View style={{
             marginTop: "auto",
-            backgroundColor: C.bg,
+            backgroundColor: colors.bg,
             borderTopLeftRadius: 24, borderTopRightRadius: 24,
             paddingBottom: 40, paddingHorizontal: 16, paddingTop: 20,
           }}>
             <View style={{
               width: 44, height: 5, borderRadius: 3,
-              backgroundColor: "#E5E7EB",
+              backgroundColor: colors.border,
               alignSelf: "center", marginBottom: 16,
             }} />
 
-            <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, marginBottom: 16 }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text, marginBottom: 16 }}>
               {editingId ? "تعديل العنوان" : "إضافة عنوان جديد"}
             </Text>
 
@@ -338,107 +349,115 @@ export default function Addresses() {
               <View style={{ gap: 12 }}>
                 {/* Label */}
                 <View>
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: C.text, marginBottom: 6 }}>اسم العنوان *</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.text, marginBottom: 6 }}>اسم العنوان *</Text>
                   <View style={{
                     flexDirection: "row", alignItems: "center",
-                    backgroundColor: C.surface,
-                    borderRadius: 12, borderWidth: 1, borderColor: C.border,
+                    backgroundColor: colors.surface,
+                    borderRadius: 12, borderWidth: 1, borderColor: colors.border,
                     paddingHorizontal: 12,
                   }}>
                     <TextInput
                       value={form.label}
                       onChangeText={(t) => setForm({ ...form, label: t })}
                       placeholder="البيت، العمل، أخرى"
-                      placeholderTextColor={C.textMuted}
-                      style={{ flex: 1, paddingVertical: 12, fontSize: 14, color: C.text, textAlign: "right" }}
+                      placeholderTextColor={colors.textMuted}
+                      style={{
+                        flex: 1, paddingVertical: 12, fontSize: 14, color: colors.text, textAlign: "right"
+                      }}
+                      accessibilityLabel="اسم العنوان"
                     />
                   </View>
                 </View>
 
                 {/* Street */}
                 <View>
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: C.text, marginBottom: 6 }}>الشارع *</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.text, marginBottom: 6 }}>الشارع *</Text>
                   <TextInput
                     value={form.street}
                     onChangeText={(t) => setForm({ ...form, street: t })}
                     placeholder="مثال: شارع أحمد عرابي"
-                    placeholderTextColor={C.textMuted}
+                    placeholderTextColor={colors.textMuted}
                     style={{
-                      backgroundColor: C.surface,
-                      borderRadius: 12, borderWidth: 1, borderColor: C.border,
+                      backgroundColor: colors.surface,
+                      borderRadius: 12, borderWidth: 1, borderColor: colors.border,
                       paddingHorizontal: 12, paddingVertical: 12,
-                      fontSize: 14, color: C.text, textAlign: "right",
+                      fontSize: 14, color: colors.text, textAlign: "right",
                     }}
+                    accessibilityLabel="الشارع"
                   />
                 </View>
 
                 {/* Building & Floor Row */}
                 <View style={{ flexDirection: "row", gap: 12 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: C.text, marginBottom: 6 }}>البناء *</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: colors.text, marginBottom: 6 }}>البناء *</Text>
                     <TextInput
                       value={form.building}
                       onChangeText={(t) => setForm({ ...form, building: t })}
                       placeholder="مثال: 45"
-                      placeholderTextColor={C.textMuted}
+                      placeholderTextColor={colors.textMuted}
                       style={{
-                        backgroundColor: C.surface,
-                        borderRadius: 12, borderWidth: 1, borderColor: C.border,
+                        backgroundColor: colors.surface,
+                        borderRadius: 12, borderWidth: 1, borderColor: colors.border,
                         paddingHorizontal: 12, paddingVertical: 12,
-                        fontSize: 14, color: C.text, textAlign: "right",
+                        fontSize: 14, color: colors.text, textAlign: "right",
                       }}
+                      accessibilityLabel="رقم البناء"
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: C.text, marginBottom: 6 }}>الدور</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: colors.text, marginBottom: 6 }}>الدور</Text>
                     <TextInput
                       value={form.floor}
                       onChangeText={(t) => setForm({ ...form, floor: t })}
                       placeholder="مثال: 3"
-                      placeholderTextColor={C.textMuted}
+                      placeholderTextColor={colors.textMuted}
                       style={{
-                        backgroundColor: C.surface,
-                        borderRadius: 12, borderWidth: 1, borderColor: C.border,
+                        backgroundColor: colors.surface,
+                        borderRadius: 12, borderWidth: 1, borderColor: colors.border,
                         paddingHorizontal: 12, paddingVertical: 12,
-                        fontSize: 14, color: C.text, textAlign: "right",
+                        fontSize: 14, color: colors.text, textAlign: "right",
                       }}
+                      accessibilityLabel="رقم الدور"
                     />
                   </View>
                 </View>
 
                 {/* Apartment */}
                 <View>
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: C.text, marginBottom: 6 }}>الشقة *</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.text, marginBottom: 6 }}>الشقة *</Text>
                   <TextInput
                     value={form.apartment}
                     onChangeText={(t) => setForm({ ...form, apartment: t })}
                     placeholder="مثال: 12"
-                    placeholderTextColor={C.textMuted}
+                    placeholderTextColor={colors.textMuted}
                     style={{
-                      backgroundColor: C.surface,
-                      borderRadius: 12, borderWidth: 1, borderColor: C.border,
+                      backgroundColor: colors.surface,
+                      borderRadius: 12, borderWidth: 1, borderColor: colors.border,
                       paddingHorizontal: 12, paddingVertical: 12,
-                      fontSize: 14, color: C.text, textAlign: "right",
+                      fontSize: 14, color: colors.text, textAlign: "right",
                     }}
+                    accessibilityLabel="رقم الشقة"
                   />
                 </View>
 
                 {/* Notes */}
                 <View>
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: C.text, marginBottom: 6 }}>ملاحظات إضافية</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.text, marginBottom: 6 }}>ملاحظات إضافية</Text>
                   <TextInput
                     value={form.notes}
                     onChangeText={(t) => setForm({ ...form, notes: t })}
                     placeholder="مثال: بجانب المسجد، الباب الأزرق"
-                    placeholderTextColor={C.textMuted}
+                    placeholderTextColor={colors.textMuted}
                     multiline
                     numberOfLines={3}
                     style={{
-                      backgroundColor: C.surface,
-                      borderRadius: 12, borderWidth: 1, borderColor: C.border,
+                      backgroundColor: colors.surface,
+                      borderRadius: 12, borderWidth: 1, borderColor: colors.border,
                       paddingHorizontal: 12, paddingVertical: 12,
-                      fontSize: 14, color: C.text, textAlign: "right",
+                      fontSize: 14, color: colors.text, textAlign: "right",
                     }}
+                    accessibilityLabel="ملاحظات إضافية"
                   />
                 </View>
               </View>
@@ -449,20 +468,22 @@ export default function Addresses() {
               <Pressable
                 onPress={() => setShowModal(false)}
                 style={{
-                  flex: 1, borderWidth: 1.5, borderColor: C.border,
+                  flex: 1, borderWidth: 1.5, borderColor: colors.border,
                   paddingVertical: 14, borderRadius: 12,
                   alignItems: "center",
                 }}
+                {...A11yPresets.button}
               >
-                <Text style={{ color: C.text, fontWeight: "700", fontSize: 14 }}>إلغاء</Text>
+                <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>إلغاء</Text>
               </Pressable>
               <Pressable
                 onPress={saveAddress}
                 style={{
-                  flex: 1, backgroundColor: C.primary,
+                  flex: 1, backgroundColor: colors.primary,
                   paddingVertical: 14, borderRadius: 12,
                   alignItems: "center",
                 }}
+                {...A11yPresets.button}
               >
                 <Text style={{ color: "white", fontWeight: "700", fontSize: 14 }}>حفظ</Text>
               </Pressable>

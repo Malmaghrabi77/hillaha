@@ -4,13 +4,9 @@ import {
   ActivityIndicator, Image, Modal,
 } from "react-native";
 import { router } from "expo-router";
-
-const C = {
-  primary: "#8B5CF6", primarySoft: "#EDE9FE",
-  bg: "#FAFAFF",      surface: "#FFFFFF",
-  border: "#E7E3FF",  text: "#1F1B2E",
-  textMuted: "#6B6480",
-} as const;
+import { useDarkMode } from "../hooks/useDarkMode";
+import { analyticsTracker } from "../utils/analyticsTracker";
+import { A11yPresets } from "../hooks/useAccessibility";
 
 function getSB() {
   try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
@@ -36,6 +32,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function Search() {
+  const { isDarkMode, colors } = useDarkMode();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,6 +44,10 @@ export default function Search() {
   const [maxDeliveryFee, setMaxDeliveryFee] = useState(50);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    analyticsTracker.trackScreenView('search');
+  }, []);
 
   async function searchPartners() {
     const supabase = getSB();
@@ -111,13 +112,13 @@ export default function Search() {
   }, [sortBy]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{
-        padding: 16, backgroundColor: C.surface,
-        borderBottomWidth: 1, borderBottomColor: C.border,
+        padding: 16, backgroundColor: colors.surface,
+        borderBottomWidth: 1, borderBottomColor: colors.border,
         paddingTop: 52,
       }}>
-        <Text style={{ fontSize: 20, fontWeight: "900", color: C.text, marginBottom: 12 }}>بحث</Text>
+        <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text, marginBottom: 12 }}>بحث</Text>
 
         {/* Search Bar */}
         <View style={{
@@ -125,8 +126,8 @@ export default function Search() {
         }}>
           <View style={{
             flex: 1, flexDirection: "row", alignItems: "center",
-            backgroundColor: C.bg, borderRadius: 14,
-            borderWidth: 1.5, borderColor: C.border,
+            backgroundColor: colors.bg, borderRadius: 14,
+            borderWidth: 1.5, borderColor: colors.border,
             paddingHorizontal: 12, paddingVertical: 10,
           }}>
             <Text style={{ fontSize: 16, opacity: 0.5 }}>🔍</Text>
@@ -134,24 +135,25 @@ export default function Search() {
               value={query}
               onChangeText={setQuery}
               placeholder="ابحث عن مطعم، صيدلية..."
-              placeholderTextColor={C.textMuted}
+              placeholderTextColor={colors.textMuted}
               autoFocus
-              style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right", marginRight: 8 }}
+              style={{ flex: 1, fontSize: 14, color: colors.text, textAlign: "right", marginRight: 8 }}
             />
             {loading ? (
-              <ActivityIndicator size="small" color={C.primary} />
+              <ActivityIndicator size="small" color={colors.primary} />
             ) : query.length > 0 ? (
-              <Pressable onPress={() => setQuery("")}>
-                <Text style={{ color: C.textMuted, fontSize: 16 }}>✕</Text>
+              <Pressable onPress={() => setQuery("")} {...A11yPresets.button("مسح البحث", "اضغط لمسح نص البحث")}>
+                <Text style={{ color: colors.textMuted, fontSize: 16 }}>✕</Text>
               </Pressable>
             ) : null}
           </View>
 
           <Pressable
             onPress={() => setShowFilters(true)}
+            {...A11yPresets.button("التصفية", "اضغط لفتح خيارات التصفية")}
             style={{
               width: 44, height: 44, borderRadius: 12,
-              backgroundColor: C.primarySoft,
+              backgroundColor: colors.primarySoft,
               justifyContent: "center", alignItems: "center",
             }}
           >
@@ -166,17 +168,18 @@ export default function Search() {
               <Pressable
                 key={opt.id}
                 onPress={() => setSortBy(opt.id)}
+                {...A11yPresets.button(opt.label, `اختر ترتيب ${opt.label}`)}
                 style={{
                   paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20,
-                  backgroundColor: sortBy === opt.id ? C.primary : C.bg,
+                  backgroundColor: sortBy === opt.id ? colors.primary : colors.bg,
                   marginRight: 8,
                   borderWidth: 1,
-                  borderColor: sortBy === opt.id ? C.primary : C.border,
+                  borderColor: sortBy === opt.id ? colors.primary : colors.border,
                 }}
               >
                 <Text style={{
                   fontSize: 11, fontWeight: "700",
-                  color: sortBy === opt.id ? "white" : C.text,
+                  color: sortBy === opt.id ? "white" : colors.text,
                 }}>
                   {opt.icon} {opt.label}
                 </Text>
@@ -189,17 +192,25 @@ export default function Search() {
       <ScrollView style={{ padding: 16 }} contentContainerStyle={{ paddingBottom: 80 }}>
         {query.length === 0 && minRating === 0 && maxDeliveryFee === 50 && (
           <View>
-            <Text style={{ fontSize: 14, fontWeight: "700", color: C.textMuted, marginBottom: 12 }}>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textMuted, marginBottom: 12 }}>
               الأكثر بحثاً
             </Text>
             {POPULAR_TAGS.map(tag => (
-              <Pressable key={tag} onPress={() => setQuery(tag)} style={{
-                padding: 14, borderRadius: 14, marginBottom: 10,
-                backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
-                flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-              }}>
-                <Text style={{ fontWeight: "700", color: C.text }}>{tag}</Text>
-                <Text style={{ color: C.textMuted }}>←</Text>
+              <Pressable
+                key={tag}
+                onPress={() => {
+                  setQuery(tag);
+                  analyticsTracker.trackEvent('search_popular_tag_clicked', { tag });
+                }}
+                {...A11yPresets.button(tag, `ابحث عن ${tag}`)}
+                style={{
+                  padding: 14, borderRadius: 14, marginBottom: 10,
+                  backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+                  flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+                }}
+              >
+                <Text style={{ fontWeight: "700", color: colors.text }}>{tag}</Text>
+                <Text style={{ color: colors.textMuted }}>←</Text>
               </Pressable>
             ))}
           </View>
@@ -208,10 +219,10 @@ export default function Search() {
         {(query.length > 0 || minRating > 0 || maxDeliveryFee < 50) && !loading && results.length === 0 && (
           <View style={{ alignItems: "center", marginTop: 60 }}>
             <Text style={{ fontSize: 48, marginBottom: 12 }}>🔍</Text>
-            <Text style={{ color: C.textMuted, fontSize: 15, fontWeight: "700" }}>
+            <Text style={{ color: colors.textMuted, fontSize: 15, fontWeight: "700" }}>
               لا توجد نتائج
             </Text>
-            <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>
               جرب البحث بكلمات أخرى
             </Text>
           </View>
@@ -220,16 +231,20 @@ export default function Search() {
         {results.map(p => (
           <Pressable
             key={p.id}
-            onPress={() => router.push(`/restaurant/${p.id}`)}
+            onPress={() => {
+              analyticsTracker.trackEvent('search_result_clicked', { partnerId: p.id, partnerName: p.name });
+              router.push(`/restaurant/${p.id}`);
+            }}
+            {...A11yPresets.button(p.name, `اضغط لعرض ${p.name}`)}
             style={{
               flexDirection: "row", alignItems: "center", gap: 12,
               padding: 12, borderRadius: 18, marginBottom: 10,
-              backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+              backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
             }}
           >
             <View style={{
               width: 70, height: 70, borderRadius: 14,
-              backgroundColor: C.primarySoft, overflow: "hidden",
+              backgroundColor: colors.primarySoft, overflow: "hidden",
             }}>
               {p.cover_image ? (
                 <Image
@@ -243,23 +258,23 @@ export default function Search() {
               )}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "900", color: C.text, fontSize: 14 }}>{p.name}</Text>
-              <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>{p.type}</Text>
+              <Text style={{ fontWeight: "900", color: colors.text, fontSize: 14 }}>{p.name}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{p.type}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 }}>
                 {p.rating ? (
                   <Text style={{ fontSize: 11, fontWeight: "700", color: "#F59E0B" }}>
                     ★ {p.rating.toFixed(1)} ({p.review_count})
                   </Text>
                 ) : null}
-                <Text style={{ fontSize: 10, color: C.textMuted }}>•</Text>
-                <Text style={{ fontSize: 11, color: C.textMuted }}>🕐 {p.delivery_time}</Text>
+                <Text style={{ fontSize: 10, color: colors.textMuted }}>•</Text>
+                <Text style={{ fontSize: 11, color: colors.textMuted }}>🕐 {p.delivery_time}</Text>
               </View>
             </View>
             <View style={{ alignItems: "center" }}>
-              <Text style={{ fontSize: 12, fontWeight: "900", color: C.primary }}>
+              <Text style={{ fontSize: 12, fontWeight: "900", color: colors.primary }}>
                 {p.delivery_fee} ج
               </Text>
-              <Text style={{ fontSize: 9, color: C.textMuted, marginTop: 2 }}>توصيل</Text>
+              <Text style={{ fontSize: 9, color: colors.textMuted, marginTop: 2 }}>توصيل</Text>
             </View>
           </Pressable>
         ))}
@@ -271,7 +286,7 @@ export default function Search() {
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}>
           <View style={{
             marginTop: "auto",
-            backgroundColor: C.bg,
+            backgroundColor: colors.bg,
             borderTopLeftRadius: 24, borderTopRightRadius: 24,
             paddingBottom: 40, paddingHorizontal: 16, paddingTop: 20,
           }}>
@@ -281,13 +296,13 @@ export default function Search() {
               alignSelf: "center", marginBottom: 20,
             }} />
 
-            <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, marginBottom: 20 }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text, marginBottom: 20 }}>
               تصفية النتائج
             </Text>
 
             {/* Min Rating */}
             <View style={{ marginBottom: 20 }}>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: C.text, marginBottom: 10 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text, marginBottom: 10 }}>
                 التقييم الأدنى: ⭐ {minRating.toFixed(1)}
               </Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
@@ -295,16 +310,17 @@ export default function Search() {
                   <Pressable
                     key={val}
                     onPress={() => setMinRating(val)}
+                    {...A11yPresets.button(val === 0 ? "الكل" : `${val}+`, `اختر حد أدنى تقييم ${val === 0 ? "بدون" : val}`)}
                     style={{
                       flex: 1, paddingVertical: 8, borderRadius: 10,
-                      backgroundColor: minRating === val ? C.primary : C.surface,
+                      backgroundColor: minRating === val ? colors.primary : colors.surface,
                       borderWidth: 1,
-                      borderColor: minRating === val ? C.primary : C.border,
+                      borderColor: minRating === val ? colors.primary : colors.border,
                     }}
                   >
                     <Text style={{
                       fontSize: 12, fontWeight: "700",
-                      color: minRating === val ? "white" : C.text,
+                      color: minRating === val ? "white" : colors.text,
                       textAlign: "center",
                     }}>
                       {val === 0 ? "الكل" : `${val}+`}
@@ -316,7 +332,7 @@ export default function Search() {
 
             {/* Max Delivery Fee */}
             <View style={{ marginBottom: 20 }}>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: C.text, marginBottom: 10 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.text, marginBottom: 10 }}>
                 حد أقصى لرسوم التوصيل: {maxDeliveryFee} جنيه
               </Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
@@ -324,16 +340,17 @@ export default function Search() {
                   <Pressable
                     key={val}
                     onPress={() => setMaxDeliveryFee(val)}
+                    {...A11yPresets.button(`${val} ج`, `اختر حد أقصى توصيل ${val} جنيه`)}
                     style={{
                       flex: 1, paddingVertical: 8, borderRadius: 10,
-                      backgroundColor: maxDeliveryFee === val ? C.primary : C.surface,
+                      backgroundColor: maxDeliveryFee === val ? colors.primary : colors.surface,
                       borderWidth: 1,
-                      borderColor: maxDeliveryFee === val ? C.primary : C.border,
+                      borderColor: maxDeliveryFee === val ? colors.primary : colors.border,
                     }}
                   >
                     <Text style={{
                       fontSize: 12, fontWeight: "700",
-                      color: maxDeliveryFee === val ? "white" : C.text,
+                      color: maxDeliveryFee === val ? "white" : colors.text,
                       textAlign: "center",
                     }}>
                       {val} ج
@@ -349,19 +366,25 @@ export default function Search() {
                 onPress={() => {
                   setMinRating(0);
                   setMaxDeliveryFee(50);
+                  analyticsTracker.trackEvent('search_filter_reset', {});
                 }}
+                {...A11yPresets.button("إعادة تعيين", "اضغط لإعادة تعيين كل التصفية")}
                 style={{
-                  flex: 1, borderWidth: 1.5, borderColor: C.primary,
+                  flex: 1, borderWidth: 1.5, borderColor: colors.primary,
                   paddingVertical: 13, borderRadius: 12,
                   alignItems: "center",
                 }}
               >
-                <Text style={{ color: C.primary, fontWeight: "700", fontSize: 14 }}>إعادة تعيين</Text>
+                <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 14 }}>إعادة تعيين</Text>
               </Pressable>
               <Pressable
-                onPress={() => setShowFilters(false)}
+                onPress={() => {
+                  setShowFilters(false);
+                  analyticsTracker.trackEvent('search_filter_applied', { minRating, maxDeliveryFee });
+                }}
+                {...A11yPresets.button("تطبيق", "اضغط لتطبيق التصفية")}
                 style={{
-                  flex: 1, backgroundColor: C.primary,
+                  flex: 1, backgroundColor: colors.primary,
                   paddingVertical: 13, borderRadius: 12,
                   alignItems: "center",
                 }}

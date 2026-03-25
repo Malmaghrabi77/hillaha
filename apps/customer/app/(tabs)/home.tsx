@@ -5,16 +5,10 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDarkMode } from '../hooks/useDarkMode';
+import { analyticsTracker } from '../utils/analyticsTracker';
+import { A11yPresets } from '../hooks/useAccessibility';
 
-const C = {
-  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
-  pink: "#EC4899",       pinkSoft: "#FCE7F3",
-  bg: "#FAFAFF",         surface: "#FFFFFF",
-  border: "#E7E3FF",     text: "#1F1B2E",
-  textMuted: "#6B6480",  success: "#34D399",
-  warning: "#F59E0B",    danger: "#EF4444",
-  deepPurple: "#6D28D9",
-} as const;
 const SCREEN = Dimensions.get("window");
 
 function getSB() {
@@ -164,6 +158,7 @@ interface PartnerCardProps {
 
 function PartnerCard({ partner, onPress }: PartnerCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const { isDarkMode, colors } = useDarkMode();
 
   useEffect(() => {
     // ✅ Prefetch the image
@@ -175,18 +170,19 @@ function PartnerCard({ partner, onPress }: PartnerCardProps) {
   return (
     <Pressable
       onPress={onPress}
+      {...A11yPresets.button()}
       style={{
         marginBottom: 16,
         borderRadius: 22,
         overflow: "hidden",
-        backgroundColor: C.surface,
+        backgroundColor: colors.surface,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.09,
         shadowRadius: 14,
         elevation: 4,
         borderWidth: 1,
-        borderColor: "#F3F4F6",
+        borderColor: colors.border,
       }}
     >
       {/* ✅ Lazy Loaded Cover Image */}
@@ -218,7 +214,7 @@ function PartnerCard({ partner, onPress }: PartnerCardProps) {
       {/* Info */}
       <View style={{ padding: 14, gap: 4 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <Text style={{ fontSize: 17, fontWeight: "900", color: C.text }}>{partner.name}</Text>
+          <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text }}>{partner.name}</Text>
           {partner.rating && (
             <View style={{
               flexDirection: "row",
@@ -277,6 +273,7 @@ function PartnerCard({ partner, onPress }: PartnerCardProps) {
 // ─── Main Home Component ────────────────────────────────────────────────────────────
 
 export default function Home() {
+  const { isDarkMode, colors } = useDarkMode();
   const [activeCategory, setActiveCategory] = useState("all");
   const [bannerIndex, setBannerIndex] = useState(0);
   const [banners, setBanners] = useState<Banner[]>(DEFAULT_BANNERS);
@@ -361,6 +358,8 @@ export default function Home() {
   // ✅ Fetch initial data
   useFocusEffect(
     React.useCallback(() => {
+      analyticsTracker.trackScreenView('home_screen');
+
       async function fetchData() {
         const supabase = getSB();
 
@@ -439,6 +438,7 @@ export default function Home() {
 
   // ✅ Pull to refresh
   const handleRefresh = async () => {
+    analyticsTracker.trackEvent('home_refresh');
     setRefreshing(true);
     try {
       await AsyncStorage.multiRemove([
@@ -503,15 +503,15 @@ export default function Home() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="light-content" backgroundColor="#4C1D95" />
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.primary} />
 
       {/* ── HEADER ─────────────────────────────────────────── */}
       <View style={{
         paddingTop: Platform.OS === "android" ? 18 : 54,
         paddingHorizontal: 18,
         paddingBottom: 14,
-        backgroundColor: "#4C1D95",
+        backgroundColor: colors.deepPurple,
       }}>
         {/* Top row */}
         <View style={{
@@ -524,7 +524,9 @@ export default function Home() {
             <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: "600" }}>
               توصيل إلى
             </Text>
-            <Pressable style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+            <Pressable
+              {...A11yPresets.button()}
+              style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
               <Text style={{ fontSize: 15, fontWeight: "900", color: "white" }}>
                 📍 قنا، وسط المدينة
               </Text>
@@ -532,7 +534,9 @@ export default function Home() {
             </Pressable>
           </View>
           <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-            <Pressable style={{
+            <Pressable
+              {...A11yPresets.button()}
+              style={{
               width: 38,
               height: 38,
               borderRadius: 19,
@@ -548,9 +552,9 @@ export default function Home() {
                 width: 8,
                 height: 8,
                 borderRadius: 4,
-                backgroundColor: "#EC4899",
+                backgroundColor: colors.pink,
                 borderWidth: 1.5,
-                borderColor: "#4C1D95",
+                borderColor: colors.deepPurple,
               }} />
             </Pressable>
             <View style={{ alignItems: "center", gap: 2 }}>
@@ -574,6 +578,7 @@ export default function Home() {
         {/* Search bar */}
         <Pressable
           onPress={() => router.push("/(tabs)/search")}
+          {...A11yPresets.button()}
           style={{
             flexDirection: "row",
             alignItems: "center",
@@ -607,7 +612,7 @@ export default function Home() {
         bounces
         contentContainerStyle={{ paddingBottom: 80 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
         }
       >
         {/* ── BANNER CAROUSEL ────────────────────────────────── */}
@@ -722,7 +727,10 @@ export default function Home() {
                     {b.sub}
                   </Text>
                   <Pressable
-                    onPress={() => router.push(`/restaurant/${b.id}`)}
+                    onPress={() => {
+                      analyticsTracker.trackEvent('banner_clicked', { bannerId: b.id });
+                      router.push(`/restaurant/${b.id}`);
+                    }}
                     style={{
                       marginTop: 10,
                       alignSelf: "flex-start",
@@ -759,7 +767,7 @@ export default function Home() {
                   width: bannerIndex === i ? 20 : 6,
                   height: 6,
                   borderRadius: 3,
-                  backgroundColor: bannerIndex === i ? C.primary : "#D1D5DB",
+                  backgroundColor: bannerIndex === i ? colors.primary : "#D1D5DB",
                 }}
               />
             ))}
@@ -778,12 +786,14 @@ export default function Home() {
               <Pressable
                 key={cat.id}
                 onPress={() => {
+                  analyticsTracker.trackEvent('category_selected', { categoryId: cat.id });
                   if (cat.route) {
                     router.push(cat.route as any);
                     return;
                   }
                   setActiveCategory(cat.id);
                 }}
+                {...A11yPresets.button()}
                 style={{ alignItems: "center", gap: 6, minWidth: 64 }}
               >
                 <View style={{
@@ -824,12 +834,13 @@ export default function Home() {
         }}>
           <Pressable
             onPress={() => router.push("/loyalty")}
+            {...A11yPresets.button()}
             style={{
               borderRadius: 20,
               overflow: "hidden",
               flexDirection: "row",
               alignItems: "center",
-              backgroundColor: "#4C1D95",
+              backgroundColor: colors.deepPurple,
               padding: 16,
               gap: 14,
             }}
@@ -878,7 +889,7 @@ export default function Home() {
               </Text>
             </View>
             <View style={{
-              backgroundColor: "#EC4899",
+              backgroundColor: colors.pink,
               paddingVertical: 6,
               paddingHorizontal: 12,
               borderRadius: 12,
@@ -906,7 +917,7 @@ export default function Home() {
             <Text style={{
               fontSize: 17,
               fontWeight: "900",
-              color: C.text,
+              color: colors.text,
             }}>
               🏠 خدمات المنزل والتوصيل
             </Text>
@@ -919,7 +930,11 @@ export default function Home() {
             {services.map(srv => (
               <Pressable
                 key={srv.id}
-                onPress={() => router.push(srv.route as any)}
+                onPress={() => {
+                  analyticsTracker.trackEvent('service_clicked', { serviceId: srv.id });
+                  router.push(srv.route as any);
+                }}
+                {...A11yPresets.button()}
                 style={{
                   width: 175,
                   borderRadius: 20,
@@ -995,13 +1010,14 @@ export default function Home() {
               <Text style={{
                 fontSize: 17,
                 fontWeight: "900",
-                color: C.text,
+                color: colors.text,
               }}>
                 ⚡ عروض مميزة
               </Text>
-              <Pressable>
+              <Pressable
+                {...A11yPresets.button()}>
                 <Text style={{
-                  color: C.primary,
+                  color: colors.primary,
                   fontWeight: "700",
                   fontSize: 13,
                 }}>
@@ -1017,19 +1033,23 @@ export default function Home() {
               {allPartners.slice(0, 5).map(p => (
                 <Pressable
                   key={p.id}
-                  onPress={() => router.push(`/restaurant/${p.id}`)}
+                  onPress={() => {
+                    analyticsTracker.trackEvent('partner_clicked', { partnerId: p.id });
+                    router.push(`/restaurant/${p.id}`);
+                  }}
+                  {...A11yPresets.button()}
                   style={{
                     width: 170,
                     borderRadius: 20,
                     overflow: "hidden",
-                    backgroundColor: C.surface,
+                    backgroundColor: colors.surface,
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 3 },
                     shadowOpacity: 0.1,
                     shadowRadius: 8,
                     elevation: 3,
                     borderWidth: 1,
-                    borderColor: "#F3F4F6",
+                    borderColor: colors.border,
                   }}
                 >
                   {/* Cover image */}
@@ -1058,7 +1078,7 @@ export default function Home() {
                     <Text style={{
                       fontSize: 14,
                       fontWeight: "900",
-                      color: C.text,
+                      color: colors.text,
                     }} numberOfLines={1}>
                       {p.name}
                     </Text>
@@ -1130,7 +1150,7 @@ export default function Home() {
             <Text style={{
               fontSize: 17,
               fontWeight: "900",
-              color: C.text,
+              color: colors.text,
             }}>
               {activeCategory === "all"
                 ? "🏪 جميع الشركاء"
@@ -1148,7 +1168,7 @@ export default function Home() {
             <View style={{ alignItems: "center", paddingVertical: 40 }}>
               <Text style={{ fontSize: 48 }}>🔍</Text>
               <Text style={{
-                color: C.textMuted,
+                color: colors.textMuted,
                 marginTop: 12,
                 fontWeight: "700",
               }}>
@@ -1168,8 +1188,12 @@ export default function Home() {
           {/* ✅ Load More Button */}
           {hasMorePartners && filtered.length > 0 && (
             <Pressable
-              onPress={() => loadMorePartners()}
+              onPress={() => {
+                analyticsTracker.trackEvent('load_more_partners', { page });
+                loadMorePartners();
+              }}
               disabled={isLoadingMore}
+              {...A11yPresets.button()}
               style={{
                 paddingVertical: 16,
                 alignItems: "center",
@@ -1178,10 +1202,10 @@ export default function Home() {
               }}
             >
               {isLoadingMore ? (
-                <ActivityIndicator size="large" color={C.primary} />
+                <ActivityIndicator size="large" color={colors.primary} />
               ) : (
                 <Text style={{
-                  color: C.primary,
+                  color: colors.primary,
                   fontWeight: "900",
                   fontSize: 16,
                 }}>

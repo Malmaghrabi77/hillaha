@@ -4,13 +4,9 @@ import {
   StatusBar, Platform, ActivityIndicator, Alert,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
-
-const C = {
-  primary: "#8B5CF6", primarySoft: "#EDE9FE",
-  bg: "#FAFAFF", surface: "#FFFFFF",
-  border: "#E7E3FF", text: "#1F1B2E",
-  textMuted: "#6B6480", success: "#34D399",
-} as const;
+import { useDarkMode } from "../hooks/useDarkMode";
+import { analyticsTracker } from "../utils/analyticsTracker";
+import { A11yPresets } from "../hooks/useAccessibility";
 
 function getSB() {
   try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
@@ -36,10 +32,15 @@ interface UserCoupon {
 }
 
 export default function PromoCode() {
+  const { isDarkMode, colors } = useDarkMode();
   const [coupons, setCoupons] = useState<UserCoupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [couponCode, setCouponCode] = useState("");
   const [applying, setApplying] = useState(false);
+
+  useEffect(() => {
+    analyticsTracker.trackScreenView('promo_codes_screen');
+  }, []);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -95,6 +96,10 @@ export default function PromoCode() {
         .maybeSingle();
 
       if (!couponData) {
+        analyticsTracker.trackEvent('coupon_invalid', {
+          coupon_code: couponCode.toUpperCase(),
+          reason: 'invalid_or_expired',
+        });
         Alert.alert("خطأ", "كود الخصم غير صحيح أو منتهي الصلاحية");
         setApplying(false);
         return;
@@ -109,6 +114,9 @@ export default function PromoCode() {
         .maybeSingle();
 
       if (existingCoupon) {
+        analyticsTracker.trackEvent('coupon_duplicate', {
+          coupon_code: couponCode.toUpperCase(),
+        });
         Alert.alert("تنبيه", "لديك هذا الكود بالفعل!");
         setApplying(false);
         return;
@@ -118,6 +126,13 @@ export default function PromoCode() {
       await supabase.from("user_coupons").insert({
         user_id: user.id,
         coupon_id: couponData.id,
+      });
+
+      analyticsTracker.trackEvent('coupon_applied', {
+        coupon_code: couponCode.toUpperCase(),
+        coupon_id: couponData.id,
+        discount_value: couponData.discount_value,
+        discount_type: couponData.discount_type,
       });
 
       Alert.alert("نجاح!", "تم إضافة كود الخصم بنجاح");
@@ -133,37 +148,37 @@ export default function PromoCode() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color={C.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
         {/* Header */}
         <View style={{
           paddingTop: Platform.OS === "android" ? 18 : 54,
           paddingHorizontal: 16, paddingBottom: 16,
-          backgroundColor: C.surface,
-          borderBottomWidth: 1, borderColor: C.border,
+          backgroundColor: colors.surface,
+          borderBottomWidth: 1, borderColor: colors.border,
         }}>
-          <Text style={{ fontSize: 18, fontWeight: "900", color: C.text }}>🎟️ أكود الخصم</Text>
-          <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>استخدم أكوادك للحصول على خصومات</Text>
+          <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text }}>🎟️ أكود الخصم</Text>
+          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>استخدم أكوادك للحصول على خصومات</Text>
         </View>
 
         <View style={{ padding: 16 }}>
           {/* Apply Coupon Card */}
           <View style={{
-            backgroundColor: C.surface,
+            backgroundColor: colors.surface,
             borderRadius: 16, padding: 16,
             marginBottom: 20,
-            borderWidth: 1, borderColor: C.primary,
+            borderWidth: 1, borderColor: colors.primary,
           }}>
-            <Text style={{ fontSize: 14, fontWeight: "700", color: C.text, marginBottom: 12 }}>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: 12 }}>
               هل لديك كود خصم؟
             </Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
@@ -171,20 +186,22 @@ export default function PromoCode() {
                 value={couponCode}
                 onChangeText={setCouponCode}
                 placeholder="أدخل الكود هنا"
-                placeholderTextColor={C.textMuted}
+                placeholderTextColor={colors.textMuted}
                 style={{
                   flex: 1,
                   backgroundColor: "#F9FAFB",
-                  borderRadius: 12, borderWidth: 1, borderColor: C.border,
+                  borderRadius: 12, borderWidth: 1, borderColor: colors.border,
                   paddingHorizontal: 12, paddingVertical: 12,
-                  fontSize: 14, color: C.text, textAlign: "right",
+                  fontSize: 14, color: colors.text, textAlign: "right",
                 }}
               />
               <Pressable
                 onPress={applyCoupon}
                 disabled={applying}
+                {...A11yPresets.button()}
+                accessibilityLabel="إضافة كود الخصم"
                 style={{
-                  backgroundColor: C.primary,
+                  backgroundColor: colors.primary,
                   paddingHorizontal: 16, borderRadius: 12,
                   justifyContent: "center", alignItems: "center",
                   opacity: applying ? 0.6 : 1,
@@ -199,8 +216,8 @@ export default function PromoCode() {
           {coupons.length === 0 ? (
             <View style={{ alignItems: "center", marginVertical: 40 }}>
               <Text style={{ fontSize: 48, marginBottom: 12 }}>🎟️</Text>
-              <Text style={{ color: C.textMuted, fontSize: 14, fontWeight: "700" }}>لم تضف أي كود خصم</Text>
-              <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>أضف كود خصم للاستمتاع بعروضنا</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 14, fontWeight: "700" }}>لم تضف أي كود خصم</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>أضف كود خصم للاستمتاع بعروضنا</Text>
             </View>
           ) : (
             <View style={{ gap: 12 }}>
@@ -214,37 +231,37 @@ export default function PromoCode() {
                   <View
                     key={uc.id}
                     style={{
-                      backgroundColor: C.surface,
+                      backgroundColor: colors.surface,
                       borderRadius: 16, padding: 14,
-                      borderWidth: 1.5, borderColor: C.primary,
+                      borderWidth: 1.5, borderColor: colors.primary,
                       borderStyle: "dashed",
                     }}
                   >
                     <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
                       <View style={{
                         flex: 1,
-                        backgroundColor: C.primarySoft,
+                        backgroundColor: colors.primarySoft,
                         paddingVertical: 12, paddingHorizontal: 16,
                         borderRadius: 12,
                         alignItems: "center",
                       }}>
-                        <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: "700" }}>الخصم</Text>
-                        <Text style={{ fontSize: 20, fontWeight: "900", color: C.primary, marginTop: 2 }}>
+                        <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "700" }}>الخصم</Text>
+                        <Text style={{ fontSize: 20, fontWeight: "900", color: colors.primary, marginTop: 2 }}>
                           {disountText}
                         </Text>
                       </View>
 
                       <View style={{ flex: 1.5, gap: 4 }}>
-                        <Text style={{ fontSize: 13, fontWeight: "900", color: C.text }}>
+                        <Text style={{ fontSize: 13, fontWeight: "900", color: colors.text }}>
                           {c.code}
                         </Text>
-                        <Text style={{ fontSize: 11, color: C.textMuted }}>
+                        <Text style={{ fontSize: 11, color: colors.textMuted }}>
                           {c.description}
                         </Text>
-                        <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 4 }}>
+                        <Text style={{ fontSize: 10, color: colors.textMuted, marginTop: 4 }}>
                           💳 الحد الأدنى: {c.min_order} جنيه • الحد الأقصى: {c.max_discount} جنيه
                         </Text>
-                        <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>
+                        <Text style={{ fontSize: 10, color: colors.textMuted, marginTop: 2 }}>
                           ✓ ينتهي: {new Date(c.expires_at).toLocaleDateString("ar-EG")}
                         </Text>
                       </View>
@@ -253,16 +270,22 @@ export default function PromoCode() {
                     {/* Copy Button */}
                     <Pressable
                       onPress={() => {
+                        analyticsTracker.trackEvent('coupon_copied', {
+                          coupon_code: c.code,
+                          coupon_id: c.id,
+                        });
                         // Copy to clipboard in real app
                         Alert.alert("تم", `تم نسخ الكود: ${c.code}`);
                       }}
+                      {...A11yPresets.button()}
+                      accessibilityLabel={`نسخ كود الخصم ${c.code}`}
                       style={{
-                        backgroundColor: C.primarySoft,
+                        backgroundColor: colors.primarySoft,
                         paddingVertical: 8, borderRadius: 10,
                         alignItems: "center",
                       }}
                     >
-                      <Text style={{ color: C.primary, fontWeight: "700", fontSize: 12 }}>نسخ الكود</Text>
+                      <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 12 }}>نسخ الكود</Text>
                     </Pressable>
                   </View>
                 );

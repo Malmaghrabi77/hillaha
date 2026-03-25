@@ -4,13 +4,9 @@ import {
   KeyboardAvoidingView, Platform, StatusBar, ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
-
-const C = {
-  primary: "#8B5CF6", primarySoft: "#EDE9FE",
-  bg: "#FAFAFF", surface: "#FFFFFF",
-  border: "#E7E3FF", text: "#1F1B2E",
-  textMuted: "#6B6480",
-} as const;
+import { useDarkMode } from "../hooks/useDarkMode";
+import { analyticsTracker } from "../utils/analyticsTracker";
+import { A11yPresets } from "../hooks/useAccessibility";
 
 function getSB() {
   try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
@@ -25,11 +21,16 @@ interface Message {
 }
 
 export default function SupportChat() {
+  const { isDarkMode, colors } = useDarkMode();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [supportTicketId, setSupportTicketId] = useState<string | null>(null);
   const scrollRef = useRef<FlatList>(null);
+
+  useEffect(() => {
+    analyticsTracker.trackScreenView('support_chat_screen');
+  }, []);
 
   // Fetch or create support ticket and messages
   useEffect(() => {
@@ -125,6 +126,11 @@ export default function SupportChat() {
     if (!supabase) return;
 
     try {
+      analyticsTracker.trackEvent('support_message_sent', {
+        ticket_id: supportTicketId,
+        message_length: newMessage.length,
+      });
+
       const { data: { user } } = await supabase.auth.getUser();
       await supabase.from("support_messages").insert({
         ticket_id: supportTicketId,
@@ -140,8 +146,8 @@ export default function SupportChat() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color={C.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -149,31 +155,35 @@ export default function SupportChat() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1, backgroundColor: C.bg }}
+      style={{ flex: 1, backgroundColor: colors.bg }}
     >
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
       {/* Header */}
       <View style={{
-        backgroundColor: C.surface,
+        backgroundColor: colors.surface,
         paddingTop: Platform.OS === "android" ? 18 : 54,
         paddingHorizontal: 16, paddingBottom: 16,
-        borderBottomWidth: 1, borderColor: C.border,
+        borderBottomWidth: 1, borderColor: colors.border,
         flexDirection: "row", alignItems: "center", gap: 12,
       }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => {
+            analyticsTracker.trackEvent('back_pressed', { screen: 'support_chat' });
+            router.back();
+          }}
+          {...A11yPresets.button()}
           style={{
             width: 40, height: 40, borderRadius: 12,
-            backgroundColor: C.primarySoft,
+            backgroundColor: colors.primarySoft,
             justifyContent: "center", alignItems: "center",
           }}
         >
           <Text style={{ fontSize: 18 }}>←</Text>
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: C.text }}>🎧 فريق الدعم</Text>
-          <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>الدعم الفني</Text>
+          <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>🎧 فريق الدعم</Text>
+          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>الدعم الفني</Text>
         </View>
       </View>
 
@@ -191,27 +201,27 @@ export default function SupportChat() {
               maxWidth: "80%",
             }}>
               <View style={{
-                backgroundColor: isCustomer ? C.primary : C.surface,
+                backgroundColor: isCustomer ? colors.primary : colors.surface,
                 borderRadius: 16, padding: 12,
                 borderWidth: isCustomer ? 0 : 1,
-                borderColor: isCustomer ? "transparent" : C.border,
+                borderColor: isCustomer ? "transparent" : colors.border,
               }}>
                 {!isCustomer && item.sender_name && (
                   <Text style={{
-                    fontSize: 12, fontWeight: "700", color: C.primary, marginBottom: 4,
+                    fontSize: 12, fontWeight: "700", color: colors.primary, marginBottom: 4,
                   }}>
                     {item.sender_name}
                   </Text>
                 )}
                 <Text style={{
-                  color: isCustomer ? "white" : C.text,
+                  color: isCustomer ? "white" : colors.text,
                   fontSize: 14, fontWeight: "500",
                 }}>
                   {item.message}
                 </Text>
               </View>
               <Text style={{
-                fontSize: 11, color: C.textMuted, marginTop: 4,
+                fontSize: 11, color: colors.textMuted, marginTop: 4,
                 alignSelf: isCustomer ? "flex-end" : "flex-start",
               }}>
                 {new Date(item.created_at).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}
@@ -222,8 +232,8 @@ export default function SupportChat() {
         ListEmptyComponent={
           <View style={{ alignItems: "center", marginVertical: 40 }}>
             <Text style={{ fontSize: 48, marginBottom: 12 }}>🎧</Text>
-            <Text style={{ color: C.textMuted, fontSize: 14 }}>لا توجد رسائل حتى الآن</Text>
-            <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>تحدث مع فريق الدعم الفني</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 14 }}>لا توجد رسائل حتى الآن</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>تحدث مع فريق الدعم الفني</Text>
           </View>
         }
         onEndReachedThreshold={0.5}
@@ -232,8 +242,8 @@ export default function SupportChat() {
 
       {/* Input */}
       <View style={{
-        backgroundColor: C.surface,
-        borderTopWidth: 1, borderColor: C.border,
+        backgroundColor: colors.surface,
+        borderTopWidth: 1, borderColor: colors.border,
         paddingHorizontal: 12, paddingVertical: 8,
         paddingBottom: Platform.OS === "ios" ? 20 : 8,
         flexDirection: "row", alignItems: "center", gap: 8,
@@ -242,11 +252,11 @@ export default function SupportChat() {
           value={newMessage}
           onChangeText={setNewMessage}
           placeholder="اكتب رسالة للدعم..."
-          placeholderTextColor={C.textMuted}
+          placeholderTextColor={colors.textMuted}
           style={{
-            flex: 1, backgroundColor: C.primarySoft,
+            flex: 1, backgroundColor: colors.primarySoft,
             borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10,
-            fontSize: 14, color: C.text, textAlign: "right",
+            fontSize: 14, color: colors.text, textAlign: "right",
           }}
           multiline
           maxLength={500}
@@ -254,9 +264,11 @@ export default function SupportChat() {
         <Pressable
           onPress={sendMessage}
           disabled={!newMessage.trim()}
+          {...A11yPresets.button()}
+          accessibilityLabel="إرسال الرسالة"
           style={{
             width: 40, height: 40, borderRadius: 20,
-            backgroundColor: newMessage.trim() ? C.primary : C.primarySoft,
+            backgroundColor: newMessage.trim() ? colors.primary : colors.primarySoft,
             justifyContent: "center", alignItems: "center",
           }}
         >

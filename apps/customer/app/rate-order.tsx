@@ -4,13 +4,9 @@ import {
   StatusBar, Platform, ActivityIndicator, Alert,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
-
-const C = {
-  primary: "#8B5CF6", primarySoft: "#EDE9FE",
-  bg: "#FAFAFF", surface: "#FFFFFF",
-  border: "#E7E3FF", text: "#1F1B2E",
-  textMuted: "#6B6480", warning: "#F59E0B",
-} as const;
+import { useDarkMode } from "../hooks/useDarkMode";
+import { analyticsTracker } from "../utils/analyticsTracker";
+import { A11yPresets } from "../hooks/useAccessibility";
 
 function getSB() {
   try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
@@ -26,6 +22,7 @@ interface OrderInfo {
 }
 
 export default function RateOrder() {
+  const { isDarkMode, colors } = useDarkMode();
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
 
   const [order, setOrder] = useState<OrderInfo | null>(null);
@@ -37,6 +34,7 @@ export default function RateOrder() {
   const [comment, setComment] = useState("");
 
   useEffect(() => {
+    analyticsTracker.trackScreenView(`rate_order_${orderId}`);
     loadOrder();
   }, []);
 
@@ -77,6 +75,14 @@ export default function RateOrder() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      analyticsTracker.trackEvent('order_rating_submitted', {
+        order_id: orderId,
+        partner_rating: partnerRating,
+        driver_rating: driverRating,
+        has_comment: comment.length > 0,
+        comment_length: comment.length,
+      });
+
       // Save review
       await supabase.from("reviews").insert({
         order_id: orderId,
@@ -107,42 +113,42 @@ export default function RateOrder() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color={C.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
       {/* Header */}
       <View style={{
         paddingTop: Platform.OS === "android" ? 18 : 54,
         paddingHorizontal: 16, paddingBottom: 16,
-        backgroundColor: C.surface,
-        borderBottomWidth: 1, borderColor: C.border,
+        backgroundColor: colors.surface,
+        borderBottomWidth: 1, borderColor: colors.border,
       }}>
-        <Text style={{ fontSize: 18, fontWeight: "900", color: C.text }}>⭐ قيّم طلبك</Text>
-        <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>مساعدتك تساعد الآخرين على الاختيار الأفضل</Text>
+        <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text }}>⭐ قيّم طلبك</Text>
+        <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>مساعدتك تساعد الآخرين على الاختيار الأفضل</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 20 }}>
         {/* Partner Rating */}
         <View style={{
-          backgroundColor: C.surface,
+          backgroundColor: colors.surface,
           borderRadius: 16, padding: 16,
           marginBottom: 16,
-          borderWidth: 1, borderColor: C.border,
+          borderWidth: 1, borderColor: colors.border,
         }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 }}>
             <Text style={{ fontSize: 28 }}>🏪</Text>
             <View>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: C.text }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>
                 {order?.partners?.name || "المتجر"}
               </Text>
-              <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>قيّم المتجر</Text>
+              <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>قيّم المتجر</Text>
             </View>
           </View>
 
@@ -151,7 +157,15 @@ export default function RateOrder() {
             {[1, 2, 3, 4, 5].map(star => (
               <Pressable
                 key={star}
-                onPress={() => setPartnerRating(star)}
+                onPress={() => {
+                  analyticsTracker.trackEvent('partner_rating_selected', {
+                    rating: star,
+                    order_id: orderId,
+                  });
+                  setPartnerRating(star);
+                }}
+                {...A11yPresets.button()}
+                accessibilityLabel={`تقييم المتجر ${star} نجوم`}
                 style={{ padding: 4 }}
               >
                 <Text style={{ fontSize: 36 }}>
@@ -162,7 +176,7 @@ export default function RateOrder() {
           </View>
 
           {partnerRating > 0 && (
-            <Text style={{ fontSize: 12, color: C.primary, marginTop: 10, fontWeight: "700", textAlign: "right" }}>
+            <Text style={{ fontSize: 12, color: colors.primary, marginTop: 10, fontWeight: "700", textAlign: "right" }}>
               تقييمك: {partnerRating} من 5 نجوم
             </Text>
           )}
@@ -170,18 +184,18 @@ export default function RateOrder() {
 
         {/* Driver Rating */}
         <View style={{
-          backgroundColor: C.surface,
+          backgroundColor: colors.surface,
           borderRadius: 16, padding: 16,
           marginBottom: 16,
-          borderWidth: 1, borderColor: C.border,
+          borderWidth: 1, borderColor: colors.border,
         }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 }}>
             <Text style={{ fontSize: 28 }}>🛵</Text>
             <View>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: C.text }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>
                 {order?.driver?.full_name || "المندوب"}
               </Text>
-              <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>قيّم المندوب</Text>
+              <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>قيّم المندوب</Text>
             </View>
           </View>
 
@@ -190,7 +204,15 @@ export default function RateOrder() {
             {[1, 2, 3, 4, 5].map(star => (
               <Pressable
                 key={star}
-                onPress={() => setDriverRating(star)}
+                onPress={() => {
+                  analyticsTracker.trackEvent('driver_rating_selected', {
+                    rating: star,
+                    order_id: orderId,
+                  });
+                  setDriverRating(star);
+                }}
+                {...A11yPresets.button()}
+                accessibilityLabel={`تقييم المندوب ${star} نجوم`}
                 style={{ padding: 4 }}
               >
                 <Text style={{ fontSize: 36 }}>
@@ -201,7 +223,7 @@ export default function RateOrder() {
           </View>
 
           {driverRating > 0 && (
-            <Text style={{ fontSize: 12, color: C.primary, marginTop: 10, fontWeight: "700", textAlign: "right" }}>
+            <Text style={{ fontSize: 12, color: colors.primary, marginTop: 10, fontWeight: "700", textAlign: "right" }}>
               تقييمك: {driverRating} من 5 نجوم
             </Text>
           )}
@@ -209,33 +231,27 @@ export default function RateOrder() {
 
         {/* Comment */}
         <View style={{
-          backgroundColor: C.surface,
+          backgroundColor: colors.surface,
           borderRadius: 16, padding: 16,
           marginBottom: 16,
-          borderWidth: 1, borderColor: C.border,
+          borderWidth: 1, borderColor: colors.border,
         }}>
-          <Text style={{ fontSize: 14, fontWeight: "700", color: C.text, marginBottom: 10 }}>💬 أضف تعليق (اختياري)</Text>
+          <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: 10 }}>💬 أضف تعليق (اختياري)</Text>
           <TextInput
             value={comment}
             onChangeText={setComment}
             placeholder="شارك تجربتك مع الآخرين..."
-            placeholderTextColor={C.textMuted}
+            placeholderTextColor={colors.textMuted}
             multiline
             numberOfLines={4}
-            Style={{
-              backgroundColor: "#F9FAFB",
-              borderRadius: 12, borderWidth: 1, borderColor: C.border,
-              paddingHorizontal: 12, paddingVertical: 12,
-              fontSize: 14, color: C.text, textAlign: "right",
-            }}
             style={{
               backgroundColor: "#F9FAFB",
-              borderRadius: 12, borderWidth: 1, borderColor: C.border,
+              borderRadius: 12, borderWidth: 1, borderColor: colors.border,
               paddingHorizontal: 12, paddingVertical: 12,
-              fontSize: 14, color: C.text, textAlign: "right",
+              fontSize: 14, color: colors.text, textAlign: "right",
             }}
           />
-          <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 6 }}>
+          <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 6 }}>
             {comment.length}/500
           </Text>
         </View>
@@ -254,12 +270,14 @@ export default function RateOrder() {
       </ScrollView>
 
       {/* Submit Button */}
-      <View style={{ padding: 16, borderTopWidth: 1, borderColor: C.border, backgroundColor: C.surface }}>
+      <View style={{ padding: 16, borderTopWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
         <Pressable
           onPress={submitRating}
           disabled={submitting}
+          {...A11yPresets.button()}
+          accessibilityLabel="إرسال التقييم"
           style={{
-            backgroundColor: C.primary,
+            backgroundColor: colors.primary,
             paddingVertical: 16, borderRadius: 16,
             alignItems: "center",
             opacity: submitting ? 0.6 : 1,

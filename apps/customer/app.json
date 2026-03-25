@@ -26,12 +26,6 @@
         }
       ],
       [
-        "react-native-maps",
-        {
-          "googleMapsApiKey": "AIzaSyA3oq4FfPFFZRoVoXUs0aBN6P-3-6AjgnE"
-        }
-      ],
-      [
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "حلّها يحتاج الوصول لموقعك لتتبع رحلة التوصيل",

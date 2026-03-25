@@ -15,7 +15,7 @@ import { SafeAreaScrollView } from "../components";
 type PayMethod = "cash" | "instapay" | "etisalat" | "vodafone" | "card";
 
 const FALLBACK_ACCOUNTS = {
-  instapay:  { account: "@hillaha_official",  instructions: "افتح تطبيق InstaPay وحوّل المبلغ إلى الحساب التالي" },
+  instapay:  { account: "@malmaghrabi77",  instructions: "افتح تطبيق InstaPay وحوّل المبلغ إلى الحساب التالي" },
   etisalat:  { phone:   "01107549225",     instructions: "حوّل المبلغ عبر خدمة E& (اتصالات) إلى الرقم التالي" },
   vodafone:  { phone:   null as string | null, instructions: "سيتم الإعلان عن رقم محفظة Vodafone Cash قريباً" },
 } as const;

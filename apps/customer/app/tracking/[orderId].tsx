@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  View, Text, Pressable, Animated, Platform,
+  View, Text, Pressable, Animated, Platform, ScrollView, Linking,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
-import MapView, { Marker } from "react-native-maps";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { useSupabase } from "../../hooks/useSupabase";
 import { analyticsTracker } from "../utils/analyticsTracker";
 import { A11yPresets } from "../hooks/useAccessibility";
-import { SafeAreaDisplay, SafeAreaScrollView } from "../components";
+import { SafeAreaDisplay } from "../components";
+import { LiveMap } from "../components/LiveMap";
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -258,85 +258,17 @@ export default function Tracking() {
   return (
     <SafeAreaDisplay variant="fullscreen" safeTop={false} safeBottom={false}>
 
-      {/* ── GOOGLE MAPS (top 58%) ─────────────────────────────────── */}
-      {step >= 2 && orderInfo && driverCoord ? (
-        <MapView
-          style={{ height: SCREEN.height * 0.58 }}
-          initialRegion={{
-            latitude: (orderInfo.restaurantLat + orderInfo.customerLat) / 2,
-            longitude: (orderInfo.restaurantLng + orderInfo.customerLng) / 2,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          }}
-          provider="google"
-        >
-          {/* Partner marker - dynamic based on type */}
-          {(() => {
-            // Prioritize service name if available, otherwise use partner type
-            const markerKey = orderInfo.serviceName || orderInfo.partnerType;
-            const { icon, bgColor, borderColor } = getPartnerIcon(markerKey);
-            return (
-              <Marker
-                coordinate={{
-                  latitude: orderInfo.restaurantLat,
-                  longitude: orderInfo.restaurantLng,
-                }}
-                title={orderInfo.partnerType === "restaurant" ? "المطعم" : "الشركة"}
-                description={orderInfo.id}
-              >
-                <View style={{
-                  width: 44, height: 44,
-                  borderRadius: 22,
-                  backgroundColor: bgColor,
-                  borderWidth: 2.5, borderColor: borderColor,
-                  justifyContent: "center", alignItems: "center",
-                }}>
-                  <Text style={{ fontSize: 20 }}>{icon}</Text>
-                </View>
-              </Marker>
-            );
-          })()}
-
-          {/* Driver marker - animated */}
-          <Marker
-            coordinate={{
-              latitude: driverCoord.latitude,
-              longitude: driverCoord.longitude,
-            }}
-            title={orderInfo.driverName}
-            description={orderInfo.driverPhone}
-          >
-            <Animated.View style={{
-              width: 50, height: 50,
-              borderRadius: 25,
-              backgroundColor: "#DBEAFE",
-              borderWidth: 3, borderColor: "#2563EB",
-              justifyContent: "center", alignItems: "center",
-              transform: [{ scale: pulseAnim }],
-            }}>
-              <Text style={{ fontSize: 24 }}>🛵</Text>
-            </Animated.View>
-          </Marker>
-
-          {/* Customer marker */}
-          <Marker
-            coordinate={{
-              latitude: orderInfo.customerLat,
-              longitude: orderInfo.customerLng,
-            }}
-            title="عنوانك"
-          >
-            <View style={{
-              width: 44, height: 44,
-              borderRadius: 22,
-              backgroundColor: "#DBEAFE",
-              borderWidth: 2.5, borderColor: "#2563EB",
-              justifyContent: "center", alignItems: "center",
-            }}>
-              <Text style={{ fontSize: 20 }}>📍</Text>
-            </View>
-          </Marker>
-        </MapView>
+      {/* ── LIVE MAP WITH LEAFLET (top 58%) ─────────────────────────────────── */}
+      {step >= 1 && orderInfo && driverCoord ? (
+        <LiveMap
+          driverLat={driverCoord.latitude}
+          driverLng={driverCoord.longitude}
+          customerLat={orderInfo.customerLat}
+          customerLng={orderInfo.customerLng}
+          restaurantLat={orderInfo.restaurantLat}
+          restaurantLng={orderInfo.restaurantLng}
+          height={SCREEN.height * 0.58}
+        />
       ) : (
         <View style={{
           height: SCREEN.height * 0.58,
@@ -347,7 +279,7 @@ export default function Tracking() {
         }}>
           <Text style={{ fontSize: 48, marginBottom: 12 }}>🗺️</Text>
           <Text style={{ fontSize: 14, color: "#6B7280", fontWeight: "700" }}>
-            الخريطة ستظهر عند خروج المندوب
+            جاري تحميل الخريطة…
           </Text>
           <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>
             سيتم تتبع موقع المندوب تلقائياً

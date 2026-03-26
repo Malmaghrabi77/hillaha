@@ -66,6 +66,7 @@ export default function Cart() {
   }
 
   return (
+    <View style={{ flex: 1 }}>
     <SafeAreaScrollView variant="page">
 
         {/* ── RESTAURANT HEADER ──────────────────────────── */}

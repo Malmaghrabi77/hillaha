@@ -208,7 +208,7 @@ export default function Cart() {
           </View>
         </View>
 
-        {/* ── PROMO CODE ────────────────────────────────– */}
+        {/* ── PROMO CODE ──────────────────────────────── */}
         {discount > 0 ? (
           <View style={{
             backgroundColor: isDarkMode ? colors.surfaceSecondary : colors.lightBg1, borderRadius: 16, padding: 14,
@@ -283,7 +283,7 @@ export default function Cart() {
           </View>
         )}
 
-        {/* ── LOYALTY ───────────────────────────────────– */}
+        {/* ── LOYALTY ─────────────────────────────────── */}
         <View style={{
           backgroundColor: colors.primarySoft, borderRadius: 16, padding: 12,
           flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14,
@@ -295,7 +295,7 @@ export default function Cart() {
           </Text>
         </View>
 
-        {/* ── ORDER SUMMARY ─────────────────────────────– */}
+        {/* ── ORDER SUMMARY ───────────────────────────── */}
         <View style={{
           backgroundColor: colors.surface, borderRadius: 20, overflow: "hidden",
           shadowColor: colors.shadow, shadowOffset: { width: 0, height: 2 },
@@ -326,7 +326,7 @@ export default function Cart() {
         </View>
       </SafeAreaScrollView>
 
-      {/* ── CHECKOUT BUTTON ───────────────────────────────– */}
+      {/* ── CHECKOUT BUTTON ──────────────────────────────── */}
       <View style={{
         position: "absolute", bottom: 0, left: 0, right: 0,
         padding: 16, backgroundColor: colors.surface,

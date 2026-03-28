@@ -123,6 +123,8 @@ export default function FinancePage() {
   const [settlements, setSettlements] = useState<SettlementRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [partnerCommissionRate, setPartnerCommissionRate] = useState<number | null>(null);
+  const [partnerName, setPartnerName] = useState<string>("");
 
   useEffect(() => {
     loadFinanceData();
@@ -135,6 +137,19 @@ export default function FinancePage() {
         setError("خطأ في الاتصال بقاعدة البيانات");
         setLoading(false);
         return;
+      }
+
+      // Get current user's partner profile with commission_rate
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.user) {
+        const { data: partner } = await (supabase.from("partners") as any)
+          .select("commission_rate, business_name")
+          .eq("user_id", session.session.user.id)
+          .single();
+        if (partner) {
+          setPartnerCommissionRate(partner.commission_rate ?? 0.10);
+          setPartnerName(partner.business_name || "متجري");
+        }
       }
 
       const months = getLast6Months();
@@ -153,7 +168,7 @@ export default function FinancePage() {
 
         const { data: orders, error: ordersError } = await (supabase
           .from("orders") as any)
-          .select("total, commission")
+          .select("total, commission, commission_rate, app_commission")
           .gte("created_at", startDate.toISOString())
           .lte("created_at", endDate.toISOString())
           .eq("status", "delivered");
@@ -164,9 +179,9 @@ export default function FinancePage() {
         }
 
         const ordersData = orders || [];
-        const sales = ordersData.reduce((sum, order) => sum + (order.total || 0), 0);
+        const sales = ordersData.reduce((sum: number, order: any) => sum + (order.total || 0), 0);
         const commission = ordersData.reduce(
-          (sum, order) => sum + (order.commission || 0),
+          (sum: number, order: any) => sum + (order.app_commission || order.commission || 0),
           0
         );
         const net = sales - commission;
@@ -194,6 +209,11 @@ export default function FinancePage() {
     }
   };
 
+  const appRate = partnerCommissionRate ?? 0.10;
+  const partnerRate = 1 - appRate;
+  const appPct = Math.round(appRate * 100);
+  const partnerPct = Math.round(partnerRate * 100);
+
   const currentMonth = monthlyStats[monthlyStats.length - 1];
   const totalSales = monthlyStats.reduce((sum, m) => sum + m.sales, 0);
   const totalCommission = monthlyStats.reduce((sum, m) => sum + m.commission, 0);
@@ -216,7 +236,7 @@ export default function FinancePage() {
     }));
 
     generateFinanceReport(reportData, {
-      name: "متجري",
+      name: partnerName || "متجري",
       email: "partner@example.com",
     });
   };
@@ -443,56 +463,80 @@ export default function FinancePage() {
           }}
         >
           <h2 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 900, color: C.text }}>
-            تفصيل العمولات
+            حسابات المتجر والعمولات
           </h2>
 
-          <div
-            style={{
-              background: C.primarySoft,
-              borderRadius: 14,
-              padding: 16,
-              marginBottom: 16,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 12,
-                color: C.primary,
-                fontWeight: 700,
-                marginBottom: 4,
-              }}
-            >
-              نسبة عمولة المنصة
-            </div>
-            <div
-              style={{
-                fontSize: 26,
-                fontWeight: 900,
-                color: C.primary,
-              }}
-            >
-              8% - 10%
-            </div>
-            <div style={{ fontSize: 10, color: C.textMuted, marginTop: 4, lineHeight: 1.4 }}>
-              مرن حسب عدد الطلبات. شامل: الخدمة واللوجستية والدعم
+          {/* Commission Visual */}
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ display: "flex", borderRadius: 12, overflow: "hidden", height: 38, marginBottom: 10 }}>
+              <div style={{
+                width: `${partnerPct}%`,
+                background: `linear-gradient(135deg, ${C.success}, #059669)`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "white", fontSize: 13, fontWeight: 900,
+              }}>
+                {partnerPct}% لك
+              </div>
+              <div style={{
+                width: `${appPct}%`,
+                background: `linear-gradient(135deg, ${C.primary}, ${C.pink})`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "white", fontSize: 13, fontWeight: 900,
+              }}>
+                {appPct}% حلّها
+              </div>
             </div>
           </div>
 
+          {/* Partner Share Card */}
+          <div style={{
+            background: "#D1FAE5", borderRadius: 14, padding: 16, marginBottom: 10,
+          }}>
+            <div style={{ fontSize: 12, color: C.success, fontWeight: 700, marginBottom: 4 }}>
+              نصيبك من كل طلب
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 900, color: C.success }}>
+              {partnerPct}%
+            </div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>
+              من إجمالي قيمة الطلب بعد خصم عمولة المنصة
+            </div>
+          </div>
+
+          {/* App Share Card */}
+          <div style={{
+            background: C.primarySoft, borderRadius: 14, padding: 16, marginBottom: 16,
+          }}>
+            <div style={{ fontSize: 12, color: C.primary, fontWeight: 700, marginBottom: 4 }}>
+              عمولة منصة حلّها
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 900, color: C.primary }}>
+              {appPct}%
+            </div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4, lineHeight: 1.4 }}>
+              تشمل: الخدمة، اللوجستية، الدعم، والتسويق
+            </div>
+          </div>
+
+          {/* Current Month Breakdown */}
           {currentMonth && (
             <div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: C.textMuted, marginBottom: 10 }}>
+                حسابات الشهر الحالي
+              </div>
               {[
                 {
-                  label: "مبيعات هذا الشهر",
+                  label: "إجمالي المبيعات",
                   value: `${currentMonth.sales.toLocaleString("ar-EG")} ج.س`,
                   color: C.text,
                 },
                 {
-                  label: "عمولة المنصة",
+                  label: `عمولة حلّها (${appPct}%)`,
                   value: `- ${currentMonth.commission.toLocaleString("ar-EG")} ج.س`,
                   color: C.danger,
                 },
                 {
-                  label: "صافي الأرباح",
+                  label: `صافي أرباحك (${partnerPct}%)`,
                   value: `${currentMonth.net.toLocaleString("ar-EG")} ج.س`,
                   color: C.success,
                 },

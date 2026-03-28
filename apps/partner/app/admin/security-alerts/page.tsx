@@ -95,8 +95,9 @@ export default function SecurityAlertsPage() {
   }, [filter]);
 
   useEffect(() => {
+    if (auth.loading) return;
     if (auth.user && (auth.isSuperAdmin || auth.isAccountant)) fetchData();
-  }, [auth.user, fetchData]);
+  }, [auth.user, auth.loading, fetchData]);
 
   const handleResolve = async (alertId: string) => {
     const supabase = getSupabase();

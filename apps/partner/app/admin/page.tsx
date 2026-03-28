@@ -59,9 +59,10 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user) return;
     loadStats();
-  }, [auth.user]);
+  }, [auth.user, auth.loading]);
 
   const loadStats = async () => {
     try {

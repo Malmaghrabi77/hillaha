@@ -41,8 +41,9 @@ export default function CardAnalyticsPage() {
   const [recentCodes, setRecentCodes] = useState<any[]>([]);
 
   useEffect(() => {
+    if (auth.loading) return;
     if (auth.user && (auth.isSuperAdmin || auth.isAccountant)) fetchStats();
-  }, [auth.user]);
+  }, [auth.user, auth.loading]);
 
   const fetchStats = async () => {
     setLoading(true);

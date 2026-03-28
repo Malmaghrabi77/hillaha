@@ -57,9 +57,10 @@ export default function UsersPage() {
   const itemsPerPage = 50;
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user) return;
     loadUsers();
-  }, [auth.user]);
+  }, [auth.user, auth.loading]);
 
   useEffect(() => {
     let filtered = [...users];

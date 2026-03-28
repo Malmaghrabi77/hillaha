@@ -66,10 +66,11 @@ export default function OrdersPage() {
   const itemsPerPage = 50;
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user) return;
     loadOrders();
     loadPartners();
-  }, [auth.user]);
+  }, [auth.user, auth.loading]);
 
   useEffect(() => {
     let filtered = [...orders];

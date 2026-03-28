@@ -40,12 +40,14 @@ export default function ApprovePartnersPage() {
   const [selectedInvite, setSelectedInvite] = useState<string | null>(null);
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user || !auth.isSuperAdmin) {
       setError("فقط السوبر أدمن يمكنه الموافقة على دعوات الشركاء");
       return;
     }
+    setError(null);
     loadPendingInvitations();
-  }, [auth.user, auth.isSuperAdmin]);
+  }, [auth.user, auth.isSuperAdmin, auth.loading]);
 
   const loadPendingInvitations = async () => {
     try {

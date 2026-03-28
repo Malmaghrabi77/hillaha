@@ -35,9 +35,10 @@ export default function InviteRegionalManagerPage() {
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user) return;
     loadInvitations();
-  }, [auth.user]);
+  }, [auth.user, auth.loading]);
 
   const loadInvitations = async () => {
     try {

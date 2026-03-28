@@ -39,9 +39,10 @@ export default function PartnerApprovalsPage() {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user) return;
     loadApprovals();
-  }, [auth.user]);
+  }, [auth.user, auth.loading]);
 
   const loadApprovals = async () => {
     try {

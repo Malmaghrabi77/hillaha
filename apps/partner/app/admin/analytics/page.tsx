@@ -41,9 +41,10 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user || !auth.isSuperAdmin) return;
     loadAnalytics();
-  }, [auth.user]);
+  }, [auth.user, auth.loading]);
 
   const loadAnalytics = async () => {
     try {

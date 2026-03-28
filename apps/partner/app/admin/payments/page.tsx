@@ -37,9 +37,10 @@ export default function PaymentsPage() {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user) return;
     loadCommissions();
-  }, [auth.user, filter]);
+  }, [auth.user, auth.loading, filter]);
 
   const loadCommissions = async () => {
     try {

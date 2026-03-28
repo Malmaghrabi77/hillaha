@@ -42,9 +42,10 @@ export default function ApproveOffersPage() {
   const [rejectionReason, setRejectionReason] = useState("");
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user || (!auth.isSuperAdmin && auth.role !== 'admin')) return;
     loadOffers();
-  }, [auth.user]);
+  }, [auth.user, auth.loading]);
 
   const loadOffers = async () => {
     try {

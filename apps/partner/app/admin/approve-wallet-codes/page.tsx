@@ -40,8 +40,9 @@ export default function ApproveWalletCodesPage() {
   const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
 
   useEffect(() => {
+    if (auth.loading) return;
     if (auth.user && auth.isSuperAdmin) fetchPendingCodes();
-  }, [auth.user, auth.isSuperAdmin]);
+  }, [auth.user, auth.isSuperAdmin, auth.loading]);
 
   const fetchPendingCodes = async () => {
     setLoading(true);

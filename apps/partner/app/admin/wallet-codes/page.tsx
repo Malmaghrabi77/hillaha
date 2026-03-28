@@ -79,7 +79,7 @@ export default function WalletCodesPage() {
     const newCodes: { code: string; amount: number; target_type: string; created_by: string; approval_status: string; batch_id: string }[] = [];
 
     for (let i = 0; i < quantity; i++) {
-      const code = `HL-${targetType === "driver" ? "D" : "C"}-${amount}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const code = `HL-${targetType === "driver" ? "D" : "C"}-${amount}-${crypto.randomUUID().replace(/-/g, "").substring(0, 12).toUpperCase()}`;
       newCodes.push({
         code,
         amount,

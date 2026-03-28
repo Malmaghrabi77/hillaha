@@ -48,7 +48,7 @@ export default function ApproveWalletCodesPage() {
     const supabase = getSupabase();
     if (!supabase) return;
 
-    let query = supabase
+    let query = (supabase as any)
       .from("wallet_codes")
       .select("id, code, amount, target_type, approval_status, batch_id, created_at, created_by")
       .order("created_at", { ascending: false })
@@ -72,7 +72,7 @@ export default function ApproveWalletCodesPage() {
     const supabase = getSupabase();
     if (!supabase || !auth.user) return;
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("wallet_codes")
       .update({
         approval_status: action,
@@ -94,7 +94,7 @@ export default function ApproveWalletCodesPage() {
     const supabase = getSupabase();
     if (!supabase || !auth.user) return;
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("wallet_codes")
       .update({
         approval_status: action,

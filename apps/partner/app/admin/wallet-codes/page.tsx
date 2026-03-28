@@ -57,7 +57,7 @@ export default function WalletCodesPage() {
     const supabase = getSupabase();
     if (!supabase || !auth.user) return;
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("wallet_codes")
       .select("id, code, amount, target_type, is_used, approval_status, created_at, redeemed_by")
       .eq("created_by", auth.user.id)
@@ -90,7 +90,7 @@ export default function WalletCodesPage() {
       });
     }
 
-    const { error } = await supabase.from("wallet_codes").insert(newCodes);
+    const { error } = await (supabase as any).from("wallet_codes").insert(newCodes);
     if (error) {
       alert("خطأ في توليد الأكواد: " + error.message);
     } else {

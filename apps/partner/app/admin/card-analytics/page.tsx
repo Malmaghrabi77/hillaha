@@ -50,7 +50,7 @@ export default function CardAnalyticsPage() {
     if (!supabase) return;
 
     // Fetch all codes for analytics
-    const { data: allCodes, error } = await supabase
+    const { data: allCodes, error } = await (supabase as any)
       .from("wallet_codes")
       .select("id, code, amount, target_type, is_used, approval_status, created_at, redeemed_at")
       .order("created_at", { ascending: false });

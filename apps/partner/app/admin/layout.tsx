@@ -86,7 +86,7 @@ export default function AdminLayout({
     }
     // Accountants only see: dashboard, wallet-codes, analytics, payments
     if (auth.isAccountant) {
-      const accountantPages = ["/admin", "/admin/wallet-codes", "/admin/analytics", "/admin/payments", "/admin/card-analytics"];
+      const accountantPages = ["/admin", "/admin/wallet-codes", "/admin/analytics", "/admin/payments", "/admin/card-analytics", "/admin/security-alerts"];
       return accountantPages.includes(item.href);
     }
     return true;
@@ -95,19 +95,21 @@ export default function AdminLayout({
   // Add role-specific admin management items
   const adminManagementItems: NavItem[] = [];
 
-  // Super Admin: approve wallet codes + card analytics
+  // Super Admin: approve wallet codes + card analytics + security
   if (auth.isSuperAdmin) {
     adminManagementItems.push(
       { href: "/admin/approve-wallet-codes", label: "اعتماد أكواد المحفظة", icon: "✅" },
       { href: "/admin/card-analytics", label: "تقارير البطاقات", icon: "📊" },
+      { href: "/admin/security-alerts", label: "مركز الأمان", icon: "🛡️" },
       { href: "/admin/invite-partners", label: "دعوة شريك جديد", icon: "🤝" }
     );
   }
 
-  // Accountant: card analytics
+  // Accountant: card analytics + security alerts
   if (auth.isAccountant) {
     adminManagementItems.push(
-      { href: "/admin/card-analytics", label: "تقارير البطاقات", icon: "📊" }
+      { href: "/admin/card-analytics", label: "تقارير البطاقات", icon: "📊" },
+      { href: "/admin/security-alerts", label: "مركز الأمان", icon: "🛡️" }
     );
   }
 

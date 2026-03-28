@@ -43,6 +43,9 @@ export interface AdminPermissions {
 
   // Financial / Card Analytics
   viewCardAnalytics: boolean;
+
+  // Security
+  viewSecurityAlerts: boolean;
 }
 
 export function useAdminPermissions(
@@ -70,6 +73,7 @@ export function useAdminPermissions(
     generateWalletCodes: false,
     approveWalletCodes: false,
     viewCardAnalytics: false,
+    viewSecurityAlerts: false,
   });
 
   useEffect(() => {
@@ -98,6 +102,7 @@ export function useAdminPermissions(
       generateWalletCodes: false,
       approveWalletCodes: false,
       viewCardAnalytics: false,
+      viewSecurityAlerts: false,
     };
 
     if (role === "super_admin") {
@@ -113,6 +118,7 @@ export function useAdminPermissions(
         generateWalletCodes: true,
         approveWalletCodes: true,
         viewCardAnalytics: true,
+        viewSecurityAlerts: true,
       });
     } else if (role === "accountant") {
       setPermissions({
@@ -132,6 +138,7 @@ export function useAdminPermissions(
         generateWalletCodes: true,
         approveWalletCodes: false,
         viewCardAnalytics: true,
+        viewSecurityAlerts: true,
       });
     } else {
       // Regular Admin / Regional Manager

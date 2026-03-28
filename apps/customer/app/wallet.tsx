@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, TextInput, Pressable, Image, ActivityIndicator, Alert } from "react-native";
-import { useDarkMode } from "../src/hooks/useDarkMode";
+import { View, Text, TextInput, Pressable, Image, ActivityIndicator, Alert, Modal } from "react-native";
 import { useSupabase } from "../src/hooks/useSupabase";
 import { analyticsTracker } from "../src/utils/analyticsTracker";
 import { A11yPresets } from "../src/hooks/useAccessibility";
@@ -76,9 +75,16 @@ export default function Wallet() {
     fetchData();
   }, [fetchData]);
 
-  // ── Redeem code ─────────────────────────────────────────────
+  // ── Rate Limiting State ────────────────────────────────────
   const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null);
 
+  // ── 2FA State ──────────────────────────────────────────────
+  const [show2FA, setShow2FA] = useState(false);
+  const [pending2FA, setPending2FA] = useState<{ code_id: string; amount: number } | null>(null);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [confirming, setConfirming] = useState(false);
+
+  // ── Redeem code ───────────────────────────────────────────
   async function handleRedeem() {
     const trimmed = code.trim();
     if (!trimmed) return;
@@ -95,7 +101,11 @@ export default function Wallet() {
     analyticsTracker.trackEvent(ANALYTICS_EVENTS.WALLET.CODE_SUBMITTED);
 
     try {
-      const { data: result, error: rpcError } = await supabase.rpc("redeem_wallet_code", { p_code: trimmed });
+      const { data: result, error: rpcError } = await supabase.rpc("redeem_wallet_code", {
+        p_code: trimmed,
+        p_ip_hint: null,
+        p_region: null,
+      });
 
       if (rpcError) throw rpcError;
 
@@ -104,6 +114,12 @@ export default function Wallet() {
         setLockoutUntil(new Date(Date.now() + retryMins * 60000));
         analyticsTracker.trackEvent(ANALYTICS_EVENTS.WALLET.CODE_FAILED);
         Alert.alert("تم القفل مؤقتاً", result.error);
+      } else if (result?.requires_2fa) {
+        // High-value code — show 2FA modal
+        setPending2FA({ code_id: result.code_id, amount: result.amount });
+        setVerificationCode("");
+        setShow2FA(true);
+        analyticsTracker.trackEvent(ANALYTICS_EVENTS.WALLET.CODE_SUBMITTED, { requires_2fa: true });
       } else if (result?.success) {
         analyticsTracker.trackEvent(ANALYTICS_EVENTS.WALLET.CODE_REDEEMED, { amount: result.amount });
         Alert.alert("تم الشحن بنجاح!", `تمت إضافة ${result.amount} جنيه لمحفظتك`);
@@ -122,7 +138,40 @@ export default function Wallet() {
     }
   }
 
-  // ── Loading ─────────────────────────────────────────────────
+  // ── Confirm 2FA ───────────────────────────────────────────
+  async function handleConfirm2FA() {
+    if (!supabase || !pending2FA || !verificationCode.trim()) return;
+
+    setConfirming(true);
+    try {
+      const { data: result, error: rpcError } = await supabase.rpc("confirm_wallet_redemption", {
+        p_code_id: pending2FA.code_id,
+        p_verification_code: verificationCode.trim(),
+        p_ip_hint: null,
+      });
+
+      if (rpcError) throw rpcError;
+
+      if (result?.success) {
+        analyticsTracker.trackEvent(ANALYTICS_EVENTS.WALLET.CODE_REDEEMED, { amount: result.amount, via_2fa: true });
+        Alert.alert("تم الشحن بنجاح!", `تمت إضافة ${result.amount} جنيه لمحفظتك`);
+        setShow2FA(false);
+        setPending2FA(null);
+        setVerificationCode("");
+        setCode("");
+        setLoading(true);
+        fetchData();
+      } else {
+        Alert.alert("خطأ", result?.error ?? "رمز التحقق غير صحيح");
+      }
+    } catch (e: any) {
+      Alert.alert("خطأ", e?.message ?? "حدث خطأ — حاول مرة أخرى");
+    } finally {
+      setConfirming(false);
+    }
+  }
+
+  // ── Loading ───────────────────────────────────────────────
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: "center", alignItems: "center" }}>
@@ -296,6 +345,107 @@ export default function Wallet() {
       </View>
 
       <View style={{ height: 40 }} />
+
+      {/* ── 2FA VERIFICATION MODAL ───────────────────────── */}
+      <Modal
+        visible={show2FA}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { setShow2FA(false); setPending2FA(null); }}
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 24,
+        }}>
+          <View style={{
+            width: "100%",
+            maxWidth: 380,
+            backgroundColor: C.surface,
+            borderRadius: 24,
+            padding: 28,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.25,
+            shadowRadius: 20,
+            elevation: 15,
+          }}>
+            {/* Header */}
+            <View style={{ alignItems: "center", marginBottom: 20 }}>
+              <View style={{
+                width: 60, height: 60, borderRadius: 16,
+                backgroundColor: C.primarySoft,
+                justifyContent: "center", alignItems: "center",
+                marginBottom: 12,
+              }}>
+                <Text style={{ fontSize: 30 }}>🔐</Text>
+              </View>
+              <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, marginBottom: 6 }}>
+                تأكيد إضافي مطلوب
+              </Text>
+              <Text style={{ fontSize: 13, color: C.textMuted, textAlign: "center" }}>
+                هذا الكود بمبلغ{" "}
+                <Text style={{ fontWeight: "900", color: C.primary }}>
+                  {pending2FA?.amount ?? 0}
+                </Text>{" "}
+                جنيه — أدخل رمز التحقق للمتابعة
+              </Text>
+            </View>
+
+            {/* Verification Code Input */}
+            <TextInput
+              value={verificationCode}
+              onChangeText={setVerificationCode}
+              placeholder="أدخل رمز التحقق المكون من 6 أرقام"
+              placeholderTextColor={C.textMuted}
+              keyboardType="number-pad"
+              maxLength={6}
+              style={{
+                borderWidth: 2, borderColor: C.primary, borderRadius: 16,
+                paddingHorizontal: 16, paddingVertical: 14,
+                backgroundColor: C.bg, fontSize: 24, fontWeight: "900",
+                color: C.text, textAlign: "center", letterSpacing: 8,
+                marginBottom: 8,
+              }}
+            />
+
+            <Text style={{ color: C.textMuted, fontSize: 11, textAlign: "center", marginBottom: 20 }}>
+              تم إرسال رمز التحقق — أدخله هنا للتأكيد
+            </Text>
+
+            {/* Buttons */}
+            <Pressable
+              onPress={handleConfirm2FA}
+              disabled={confirming || verificationCode.length !== 6}
+              style={{
+                paddingVertical: 14, borderRadius: 14,
+                backgroundColor: confirming || verificationCode.length !== 6 ? C.primarySoft : C.primary,
+                alignItems: "center",
+                marginBottom: 10,
+              }}
+            >
+              {confirming
+                ? <ActivityIndicator color="white" size="small" />
+                : <Text style={{ color: "white", fontWeight: "900", fontSize: 16 }}>تأكيد الشحن</Text>
+              }
+            </Pressable>
+
+            <Pressable
+              onPress={() => { setShow2FA(false); setPending2FA(null); setVerificationCode(""); }}
+              style={{
+                paddingVertical: 12, borderRadius: 14,
+                backgroundColor: C.bg,
+                alignItems: "center",
+                borderWidth: 1, borderColor: C.border,
+              }}
+            >
+              <Text style={{ color: C.textMuted, fontWeight: "700", fontSize: 14 }}>إلغاء</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaScrollView>
   );
 }

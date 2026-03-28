@@ -77,10 +77,19 @@ export default function Wallet() {
   }, [fetchData]);
 
   // ── Redeem code ─────────────────────────────────────────────
+  const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null);
+
   async function handleRedeem() {
     const trimmed = code.trim();
     if (!trimmed) return;
     if (!supabase) return Alert.alert("خطأ", "تأكد من اتصالك بالإنترنت");
+
+    // Client-side lockout check
+    if (lockoutUntil && new Date() < lockoutUntil) {
+      const mins = Math.ceil((lockoutUntil.getTime() - Date.now()) / 60000);
+      Alert.alert("محاولات كثيرة", `حاول مرة أخرى بعد ${mins} دقيقة`);
+      return;
+    }
 
     setRedeeming(true);
     analyticsTracker.trackEvent(ANALYTICS_EVENTS.WALLET.CODE_SUBMITTED);
@@ -90,7 +99,12 @@ export default function Wallet() {
 
       if (rpcError) throw rpcError;
 
-      if (result?.success) {
+      if (result?.locked) {
+        const retryMins = result.retry_after_minutes || 15;
+        setLockoutUntil(new Date(Date.now() + retryMins * 60000));
+        analyticsTracker.trackEvent(ANALYTICS_EVENTS.WALLET.CODE_FAILED);
+        Alert.alert("تم القفل مؤقتاً", result.error);
+      } else if (result?.success) {
         analyticsTracker.trackEvent(ANALYTICS_EVENTS.WALLET.CODE_REDEEMED, { amount: result.amount });
         Alert.alert("تم الشحن بنجاح!", `تمت إضافة ${result.amount} جنيه لمحفظتك`);
         setCode("");

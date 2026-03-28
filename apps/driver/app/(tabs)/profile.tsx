@@ -15,25 +15,61 @@ const C = {
   deepPurple: "#6D28D9",
 } as const;
 
+const VEHICLE_LABELS: Record<string, string> = { car: "سيارة", scooter: "سكوتر / فيسبا", bicycle: "دراجة هوائية" };
+const VEHICLE_ICONS: Record<string, string> = { car: "🚗", scooter: "🛵", bicycle: "🚲" };
+
 function getSB() {
   try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
 }
 
+interface ProfileData {
+  name: string;
+  email: string;
+  phone: string;
+  vehicleType: string | null;
+  isApproved: boolean;
+  rating: number;
+  completedOrders: number;
+  totalEarnings: number;
+  maxDistance: number | null;
+}
+
 export default function ProfileTab() {
-  const [name, setName]     = useState("المندوب");
-  const [email, setEmail]   = useState("");
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    loadProfile();
+  }, []);
+
+  async function loadProfile() {
     const supabase = getSB();
     if (!supabase) { setLoading(false); return; }
-    supabase.auth.getUser().then(({ data }) => {
-      const meta = data.user?.user_metadata as any;
-      setName(meta?.full_name ?? data.user?.email?.split("@")[0] ?? "المندوب");
-      setEmail(data.user?.email ?? "");
-      setLoading(false);
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) { setLoading(false); return; }
+
+    const userId = userData.user.id;
+    const meta = userData.user.user_metadata as any;
+
+    const { data: profileData } = await (supabase as any)
+      .from("profiles")
+      .select("full_name, phone, vehicle_type, is_approved, rating, completed_orders, total_earnings, max_delivery_distance_km")
+      .eq("id", userId)
+      .single();
+
+    setProfile({
+      name: profileData?.full_name || meta?.full_name || userData.user.email?.split("@")[0] || "المندوب",
+      email: userData.user.email || "",
+      phone: profileData?.phone || meta?.phone || "",
+      vehicleType: profileData?.vehicle_type || null,
+      isApproved: profileData?.is_approved ?? true,
+      rating: profileData?.rating ? Number(profileData.rating) : 0,
+      completedOrders: profileData?.completed_orders || 0,
+      totalEarnings: profileData?.total_earnings ? Number(profileData.total_earnings) : 0,
+      maxDistance: profileData?.max_delivery_distance_km ? Number(profileData.max_delivery_distance_km) : null,
     });
-  }, []);
+    setLoading(false);
+  }
 
   async function handleLogout() {
     const supabase = getSB();
@@ -41,7 +77,7 @@ export default function ProfileTab() {
     router.replace("/(auth)/login");
   }
 
-  if (loading) {
+  if (loading || !profile) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: C.bg }}>
         <ActivityIndicator size="large" color={C.primary} />
@@ -49,10 +85,13 @@ export default function ProfileTab() {
     );
   }
 
+  const vehicleIcon = profile.vehicleType ? (VEHICLE_ICONS[profile.vehicleType] || "🛵") : "🛵";
+  const vehicleLabel = profile.vehicleType ? (VEHICLE_LABELS[profile.vehicleType] || profile.vehicleType) : "";
+
   const STATS = [
-    { label: "التقييم",      value: "4.9 ⭐",  color: C.warning, bg: "#FEF3C7" },
-    { label: "إجمالي توصيلات", value: "247",   color: C.primary, bg: C.primarySoft },
-    { label: "معدل القبول",  value: "94%",    color: "#059669", bg: "#D1FAE5" },
+    { label: "التقييم", value: profile.rating > 0 ? `${profile.rating.toFixed(1)} ⭐` : "—", color: C.warning, bg: "#FEF3C7" },
+    { label: "إجمالي توصيلات", value: `${profile.completedOrders}`, color: C.primary, bg: C.primarySoft },
+    { label: "إجمالي الأرباح", value: `${profile.totalEarnings.toFixed(0)} ج`, color: "#059669", bg: "#D1FAE5" },
   ];
 
   const MENU_ITEMS = [
@@ -77,16 +116,31 @@ export default function ProfileTab() {
           justifyContent: "center", alignItems: "center", marginBottom: 12,
           borderWidth: 2, borderColor: "rgba(255,255,255,0.4)",
         }}>
-          <Text style={{ fontSize: 32 }}>🛵</Text>
+          <Text style={{ fontSize: 32 }}>{vehicleIcon}</Text>
         </View>
-        <Text style={{ fontSize: 18, fontWeight: "900", color: "white" }}>{name}</Text>
-        <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 3 }}>{email}</Text>
-        <View style={{
-          marginTop: 10, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 12,
-          paddingHorizontal: 14, paddingVertical: 5,
-        }}>
-          <Text style={{ fontSize: 12, color: "white", fontWeight: "700" }}>مندوب توصيل معتمد ✓</Text>
+        <Text style={{ fontSize: 18, fontWeight: "900", color: "white" }}>{profile.name}</Text>
+        <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 3 }}>{profile.email}</Text>
+
+        {/* Vehicle type + approval badge */}
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+          {vehicleLabel ? (
+            <View style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 5 }}>
+              <Text style={{ fontSize: 12, color: "white", fontWeight: "700" }}>{vehicleIcon} {vehicleLabel}</Text>
+            </View>
+          ) : null}
+          <View style={{ backgroundColor: profile.isApproved ? "rgba(52,211,153,0.3)" : "rgba(245,158,11,0.3)", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 5 }}>
+            <Text style={{ fontSize: 12, color: "white", fontWeight: "700" }}>
+              {profile.isApproved ? "مندوب معتمد ✓" : "قيد المراجعة ⏳"}
+            </Text>
+          </View>
         </View>
+
+        {/* Bicycle distance limit */}
+        {profile.maxDistance && (
+          <View style={{ marginTop: 8, backgroundColor: "rgba(245,158,11,0.3)", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 11, color: "white", fontWeight: "700" }}>الحد الأقصى: {profile.maxDistance} كم لكل اتجاه</Text>
+          </View>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
@@ -111,15 +165,19 @@ export default function ProfileTab() {
         }}>
           <View style={{
             width: 44, height: 44, borderRadius: 12,
-            backgroundColor: "#D1FAE5",
+            backgroundColor: profile.isApproved ? "#D1FAE5" : "#FEF3C7",
             justifyContent: "center", alignItems: "center",
           }}>
-            <Text style={{ fontSize: 22 }}>✅</Text>
+            <Text style={{ fontSize: 22 }}>{profile.isApproved ? "✅" : "⏳"}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: "900", color: C.text }}>حسابك نشط</Text>
+            <Text style={{ fontSize: 14, fontWeight: "900", color: C.text }}>
+              {profile.isApproved ? "حسابك نشط" : "حسابك قيد المراجعة"}
+            </Text>
             <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
-              مؤهل لاستقبال الطلبات في منطقة القاهرة الكبرى
+              {profile.isApproved
+                ? "مؤهل لاستقبال الطلبات"
+                : "سيتم إخطارك فور الموافقة على حسابك"}
             </Text>
           </View>
         </View>

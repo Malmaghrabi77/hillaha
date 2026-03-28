@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, Pressable, ScrollView,
-  StatusBar, Animated, Platform,
+  StatusBar, Animated, Platform, Linking,
 } from "react-native";
 import * as Location from "expo-location";
 
@@ -71,10 +71,11 @@ export default function ActiveTab() {
   const [done, setDone]                 = useState(false);
   const [locationStatus, setLocStatus]  = useState<LocationStatus>("idle");
 
-  const pulseAnim   = useRef(new Animated.Value(1)).current;
-  const gpsPulse    = useRef(new Animated.Value(1)).current;
-  const locationSub = useRef<Location.LocationSubscription | null>(null);
-  const orderUuid   = useRef<string | null>(null);
+  const pulseAnim       = useRef(new Animated.Value(1)).current;
+  const gpsPulse        = useRef(new Animated.Value(1)).current;
+  const locationSub     = useRef<Location.LocationSubscription | null>(null);
+  const orderUuid       = useRef<string | null>(null);
+  const lastDeliveryFee = useRef<number>(0);
 
   // Pulse animation for status
   useEffect(() => {
@@ -118,6 +119,7 @@ export default function ActiveTab() {
       if (data) {
         setOrder(mapActive(data));
         orderUuid.current = data.id;
+        lastDeliveryFee.current = Number(data.delivery_fee) || 0;
       }
     }
     load();
@@ -130,6 +132,7 @@ export default function ActiveTab() {
           if (payload.new.status === "picked_up") {
             setOrder(mapActive(payload.new));
             orderUuid.current = payload.new.id;
+            lastDeliveryFee.current = Number(payload.new.delivery_fee) || 0;
           }
           if (payload.new.status === "delivered") {
             setOrder(null);
@@ -261,7 +264,7 @@ export default function ActiveTab() {
           أحسنت! نقاطك والأرباح تضاف لحسابك
         </Text>
         <Text style={{ fontSize: 36, fontWeight: "900", color: "#059669", marginBottom: 32 }}>
-          +20 ج 💰
+          +{lastDeliveryFee.current} ج 💰
         </Text>
         <Pressable
           onPress={() => setDone(false)}
@@ -442,7 +445,9 @@ export default function ActiveTab() {
           <Text style={{ fontSize: 15, fontWeight: "900", color: C.text }}>{order.customerName}</Text>
           <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 3 }}>{order.customerAddress}</Text>
           {order.customerPhone ? (
-            <Pressable style={{
+            <Pressable
+              onPress={() => Linking.openURL(`tel:${order.customerPhone}`)}
+              style={{
               marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "center",
               gap: 8, paddingVertical: 11, borderRadius: 12,
               backgroundColor: "#D1FAE5", borderWidth: 1, borderColor: "#34D399",

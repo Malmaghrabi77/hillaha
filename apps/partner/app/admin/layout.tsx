@@ -105,6 +105,7 @@ export default function AdminLayout({
   // Super Admin: approve wallet codes + card analytics + security
   if (auth.isSuperAdmin) {
     adminManagementItems.push(
+      { href: "/admin/approve-drivers", label: "اعتماد المندوبين", icon: "📋" },
       { href: "/admin/approve-wallet-codes", label: "اعتماد أكواد المحفظة", icon: "✅" },
       { href: "/admin/card-analytics", label: "تقارير البطاقات", icon: "📊" },
       { href: "/admin/security-alerts", label: "مركز الأمان", icon: "🛡️" },

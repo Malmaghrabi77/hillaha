@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, Pressable,
   StatusBar, RefreshControl,
 } from "react-native";
+import { haversineDistance, MAX_BICYCLE_DISTANCE_KM } from "../lib/constants";
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -28,6 +29,10 @@ interface AvailableOrder {
   total:             number;
   deliveryFee:       number;
   paymentMethod:     string;
+  partnerLat:        number | null;
+  partnerLng:        number | null;
+  deliveryLat:       number | null;
+  deliveryLng:       number | null;
 }
 
 function mapOrder(row: any): AvailableOrder {
@@ -40,6 +45,10 @@ function mapOrder(row: any): AvailableOrder {
     items:             Array.isArray(row.items) ? row.items.length : 0,
     total:             Number(row.total),
     deliveryFee:       Number(row.delivery_fee),
+    partnerLat:        row.partners?.lat ?? null,
+    partnerLng:        row.partners?.lng ?? null,
+    deliveryLat:       row.delivery_lat ?? null,
+    deliveryLng:       row.delivery_lng ?? null,
     paymentMethod:     row.payment_method === "cash"      ? "كاش"
                      : row.payment_method === "instapay"  ? "إنستاباي"
                      : row.payment_method === "vodafone"  ? "فودافون كاش"
@@ -52,20 +61,49 @@ export default function HomeTab() {
   const [refreshing, setRefreshing] = useState(false);
   const [online, setOnline]         = useState(true);
   const [driverId, setDriverId]     = useState<string | null>(null);
+  const [vehicleType, setVehicleType] = useState<string | null>(null);
+  const [maxDistance, setMaxDistance]  = useState<number | null>(null);
+  const [todayEarnings, setTodayEarnings] = useState(0);
+  const [todayDeliveries, setTodayDeliveries] = useState(0);
 
   useEffect(() => {
     const supabase = getSB();
     if (!supabase) return;
 
-    // جلب ID السائق الحالي
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setDriverId(data.user.id);
+    // جلب ID السائق الحالي + نوع المركبة
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (data.user) {
+        setDriverId(data.user.id);
+        const { data: profile } = await (supabase as any)
+          .from("profiles")
+          .select("vehicle_type, max_delivery_distance_km, is_online")
+          .eq("id", data.user.id)
+          .single();
+        if (profile) {
+          setVehicleType(profile.vehicle_type);
+          setMaxDistance(profile.max_delivery_distance_km ? Number(profile.max_delivery_distance_km) : null);
+          if (typeof profile.is_online === "boolean") setOnline(profile.is_online);
+        }
+
+        // Get today's stats from delivered orders
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const { data: todayOrders } = await (supabase as any)
+          .from("orders")
+          .select("delivery_fee")
+          .eq("driver_id", data.user.id)
+          .eq("status", "delivered")
+          .gte("delivered_at", today.toISOString());
+
+        setTodayDeliveries(todayOrders?.length || 0);
+        setTodayEarnings(todayOrders?.reduce((sum: number, o: any) => sum + (o.delivery_fee || 0), 0) || 0);
+      }
     });
 
     async function loadOrders() {
       const { data } = await supabase!
         .from("orders")
-        .select("*, partners(name, address)")
+        .select("*, partners(name, address, lat, lng)")
         .eq("status", "ready")
         .is("driver_id", null)
         .order("created_at", { ascending: false });
@@ -115,7 +153,7 @@ export default function HomeTab() {
     if (supabase) {
       const { data } = await supabase
         .from("orders")
-        .select("*, partners(name, address)")
+        .select("*, partners(name, address, lat, lng)")
         .eq("status", "ready")
         .is("driver_id", null)
         .order("created_at", { ascending: false });
@@ -124,9 +162,12 @@ export default function HomeTab() {
     setRefreshing(false);
   }
 
-  const available = orders;
-  const todayEarnings = 185;
-  const todayDeliveries = 8;
+  const available = (vehicleType === "bicycle")
+    ? orders.filter(o => {
+        if (!o.partnerLat || !o.partnerLng || !o.deliveryLat || !o.deliveryLng) return true;
+        return haversineDistance(o.partnerLat, o.partnerLng, o.deliveryLat, o.deliveryLng) <= (maxDistance || MAX_BICYCLE_DISTANCE_KM);
+      })
+    : orders;
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -147,7 +188,14 @@ export default function HomeTab() {
 
           {/* ONLINE TOGGLE */}
           <Pressable
-            onPress={() => setOnline(v => !v)}
+            onPress={async () => {
+              const newStatus = !online;
+              setOnline(newStatus);
+              const sb = getSB();
+              if (sb && driverId) {
+                await (sb as any).from("profiles").update({ is_online: newStatus }).eq("id", driverId);
+              }
+            }}
             style={{
               flexDirection: "row", alignItems: "center", gap: 8,
               paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
@@ -187,6 +235,14 @@ export default function HomeTab() {
           ))}
         </View>
       </View>
+
+      {/* Bicycle distance banner */}
+      {vehicleType === "bicycle" && (
+        <View style={{ marginHorizontal: 20, marginTop: 12, backgroundColor: "#FEF3C7", borderRadius: 14, padding: 12, borderWidth: 1, borderColor: "#F59E0B", flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text style={{ fontSize: 20 }}>🚲</Text>
+          <Text style={{ flex: 1, fontSize: 13, fontWeight: "700", color: "#92400E" }}>حساب دراجة — الحد الأقصى {maxDistance || 2} كم لكل اتجاه</Text>
+        </View>
+      )}
 
       {/* ORDERS LIST */}
       <ScrollView

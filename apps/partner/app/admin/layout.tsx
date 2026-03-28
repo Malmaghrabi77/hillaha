@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAdminAuth } from "./hooks/useAdminAuth";
 import { useAdminPermissions } from "./hooks/useAdminPermissions";
+import { getSupabase } from "@hillaha/core";
 
 const C = {
   primary: "#8B5CF6",
@@ -54,6 +55,12 @@ export default function AdminLayout({
   const auth = useAdminAuth();
   const permissions = useAdminPermissions(auth.role);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  async function handleLogout() {
+    const sb = getSupabase();
+    if (sb) await sb.auth.signOut();
+    router.push("/login");
+  }
 
   // Show loading spinner while checking auth
   if (auth.loading) {
@@ -209,9 +216,27 @@ export default function AdminLayout({
         </nav>
 
         {/* Footer */}
-        <div style={{ padding: "16px 12px", borderTop: `1px solid ${C.border}` }}>
+        <div style={{ padding: "16px 12px", borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 8 }}>
           <button
             onClick={() => router.push("/dashboard")}
+            style={{
+              width: "100%",
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "none",
+              background: C.primarySoft,
+              color: C.primary,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              textAlign: "right",
+              direction: "rtl",
+            }}
+          >
+            ↩️ العودة للوحة الشريك
+          </button>
+          <button
+            onClick={handleLogout}
             style={{
               width: "100%",
               padding: "10px 16px",
@@ -226,7 +251,7 @@ export default function AdminLayout({
               direction: "rtl",
             }}
           >
-            العودة للأساسي
+            🚪 تسجيل الخروج
           </button>
         </div>
       </aside>

@@ -35,9 +35,10 @@ export default function RegularAdminInvitePartnersPage() {
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user || !auth.isRegularAdmin) return;
     loadInvitations();
-  }, [auth.user, auth.isRegularAdmin]);
+  }, [auth.user, auth.isRegularAdmin, auth.loading]);
 
   const loadInvitations = async () => {
     try {
@@ -118,6 +119,10 @@ export default function RegularAdminInvitePartnersPage() {
     if (filter === "rejected") return inv.status === "rejected";
     return true;
   });
+
+  if (auth.loading) {
+    return <div style={{ padding: 40, textAlign: "center", color: "#6B6480" }}>جاري التحميل...</div>;
+  }
 
   if (!auth.isRegularAdmin) {
     return (

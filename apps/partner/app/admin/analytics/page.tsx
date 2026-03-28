@@ -229,6 +229,10 @@ export default function AnalyticsPage() {
     );
   }
 
+  if (auth.loading) {
+    return <div style={{ padding: 40, textAlign: "center", color: "#6B6480" }}>جاري التحميل...</div>;
+  }
+
   if (!auth.isSuperAdmin) {
     return (
       <div dir="rtl" style={{ padding: "24px" }}>

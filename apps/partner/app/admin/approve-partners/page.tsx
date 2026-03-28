@@ -130,6 +130,10 @@ export default function ApprovePartnersPage() {
     }
   };
 
+  if (auth.loading) {
+    return <div style={{ padding: 40, textAlign: "center", color: C.textMuted }}>جاري التحميل...</div>;
+  }
+
   if (!auth.isSuperAdmin) {
     return (
       <div style={{ padding: 20, textAlign: "center", color: C.danger }}>

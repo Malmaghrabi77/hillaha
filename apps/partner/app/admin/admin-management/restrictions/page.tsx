@@ -57,9 +57,10 @@ export default function AdminRestrictionsPage() {
   ];
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user || !auth.isSuperAdmin) return;
     loadData();
-  }, [auth.user, auth.isSuperAdmin]);
+  }, [auth.user, auth.isSuperAdmin, auth.loading]);
 
   const loadData = async () => {
     try {
@@ -155,6 +156,10 @@ export default function AdminRestrictionsPage() {
       console.error("Error removing restriction:", error);
     }
   };
+
+  if (auth.loading) {
+    return <div style={{ padding: 40, textAlign: "center", color: "#6B6480" }}>جاري التحميل...</div>;
+  }
 
   if (!auth.isSuperAdmin) {
     return (

@@ -38,7 +38,7 @@ export default function InviteRegionalManagerPage() {
   const [filter, setFilter] = useState<"all" | "pending" | "accepted" | "rejected">("all");
 
   useEffect(() => {
-    if (!auth.isAdmin) return;
+    if (auth.loading) return;
 
     if (!auth.isSuperAdmin) {
       router.push("/admin");
@@ -47,7 +47,7 @@ export default function InviteRegionalManagerPage() {
 
     loadInvitations();
     setLoading(false);
-  }, [auth.isSuperAdmin, auth.isAdmin, router]);
+  }, [auth.isSuperAdmin, auth.loading, router]);
 
   const loadInvitations = async () => {
     try {

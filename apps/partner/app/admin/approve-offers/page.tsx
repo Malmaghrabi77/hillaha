@@ -129,6 +129,10 @@ export default function ApproveOffersPage() {
     }
   };
 
+  if (auth.loading) {
+    return <div style={{ padding: 40, textAlign: "center", color: C.textMuted }}>جاري التحميل...</div>;
+  }
+
   if (!auth.isSuperAdmin && auth.role !== 'admin') {
     return (
       <div style={{ padding: "24px", textAlign: "center" }}>

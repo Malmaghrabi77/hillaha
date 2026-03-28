@@ -32,12 +32,13 @@ export default function RegionalManagerApprovePartnersPage() {
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user || !auth.isRegionalManager) {
       setLoading(false);
       return;
     }
     loadInvitations();
-  }, [auth.user, auth.isRegionalManager]);
+  }, [auth.user, auth.isRegionalManager, auth.loading]);
 
   const loadInvitations = async () => {
     try {
@@ -133,6 +134,10 @@ export default function RegionalManagerApprovePartnersPage() {
     if (filter === "rejected") return inv.status === "rejected";
     return true;
   });
+
+  if (auth.loading) {
+    return <div style={{ padding: 40, textAlign: "center", color: "#6B6480" }}>جاري التحميل...</div>;
+  }
 
   if (!auth.isRegionalManager) {
     return (

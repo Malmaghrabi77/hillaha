@@ -124,6 +124,14 @@ export default function SuperAdminInvitePartnersPage() {
     (inv) => filter === "all" || inv.status === filter
   );
 
+  if (auth.loading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 200 }}>
+        <span style={{ color: C.textMuted }}>جاري التحميل...</span>
+      </div>
+    );
+  }
+
   if (!auth.isSuperAdmin) {
     return (
       <div style={{ padding: 20, textAlign: "center", color: C.danger }}>

@@ -35,9 +35,10 @@ export default function RegionalManagerInvitePartnersPage() {
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user || !auth.isRegionalManager) return;
     loadInvitations();
-  }, [auth.user, auth.isRegionalManager]);
+  }, [auth.user, auth.isRegionalManager, auth.loading]);
 
   const loadInvitations = async () => {
     try {
@@ -118,6 +119,10 @@ export default function RegionalManagerInvitePartnersPage() {
     if (filter === "rejected") return inv.status === "rejected";
     return true;
   });
+
+  if (auth.loading) {
+    return <div style={{ padding: 40, textAlign: "center", color: "#6B6480" }}>جاري التحميل...</div>;
+  }
 
   if (!auth.isRegionalManager) {
     return (

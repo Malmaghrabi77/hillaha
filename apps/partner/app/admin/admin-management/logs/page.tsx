@@ -24,7 +24,7 @@ export default function AuditLogsPage() {
   const [filter, setFilter] = useState<string>("all");
 
   useEffect(() => {
-    if (!auth.isAdmin) return;
+    if (auth.loading) return;
 
     if (!auth.isSuperAdmin) {
       router.push("/admin");
@@ -33,7 +33,7 @@ export default function AuditLogsPage() {
 
     loadLogs();
     setLoading(false);
-  }, [auth.isSuperAdmin, auth.isAdmin, router, filter]);
+  }, [auth.isSuperAdmin, auth.loading, router, filter]);
 
   const loadLogs = async () => {
     try {

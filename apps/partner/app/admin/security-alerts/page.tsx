@@ -73,8 +73,8 @@ export default function SecurityAlertsPage() {
     if (!supabase) return;
 
     // Fetch security dashboard stats
-    const { data: dashData } = await supabase.rpc("get_security_dashboard");
-    if (dashData && !dashData.error) {
+    const { data: dashData, error: dashError } = await (supabase as any).rpc("get_security_dashboard");
+    if (dashData && !dashError) {
       setStats(dashData as any);
     }
 

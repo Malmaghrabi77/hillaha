@@ -19,6 +19,8 @@ export interface RegistrationData {
   licenseNumber: string;
   licenseExpiryDate: string;
   licensePhotoUri: string | null;
+  // Step 4 OCR
+  ocrResult: string | null;
   // Step 5
   vehiclePlate: string;
   vehiclePhotoUri: string | null;
@@ -38,6 +40,7 @@ const DEFAULT: RegistrationData = {
   licenseNumber: "",
   licenseExpiryDate: "",
   licensePhotoUri: null,
+  ocrResult: null,
   vehiclePlate: "",
   vehiclePhotoUri: null,
   selfieUri: null,

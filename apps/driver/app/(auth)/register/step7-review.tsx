@@ -22,18 +22,26 @@ export default function Step7Review() {
       const supabase = getSB();
       if (!supabase) throw new Error("خطأ في الاتصال");
 
-      // 1. Create auth user
-      const { data: authData, error: signUpErr } = await supabase.auth.signUp({
-        email: data.email.trim().toLowerCase(),
-        password: data.password,
-        options: {
-          data: { full_name: data.fullName.trim(), phone: data.phone.trim(), role: "driver" },
-        },
-      });
-      if (signUpErr) throw signUpErr;
-      if (!authData.user) throw new Error("فشل إنشاء الحساب");
+      // Check if user is already signed in (re-apply case)
+      const { data: existingSession } = await supabase.auth.getSession();
+      let userId: string;
 
-      const userId = authData.user.id;
+      if (existingSession?.session?.user) {
+        // Re-apply: user already has an account
+        userId = existingSession.session.user.id;
+      } else {
+        // New registration: create auth user
+        const { data: authData, error: signUpErr } = await supabase.auth.signUp({
+          email: data.email.trim().toLowerCase(),
+          password: data.password,
+          options: {
+            data: { full_name: data.fullName.trim(), phone: data.phone.trim(), role: "driver" },
+          },
+        });
+        if (signUpErr) throw signUpErr;
+        if (!authData.user) throw new Error("فشل إنشاء الحساب");
+        userId = authData.user.id;
+      }
 
       // 2. Upload all documents
       const urls = await uploadDriverDocuments(supabase, userId, {
@@ -52,8 +60,8 @@ export default function Step7Review() {
         }
       }
 
-      // 4. Insert driver application
-      const { error: appErr } = await (supabase as any).from("driver_applications").insert({
+      // 4. Insert or update driver application (upsert for re-apply)
+      const { error: appErr } = await (supabase as any).from("driver_applications").upsert({
         user_id: userId,
         full_name: data.fullName.trim(),
         phone: data.phone.trim(),
@@ -68,6 +76,7 @@ export default function Step7Review() {
         license_photo_url: urls.licensePhotoUrl,
         vehicle_photo_url: urls.vehiclePhotoUrl,
         selfie_url: urls.selfieUrl,
+        ocr_result: data.ocrResult,
         status: "pending",
       });
       if (appErr) throw appErr;

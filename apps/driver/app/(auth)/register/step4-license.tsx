@@ -30,6 +30,9 @@ export default function Step4License() {
         return;
       }
 
+      // Save full OCR text for admin review
+      update({ ocrResult: ocrText });
+
       const expiryDate = extractExpiryDate(ocrText);
       if (expiryDate) {
         const formatted = formatDate(expiryDate);

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, StatusBar } from "react-native";
+import { View, Text, Pressable, StatusBar, ActivityIndicator, Alert } from "react-native";
 import { router } from "expo-router";
 import { C, getSB } from "../lib/constants";
 
 export default function Rejected() {
   const [reason, setReason] = useState<string | null>(null);
+  const [reapplying, setReapplying] = useState(false);
 
   useEffect(() => {
     loadRejectionReason();
@@ -21,6 +22,36 @@ export default function Rejected() {
       .eq("user_id", session.session.user.id)
       .single();
     if (data?.rejection_reason) setReason(data.rejection_reason);
+  }
+
+  async function handleReapply() {
+    setReapplying(true);
+    try {
+      const supabase = getSB();
+      if (!supabase) return;
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.user) return;
+      const userId = session.session.user.id;
+
+      // Delete old application so user can re-submit
+      await (supabase as any)
+        .from("driver_applications")
+        .delete()
+        .eq("user_id", userId);
+
+      // Reset profile status
+      await (supabase as any)
+        .from("profiles")
+        .update({ driver_application_status: null, is_approved: false })
+        .eq("id", userId);
+
+      // Navigate to registration (step2 — personal info already on file)
+      router.replace("/(auth)/register/step2-vehicle");
+    } catch {
+      Alert.alert("خطأ", "حدث خطأ أثناء إعادة التقديم. حاول مرة أخرى.");
+    } finally {
+      setReapplying(false);
+    }
   }
 
   async function handleLogout() {
@@ -61,6 +92,18 @@ export default function Rejected() {
             أو التواصل مع الدعم الفني
           </Text>
         </View>
+
+        <Pressable
+          onPress={handleReapply}
+          disabled={reapplying}
+          style={{ width: "100%", paddingVertical: 14, borderRadius: 14, alignItems: "center", backgroundColor: C.primary, elevation: 4, marginBottom: 12 }}
+        >
+          {reapplying ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={{ color: "white", fontWeight: "900", fontSize: 15 }}>إعادة التقديم</Text>
+          )}
+        </Pressable>
 
         <Pressable
           onPress={handleLogout}

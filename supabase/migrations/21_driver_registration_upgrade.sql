@@ -31,6 +31,9 @@ CREATE TABLE IF NOT EXISTS public.driver_applications (
   vehicle_photo_url   text,
   selfie_url          text NOT NULL,
 
+  -- OCR result from license scan
+  ocr_result          text,
+
   -- Application status
   status              text NOT NULL DEFAULT 'pending'
                         CHECK (status IN ('pending', 'approved', 'rejected', 'documents_expired')),
@@ -54,6 +57,7 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS vehicle_type text;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_approved boolean DEFAULT false;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS driver_application_status text;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS max_delivery_distance_km numeric(5,2);
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_online boolean DEFAULT false;
 
 -- ============================================================
 -- 3. Create driver-documents storage bucket (private)

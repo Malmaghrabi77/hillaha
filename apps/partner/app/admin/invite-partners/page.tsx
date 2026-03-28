@@ -44,12 +44,14 @@ export default function SuperAdminInvitePartnersPage() {
   const [filter, setFilter] = useState<"all" | "pending" | "accepted" | "rejected">("all");
 
   useEffect(() => {
+    if (auth.loading) return;
     if (!auth.user || !auth.isSuperAdmin) {
       setError("فقط السوبر أدمن يمكنه دعوة الشركاء");
       return;
     }
+    setError(null);
     loadInvitations();
-  }, [auth.user, auth.isSuperAdmin]);
+  }, [auth.user, auth.isSuperAdmin, auth.loading]);
 
   const loadInvitations = async () => {
     try {

@@ -8,6 +8,9 @@ const EMAILS = {
   legal: "legal@hillaha.com",     // الاستفسارات القانونية
   business: "business@hillaha.com", // الشراكات والتعاون التجاري
   support: "support@hillaha.com",  // الدعم الفني والتقني
+  admin: "admin@hillaha.com",      // إدارة الشركاء
+  masterAdmin: "master@hillaha.com", // الإدارة العليا
+  webmaster: "webmaster@hillaha.com", // مسؤول الموقع
 } as const;
 
 const C = {

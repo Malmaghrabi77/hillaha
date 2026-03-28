@@ -17,113 +17,48 @@ const C = {
   danger: "#EF4444",
 };
 
-interface MonthlyStats {
-  month: string;
-  monthKey: string;
+interface WeeklySettlement {
+  weekLabel: string;
+  weekStart: string;
+  weekEnd: string;
   sales: number;
-  commission: number;
-  net: number;
+  netPayout: number;
   orders: number;
-}
-
-interface SettlementRecord {
-  id: string;
-  date: string;
-  type: string;
-  amount: number;
   status: "completed" | "pending";
 }
 
 const MONTHS_AR = [
-  "يناير",
-  "فبراير",
-  "مارس",
-  "أبريل",
-  "مايو",
-  "يونيو",
-  "يوليو",
-  "أغسطس",
-  "سبتمبر",
-  "أكتوبر",
-  "نوفمبر",
-  "ديسمبر",
+  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
 ];
 
-function getLast6Months(): { month: string; monthKey: string; date: Date }[] {
-  const months: { month: string; monthKey: string; date: Date }[] = [];
-  const now = new Date();
-
-  for (let i = 5; i >= 0; i--) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push({
-      month: MONTHS_AR[date.getMonth()],
-      monthKey: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-        2,
-        "0"
-      )}`,
-      date,
-    });
-  }
-
-  return months;
+function formatDateAr(d: Date): string {
+  return `${d.getDate()} ${MONTHS_AR[d.getMonth()]}`;
 }
 
-function generateMockSettlements(): SettlementRecord[] {
-  const settlements: SettlementRecord[] = [
-    {
-      id: "TRX-088",
-      date: "21 فبراير",
-      type: "تسوية أسبوعية",
-      amount: 3200,
-      status: "completed",
-    },
-    {
-      id: "TRX-087",
-      date: "14 فبراير",
-      type: "تسوية أسبوعية",
-      amount: 2980,
-      status: "completed",
-    },
-    {
-      id: "TRX-086",
-      date: "7 فبراير",
-      type: "تسوية أسبوعية",
-      amount: 3150,
-      status: "completed",
-    },
-    {
-      id: "TRX-085",
-      date: "31 يناير",
-      type: "تسوية شهرية",
-      amount: 9860,
-      status: "completed",
-    },
-    {
-      id: "TRX-084",
-      date: "28 يناير",
-      type: "تسوية أسبوعية",
-      amount: 2450,
-      status: "completed",
-    },
-    {
-      id: "TRX-NEXT",
-      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(
-        "ar-EG"
-      ),
-      type: "التسوية القادمة",
-      amount: 2190,
-      status: "pending",
-    },
-  ];
-  return settlements;
+function getWeeksInRange(startDate: Date, endDate: Date): { start: Date; end: Date }[] {
+  const weeks: { start: Date; end: Date }[] = [];
+  const current = new Date(startDate);
+  // Align to Saturday (start of week in Arabic calendar)
+  const day = current.getDay();
+  const diff = day === 6 ? 0 : -(day + 1);
+  current.setDate(current.getDate() + diff);
+
+  while (current < endDate) {
+    const weekStart = new Date(current);
+    const weekEnd = new Date(current);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+    weeks.push({ start: new Date(weekStart), end: new Date(weekEnd) });
+    current.setDate(current.getDate() + 7);
+  }
+  return weeks;
 }
 
 export default function FinancePage() {
-  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([]);
-  const [settlements, setSettlements] = useState<SettlementRecord[]>([]);
+  const [weeklyData, setWeeklyData] = useState<WeeklySettlement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [partnerCommissionRate, setPartnerCommissionRate] = useState<number | null>(null);
   const [partnerName, setPartnerName] = useState<string>("");
 
   useEffect(() => {
@@ -139,102 +74,73 @@ export default function FinancePage() {
         return;
       }
 
-      // Get current user's partner profile with commission_rate
       const { data: session } = await supabase.auth.getSession();
       if (session?.session?.user) {
         const { data: partner } = await (supabase.from("partners") as any)
-          .select("commission_rate, business_name")
+          .select("business_name")
           .eq("user_id", session.session.user.id)
           .single();
         if (partner) {
-          setPartnerCommissionRate(partner.commission_rate ?? 0.10);
           setPartnerName(partner.business_name || "متجري");
         }
       }
 
-      const months = getLast6Months();
-      const stats: MonthlyStats[] = [];
+      // Fetch last 8 weeks of weekly settlements
+      const now = new Date();
+      const eightWeeksAgo = new Date(now);
+      eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
+      const weeks = getWeeksInRange(eightWeeksAgo, now);
 
-      for (const { month, monthKey, date } of months) {
-        const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
-        const endDate = new Date(
-          date.getFullYear(),
-          date.getMonth() + 1,
-          0,
-          23,
-          59,
-          59
-        );
+      const settlements: WeeklySettlement[] = [];
 
-        const { data: orders, error: ordersError } = await (supabase
-          .from("orders") as any)
-          .select("total, commission, commission_rate, app_commission")
-          .gte("created_at", startDate.toISOString())
-          .lte("created_at", endDate.toISOString())
+      for (const week of weeks) {
+        const { data: orders } = await (supabase.from("orders") as any)
+          .select("total, app_commission")
+          .gte("created_at", week.start.toISOString())
+          .lte("created_at", week.end.toISOString())
           .eq("status", "delivered");
 
-        if (ordersError) {
-          console.error("Error fetching orders:", ordersError);
-          continue;
-        }
-
         const ordersData = orders || [];
-        const sales = ordersData.reduce((sum: number, order: any) => sum + (order.total || 0), 0);
-        const commission = ordersData.reduce(
-          (sum: number, order: any) => sum + (order.app_commission || order.commission || 0),
-          0
-        );
-        const net = sales - commission;
+        const sales = ordersData.reduce((s: number, o: any) => s + (o.total || 0), 0);
+        const appCommission = ordersData.reduce((s: number, o: any) => s + (o.app_commission || 0), 0);
+        const netPayout = sales - appCommission;
+        const isPast = week.end < now;
 
-        stats.push({
-          month,
-          monthKey,
+        settlements.push({
+          weekLabel: `${formatDateAr(week.start)} — ${formatDateAr(week.end)}`,
+          weekStart: week.start.toISOString(),
+          weekEnd: week.end.toISOString(),
           sales: Math.round(sales),
-          commission: Math.round(commission),
-          net: Math.round(net),
+          netPayout: Math.round(netPayout),
           orders: ordersData.length,
+          status: isPast ? "completed" : "pending",
         });
       }
 
-      setMonthlyStats(stats);
-      setSettlements(generateMockSettlements());
+      setWeeklyData(settlements.reverse());
       setError(null);
     } catch (err: any) {
       console.error("Finance page error:", err);
-      setError(
-        err.message || "فشل في تحميل البيانات المالية. يرجى المحاولة لاحقاً"
-      );
+      setError(err.message || "فشل في تحميل البيانات المالية");
     } finally {
       setLoading(false);
     }
   };
 
-  const appRate = partnerCommissionRate ?? 0.10;
-  const partnerRate = 1 - appRate;
-  const appPct = Math.round(appRate * 100);
-  const partnerPct = Math.round(partnerRate * 100);
-
-  const currentMonth = monthlyStats[monthlyStats.length - 1];
-  const totalSales = monthlyStats.reduce((sum, m) => sum + m.sales, 0);
-  const totalCommission = monthlyStats.reduce((sum, m) => sum + m.commission, 0);
-  const totalNet = monthlyStats.reduce((sum, m) => sum + m.net, 0);
-  const totalOrders = monthlyStats.reduce((sum, m) => sum + m.orders, 0);
-
-  const chartData = monthlyStats.map((stat) => ({
-    name: stat.month,
-    "المبيعات": stat.sales,
-    "الصافي": stat.net,
-  }));
+  const totalPayout = weeklyData.reduce((s, w) => s + w.netPayout, 0);
+  const totalSales = weeklyData.reduce((s, w) => s + w.sales, 0);
+  const totalOrders = weeklyData.reduce((s, w) => s + w.orders, 0);
+  const currentWeek = weeklyData[0];
+  const completedWeeks = weeklyData.filter((w) => w.status === "completed");
 
   const handleExportPDF = () => {
-    const reportData = monthlyStats.map((m) => ({
-      month: m.month,
-      total_sales: m.sales,
-      commission: m.commission,
-      net_profit: m.net,
-      order_count: m.orders,
+    const reportData = weeklyData.map((w) => ({
+      month: w.weekLabel,
+      total_sales: w.sales,
+      commission: w.sales - w.netPayout,
+      net_profit: w.netPayout,
+      order_count: w.orders,
     }));
-
     generateFinanceReport(reportData, {
       name: partnerName || "متجري",
       email: "partner@example.com",
@@ -243,27 +149,15 @@ export default function FinancePage() {
 
   if (loading) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "400px",
-          color: C.textMuted,
-        }}
-      >
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            border: `3px solid ${C.border}`,
-            borderTopColor: C.primary,
-            marginBottom: 12,
-            animation: "spin 1s linear infinite",
-          }}
-        />
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", minHeight: "400px", color: C.textMuted,
+      }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: "50%",
+          border: `3px solid ${C.border}`, borderTopColor: C.primary,
+          marginBottom: 12, animation: "spin 1s linear infinite",
+        }} />
         <div style={{ fontSize: 14 }}>جاري تحميل البيانات المالية...</div>
       </div>
     );
@@ -272,18 +166,12 @@ export default function FinancePage() {
   return (
     <div>
       {error && (
-        <div
-          style={{
-            background: "#FEE2E2",
-            color: C.danger,
-            padding: 16,
-            borderRadius: 12,
-            marginBottom: 20,
-            fontSize: 14,
-            border: `1px solid ${C.danger}20`,
-          }}
-        >
-          ⚠️ {error}
+        <div style={{
+          background: "#FEE2E2", color: C.danger, padding: 16,
+          borderRadius: 12, marginBottom: 20, fontSize: 14,
+          border: `1px solid ${C.danger}20`,
+        }}>
+          {error}
         </div>
       )}
 
@@ -292,436 +180,154 @@ export default function FinancePage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: C.text }}>
-              المالية والعمولات
+              المالية والتسويات
             </h1>
             <p style={{ margin: "4px 0 0", color: C.textMuted, fontSize: 14 }}>
-              تتبع إيراداتك وعمولات المنصة وصافي أرباحك خلال آخر 6 أشهر
+              تسويات أسبوعية — المبالغ المستحقة والمحوّلة لحسابك
             </p>
           </div>
           <button
             onClick={handleExportPDF}
             style={{
-              padding: "10px 16px",
-              borderRadius: 12,
-              border: "none",
-              background: C.primary,
-              color: "white",
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: "pointer",
-              boxShadow: "0 4px 12px rgba(139,92,246,0.3)",
-              whiteSpace: "nowrap",
+              padding: "10px 16px", borderRadius: 12, border: "none",
+              background: C.primary, color: "white", fontWeight: 700,
+              fontSize: 13, cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(139,92,246,0.3)", whiteSpace: "nowrap",
             }}
           >
-            📥 تحميل التقرير PDF
+            تحميل التقرير PDF
           </button>
         </div>
       </div>
 
       {/* TOP STATS CARDS */}
-      {currentMonth && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 14,
-            marginBottom: 24,
-          }}
-        >
-          {[
-            {
-              label: "إجمالي المبيعات (6 أشهر)",
-              value: `${totalSales.toLocaleString("ar-EG")} ج.س`,
-              icon: "💰",
-              color: C.success,
-              bg: "#D1FAE5",
-            },
-            {
-              label: "إجمالي العمولات",
-              value: `${totalCommission.toLocaleString("ar-EG")} ج.س`,
-              icon: "📊",
-              color: C.danger,
-              bg: "#FEE2E2",
-            },
-            {
-              label: "صافي الأرباح",
-              value: `${totalNet.toLocaleString("ar-EG")} ج.س`,
-              icon: "✅",
-              color: C.primary,
-              bg: C.primarySoft,
-            },
-            {
-              label: "إجمالي الطلبات",
-              value: `${totalOrders}`,
-              icon: "📦",
-              color: C.warning,
-              bg: "#FEF3C7",
-            },
-          ].map((s, i) => (
-            <div
-              key={i}
-              style={{
-                background: C.surface,
-                borderRadius: 18,
-                padding: 20,
-                border: `1px solid ${C.border}`,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 14,
-                  background: s.bg,
-                  fontSize: 22,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 12,
-                }}
-              >
-                {s.icon}
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 900, color: s.color }}>
-                {s.value}
-              </div>
-              <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>
-                {s.label}
-              </div>
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 14, marginBottom: 24,
+      }}>
+        {[
+          {
+            label: "إجمالي المستحق (8 أسابيع)",
+            value: `${totalPayout.toLocaleString("ar-EG")} ج.س`,
+            icon: "💰", color: C.success, bg: "#D1FAE5",
+          },
+          {
+            label: "إجمالي المبيعات",
+            value: `${totalSales.toLocaleString("ar-EG")} ج.س`,
+            icon: "📦", color: C.primary, bg: C.primarySoft,
+          },
+          {
+            label: "إجمالي الطلبات",
+            value: `${totalOrders}`,
+            icon: "🧾", color: C.warning, bg: "#FEF3C7",
+          },
+        ].map((s, i) => (
+          <div key={i} style={{
+            background: C.surface, borderRadius: 18, padding: 20,
+            border: `1px solid ${C.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+          }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 14, background: s.bg,
+              fontSize: 22, display: "flex", alignItems: "center",
+              justifyContent: "center", marginBottom: 12,
+            }}>
+              {s.icon}
             </div>
-          ))}
+            <div style={{ fontSize: 22, fontWeight: 900, color: s.color }}>{s.value}</div>
+            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* CURRENT WEEK HIGHLIGHT */}
+      {currentWeek && currentWeek.status === "pending" && (
+        <div style={{
+          background: `linear-gradient(135deg, ${C.primary}, ${C.pink})`,
+          borderRadius: 20, padding: 24, marginBottom: 24, color: "white",
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.85, marginBottom: 8 }}>
+            التسوية الحالية — {currentWeek.weekLabel}
+          </div>
+          <div style={{ display: "flex", gap: 40, alignItems: "baseline" }}>
+            <div>
+              <div style={{ fontSize: 32, fontWeight: 900 }}>
+                {currentWeek.netPayout.toLocaleString("ar-EG")} ج.س
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>المبلغ المستحق لك هذا الأسبوع</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 900 }}>
+                {currentWeek.orders}
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>طلب مكتمل</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 900 }}>
+                {currentWeek.sales.toLocaleString("ar-EG")} ج.س
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>مبيعات</div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* CHART AND BREAKDOWN */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 380px",
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
-        {/* RECHARTS BAR CHART */}
-        <div
-          style={{
-            background: C.surface,
-            borderRadius: 20,
-            padding: 24,
-            border: `1px solid ${C.border}`,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 20,
-            }}
-          >
-            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 900, color: C.text }}>
-              المبيعات الشهرية (آخر 6 أشهر)
-            </h2>
-          </div>
-
-          {monthlyStats.length > 0 ? (
-            <div style={{
-              padding: 32,
-              backgroundColor: C.primarySoft,
-              borderRadius: 12,
-              textAlign: "center",
-              color: C.textMuted,
-              minHeight: 300
-            }}>
-              <p style={{ margin: 0 }}>📊 البيانات متاحة</p>
-              <p style={{ margin: "8px 0 0 0", fontSize: 12 }}>عدد البيانات: {chartData.length}</p>
-            </div>
-          ) : (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "40px 20px",
-                color: C.textMuted,
-                fontSize: 14,
-              }}
-            >
-              لا توجد بيانات للعرض
-            </div>
-          )}
-        </div>
-
-        {/* COMMISSION BREAKDOWN */}
-        <div
-          style={{
-            background: C.surface,
-            borderRadius: 20,
-            padding: 24,
-            border: `1px solid ${C.border}`,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-          }}
-        >
-          <h2 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 900, color: C.text }}>
-            حسابات المتجر والعمولات
-          </h2>
-
-          {/* Commission Visual */}
-          <div style={{ marginBottom: 18 }}>
-            <div style={{ display: "flex", borderRadius: 12, overflow: "hidden", height: 38, marginBottom: 10 }}>
-              <div style={{
-                width: `${partnerPct}%`,
-                background: `linear-gradient(135deg, ${C.success}, #059669)`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "white", fontSize: 13, fontWeight: 900,
-              }}>
-                {partnerPct}% لك
-              </div>
-              <div style={{
-                width: `${appPct}%`,
-                background: `linear-gradient(135deg, ${C.primary}, ${C.pink})`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "white", fontSize: 13, fontWeight: 900,
-              }}>
-                {appPct}% حلّها
-              </div>
-            </div>
-          </div>
-
-          {/* Partner Share Card */}
-          <div style={{
-            background: "#D1FAE5", borderRadius: 14, padding: 16, marginBottom: 10,
-          }}>
-            <div style={{ fontSize: 12, color: C.success, fontWeight: 700, marginBottom: 4 }}>
-              نصيبك من كل طلب
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 900, color: C.success }}>
-              {partnerPct}%
-            </div>
-            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>
-              من إجمالي قيمة الطلب بعد خصم عمولة المنصة
-            </div>
-          </div>
-
-          {/* App Share Card */}
-          <div style={{
-            background: C.primarySoft, borderRadius: 14, padding: 16, marginBottom: 16,
-          }}>
-            <div style={{ fontSize: 12, color: C.primary, fontWeight: 700, marginBottom: 4 }}>
-              عمولة منصة حلّها
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 900, color: C.primary }}>
-              {appPct}%
-            </div>
-            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4, lineHeight: 1.6 }}>
-              تشمل: الخدمة، اللوجستية، الدعم، والتسويق
-            </div>
-            <div style={{
-              marginTop: 10, padding: "8px 12px", borderRadius: 8,
-              background: "rgba(139,92,246,0.08)", border: `1px solid rgba(139,92,246,0.15)`,
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: C.primary, marginBottom: 2 }}>
-                نظام التخفيض التلقائي
-              </div>
-              <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>
-                تبدأ العمولة بـ 15% وتنخفض إلى 12% بعد أول 1,000 طلب مكتمل خلال الشهر. يتم التجديد تلقائياً كل شهر.
-              </div>
-            </div>
-          </div>
-
-          {/* Current Month Breakdown */}
-          {currentMonth && (
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 800, color: C.textMuted, marginBottom: 10 }}>
-                حسابات الشهر الحالي
-              </div>
-              {[
-                {
-                  label: "إجمالي المبيعات",
-                  value: `${currentMonth.sales.toLocaleString("ar-EG")} ج.س`,
-                  color: C.text,
-                },
-                {
-                  label: `عمولة حلّها (${appPct}%)`,
-                  value: `- ${currentMonth.commission.toLocaleString("ar-EG")} ج.س`,
-                  color: C.danger,
-                },
-                {
-                  label: `صافي أرباحك (${partnerPct}%)`,
-                  value: `${currentMonth.net.toLocaleString("ar-EG")} ج.س`,
-                  color: C.success,
-                },
-              ].map((row, i, arr) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "12px 0",
-                    borderBottom:
-                      i < arr.length - 1 ? `1px solid ${C.border}` : "none",
-                    borderTop:
-                      i === arr.length - 1 ? `2px solid ${C.border}` : "none",
-                  }}
-                >
-                  <span style={{ fontSize: 13, color: C.textMuted }}>
-                    {row.label}
-                  </span>
-                  <span style={{ fontSize: 14, fontWeight: 900, color: row.color }}>
-                    {row.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* SETTLEMENTS TABLE */}
-      <div
-        style={{
-          background: C.surface,
-          borderRadius: 20,
-          padding: 24,
-          border: `1px solid ${C.border}`,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 20,
-          }}
-        >
+      {/* WEEKLY SETTLEMENTS TABLE */}
+      <div style={{
+        background: C.surface, borderRadius: 20, padding: 24,
+        border: `1px solid ${C.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+      }}>
+        <div style={{
+          display: "flex", justifyContent: "space-between",
+          alignItems: "center", marginBottom: 20,
+        }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 15, fontWeight: 900, color: C.text }}>
-              سجل التسويات
+              سجل التسويات الأسبوعية
             </h2>
-            <p
-              style={{
-                margin: "4px 0 0",
-                fontSize: 12,
-                color: C.textMuted,
-              }}
-            >
-              التحويلات الأسبوعية والشهرية لحسابك البنكي
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: C.textMuted }}>
+              يتم الإيداع تلقائياً في حسابك البنكي نهاية كل أسبوع
             </p>
           </div>
-          <button
-            style={{
-              padding: "8px 16px",
-              borderRadius: 10,
-              border: `1px solid ${C.border}`,
-              background: "transparent",
-              cursor: "pointer",
-              fontSize: 12,
-              color: C.primary,
-              fontWeight: 700,
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = C.primarySoft;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            ⬇ تحميل PDF
-          </button>
         </div>
 
-        {settlements.length > 0 ? (
+        {weeklyData.length > 0 ? (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: `2px solid ${C.border}` }}>
-                  {[
-                    "رقم التحويل",
-                    "التاريخ",
-                    "نوع التسوية",
-                    "المبلغ",
-                    "الحالة",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        padding: "12px",
-                        textAlign: "right",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: C.textMuted,
-                      }}
-                    >
+                  {["الفترة", "الطلبات", "المبيعات", "المبلغ المستحق", "الحالة"].map((h) => (
+                    <th key={h} style={{
+                      padding: "12px", textAlign: "right",
+                      fontSize: 11, fontWeight: 700, color: C.textMuted,
+                    }}>
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {settlements.map((s) => (
-                  <tr key={s.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td
-                      style={{
-                        padding: "14px 12px",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: C.primary,
-                      }}
-                    >
-                      {s.id}
+                {weeklyData.map((w, i) => (
+                  <tr key={i} style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <td style={{ padding: "14px 12px", fontSize: 13, fontWeight: 700, color: C.primary }}>
+                      {w.weekLabel}
                     </td>
-                    <td
-                      style={{
-                        padding: "14px 12px",
-                        fontSize: 13,
-                        color: C.textMuted,
-                      }}
-                    >
-                      {s.date}
+                    <td style={{ padding: "14px 12px", fontSize: 13, color: C.text, fontWeight: 700 }}>
+                      {w.orders}
                     </td>
-                    <td
-                      style={{
-                        padding: "14px 12px",
-                        fontSize: 13,
-                        color: C.text,
-                      }}
-                    >
-                      {s.type}
+                    <td style={{ padding: "14px 12px", fontSize: 13, color: C.textMuted }}>
+                      {w.sales.toLocaleString("ar-EG")} ج.س
                     </td>
-                    <td
-                      style={{
-                        padding: "14px 12px",
-                        fontSize: 13,
-                        fontWeight: 900,
-                        color: C.success,
-                      }}
-                    >
-                      {s.amount.toLocaleString("ar-EG")} ج.س
+                    <td style={{ padding: "14px 12px", fontSize: 14, fontWeight: 900, color: C.success }}>
+                      {w.netPayout.toLocaleString("ar-EG")} ج.س
                     </td>
                     <td style={{ padding: "14px 12px" }}>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "4px 10px",
-                          borderRadius: 20,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color:
-                            s.status === "completed"
-                              ? C.success
-                              : C.warning,
-                          background:
-                            s.status === "completed"
-                              ? "#D1FAE5"
-                              : "#FEF3C7",
-                        }}
-                      >
-                        {s.status === "completed"
-                          ? "✓ تم الإيداع"
-                          : "⏳ قادمة"}
+                      <span style={{
+                        display: "inline-block", padding: "4px 10px",
+                        borderRadius: 20, fontSize: 11, fontWeight: 700,
+                        color: w.status === "completed" ? C.success : C.warning,
+                        background: w.status === "completed" ? "#D1FAE5" : "#FEF3C7",
+                      }}>
+                        {w.status === "completed" ? "تم الإيداع" : "قيد التسوية"}
                       </span>
                     </td>
                   </tr>
@@ -730,64 +336,32 @@ export default function FinancePage() {
             </table>
           </div>
         ) : (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "40px 20px",
-              color: C.textMuted,
-              fontSize: 14,
-            }}
-          >
+          <div style={{ textAlign: "center", padding: "40px 20px", color: C.textMuted, fontSize: 14 }}>
             لا توجد تسويات حتى الآن
           </div>
         )}
 
-        {/* NEXT SETTLEMENT NOTICE */}
-        {settlements.length > 0 && (
-          <div
-            style={{
-              marginTop: 20,
-              padding: 16,
-              borderRadius: 12,
-              background: C.primarySoft,
-              border: `1px solid ${C.border}`,
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 12,
-            }}
-          >
-            <span style={{ fontSize: 20, marginTop: 2 }}>📅</span>
-            <div>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 900,
-                  color: C.primary,
-                  marginBottom: 4,
-                }}
-              >
-                التسوية القادمة في {settlements[0].date}
-              </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: C.textMuted,
-                  lineHeight: 1.5,
-                }}
-              >
-                المبلغ المتوقع: <strong>{settlements[0].amount.toLocaleString("ar-EG")} ج.س</strong> •
-                يتم الإيداع تلقائياً في حسابك البنكي المسجل
-              </div>
+        {/* NOTICE */}
+        <div style={{
+          marginTop: 20, padding: 16, borderRadius: 12,
+          background: C.primarySoft, border: `1px solid ${C.border}`,
+          display: "flex", alignItems: "flex-start", gap: 12,
+        }}>
+          <span style={{ fontSize: 20, marginTop: 2 }}>📅</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 900, color: C.primary, marginBottom: 4 }}>
+              الفترة المحاسبية: أسبوعية
+            </div>
+            <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>
+              يتم احتساب المبالغ المستحقة لك نهاية كل أسبوع (السبت — الجمعة) وإيداعها تلقائياً في حسابك البنكي المسجل خلال 1-2 يوم عمل.
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       <style>{`
         @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>

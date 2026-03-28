@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, Image, StatusBar, ScrollView, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useRegistration } from "../../lib/registration-context";
-import { C, VEHICLE_LABELS } from "../../lib/constants";
+import { useRegistration } from "../../_lib/registration-context";
+import { C, VEHICLE_LABELS } from "../../_lib/constants";
 
 const TOTAL_STEPS = 7;
 

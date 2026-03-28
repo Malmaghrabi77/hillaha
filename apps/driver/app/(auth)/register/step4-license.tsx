@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, Image, StatusBar, ScrollView, Alert, ActivityIndicator } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useRegistration } from "../../lib/registration-context";
-import { C } from "../../lib/constants";
-import { extractTextFromImage, extractExpiryDate, isDocumentValid, formatDate } from "../../lib/ocr";
+import { useRegistration } from "../../_lib/registration-context";
+import { C } from "../../_lib/constants";
+import { extractTextFromImage, extractExpiryDate, isDocumentValid, formatDate } from "../../_lib/ocr";
 
 const TOTAL_STEPS = 7;
 

@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, Pressable, StatusBar, ScrollView } from "react-native";
 import { router } from "expo-router";
-import { useRegistration, VehicleType } from "../../lib/registration-context";
-import { C, MAX_BICYCLE_DISTANCE_KM } from "../../lib/constants";
+import { useRegistration, VehicleType } from "../../_lib/registration-context";
+import { C, MAX_BICYCLE_DISTANCE_KM } from "../../_lib/constants";
 
 const TOTAL_STEPS = 7;
 

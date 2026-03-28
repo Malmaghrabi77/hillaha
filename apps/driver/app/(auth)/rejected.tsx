@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, StatusBar, ActivityIndicator, Alert } from "react-native";
 import { router } from "expo-router";
-import { C, getSB } from "../lib/constants";
+import { C, getSB } from "../_lib/constants";
 
 export default function Rejected() {
   const [reason, setReason] = useState<string | null>(null);

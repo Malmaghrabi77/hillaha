@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, Pressable,
   StatusBar, RefreshControl,
 } from "react-native";
-import { haversineDistance, MAX_BICYCLE_DISTANCE_KM } from "../lib/constants";
+import { haversineDistance, MAX_BICYCLE_DISTANCE_KM } from "../_lib/constants";
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",

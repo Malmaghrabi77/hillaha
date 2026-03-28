@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { View, Text, Pressable, Image, StatusBar, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { router } from "expo-router";
-import { useRegistration } from "../../lib/registration-context";
-import { uploadDriverDocuments } from "../../lib/upload-helpers";
-import { C, VEHICLE_LABELS, IDENTITY_LABELS } from "../../lib/constants";
-import { getSB } from "../../lib/constants";
+import { useRegistration } from "../../_lib/registration-context";
+import { uploadDriverDocuments } from "../../_lib/upload-helpers";
+import { C, VEHICLE_LABELS, IDENTITY_LABELS } from "../../_lib/constants";
+import { getSB } from "../../_lib/constants";
 
 const TOTAL_STEPS = 7;
 

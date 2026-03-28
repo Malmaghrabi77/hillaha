@@ -104,7 +104,7 @@ export default function SecurityAlertsPage() {
     if (!supabase) return;
 
     setResolving(alertId);
-    const { data } = await supabase.rpc("resolve_security_alert", { p_alert_id: alertId });
+    const { data } = await (supabase as any).rpc("resolve_security_alert", { p_alert_id: alertId });
     if ((data as any)?.success) {
       setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, is_read: true, resolved_at: new Date().toISOString() } : a)));
       if (stats) setStats({ ...stats, unread_alerts: Math.max(0, stats.unread_alerts - 1) });
@@ -118,7 +118,7 @@ export default function SecurityAlertsPage() {
 
     const unread = alerts.filter((a) => !a.is_read);
     for (const alert of unread) {
-      await supabase.rpc("resolve_security_alert", { p_alert_id: alert.id });
+      await (supabase as any).rpc("resolve_security_alert", { p_alert_id: alert.id });
     }
     fetchData();
   };

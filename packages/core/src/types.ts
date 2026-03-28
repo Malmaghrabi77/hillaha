@@ -14,9 +14,9 @@ export type MonthlyCommissionRule = {
 };
 
 export const DEFAULT_MONTHLY_COMMISSION_RULE: MonthlyCommissionRule = {
-  baseRate: 0.10,
+  baseRate: 0.15,
   targetCompletedOrders: 1000,
-  afterTargetRate: 0.08,
+  afterTargetRate: 0.12,
   resetsMonthly: true,
 };
 

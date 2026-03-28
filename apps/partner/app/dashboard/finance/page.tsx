@@ -513,8 +513,19 @@ export default function FinancePage() {
             <div style={{ fontSize: 28, fontWeight: 900, color: C.primary }}>
               {appPct}%
             </div>
-            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4, lineHeight: 1.4 }}>
+            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4, lineHeight: 1.6 }}>
               تشمل: الخدمة، اللوجستية، الدعم، والتسويق
+            </div>
+            <div style={{
+              marginTop: 10, padding: "8px 12px", borderRadius: 8,
+              background: "rgba(139,92,246,0.08)", border: `1px solid rgba(139,92,246,0.15)`,
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.primary, marginBottom: 2 }}>
+                نظام التخفيض التلقائي
+              </div>
+              <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>
+                تبدأ العمولة بـ 15% وتنخفض إلى 12% بعد أول 1,000 طلب مكتمل خلال الشهر. يتم التجديد تلقائياً كل شهر.
+              </div>
             </div>
           </div>
 

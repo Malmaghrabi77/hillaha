@@ -39,6 +39,7 @@ const navItems: NavItem[] = [
   { href: "/admin/orders", label: "الطلبات", icon: "📦" },
   { href: "/admin/users", label: "المستخدمون", icon: "👥" },
   { href: "/admin/analytics", label: "التحليلات", icon: "📈" },
+  { href: "/admin/wallet-codes", label: "أكواد المحفظة", icon: "🎫" },
   { href: "/admin/invite-admin", label: "دعوة مدير", icon: "📨" },
   { href: "/admin/admin-management", label: "إدارة النظام", icon: "⚙️", superAdminOnly: true },
 ];
@@ -78,16 +79,37 @@ export default function AdminLayout({
     return null;
   }
 
-  // Filter nav items based on permissions
+  // Filter nav items based on permissions and role
   const visibleNavItems = navItems.filter((item) => {
     if (item.superAdminOnly && !auth.isSuperAdmin) {
       return false;
+    }
+    // Accountants only see: dashboard, wallet-codes, analytics, payments
+    if (auth.isAccountant) {
+      const accountantPages = ["/admin", "/admin/wallet-codes", "/admin/analytics", "/admin/payments", "/admin/card-analytics"];
+      return accountantPages.includes(item.href);
     }
     return true;
   });
 
   // Add role-specific admin management items
   const adminManagementItems: NavItem[] = [];
+
+  // Super Admin: approve wallet codes + card analytics
+  if (auth.isSuperAdmin) {
+    adminManagementItems.push(
+      { href: "/admin/approve-wallet-codes", label: "اعتماد أكواد المحفظة", icon: "✅" },
+      { href: "/admin/card-analytics", label: "تقارير البطاقات", icon: "📊" },
+      { href: "/admin/invite-partners", label: "دعوة شريك جديد", icon: "🤝" }
+    );
+  }
+
+  // Accountant: card analytics
+  if (auth.isAccountant) {
+    adminManagementItems.push(
+      { href: "/admin/card-analytics", label: "تقارير البطاقات", icon: "📊" }
+    );
+  }
 
   if (auth.isRegionalManager) {
     adminManagementItems.push(
@@ -130,6 +152,8 @@ export default function AdminLayout({
           <p style={{ color: C.textMuted, fontSize: 12, margin: 0 }}>
             {auth.isSuperAdmin
               ? "Super Admin"
+              : auth.isAccountant
+              ? "المحاسب"
               : auth.isRegionalManager
               ? "المدير الإقليمي"
               : auth.isRegularAdmin

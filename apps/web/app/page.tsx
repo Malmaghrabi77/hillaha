@@ -31,14 +31,26 @@ export default function WebHome() {
             }}>{l}</a>
           ))}
         </div>
-        <button style={{
-          padding: "9px 22px", borderRadius: 10,
-          background: "linear-gradient(135deg, #8B5CF6, #EC4899)",
-          border: "none", color: "white", fontSize: 13, fontWeight: 700,
-          cursor: "pointer", fontFamily: "inherit",
-        }}>
-          حمّل التطبيق
-        </button>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <a href="/login?role=accountant" style={{
+            padding: "8px 18px", borderRadius: 10,
+            background: "rgba(139,92,246,0.15)",
+            border: "1px solid rgba(139,92,246,0.4)",
+            color: "#C4B5FD", fontSize: 13, fontWeight: 700,
+            cursor: "pointer", fontFamily: "inherit",
+            textDecoration: "none",
+          }}>
+            دخول المحاسب
+          </a>
+          <button style={{
+            padding: "9px 22px", borderRadius: 10,
+            background: "linear-gradient(135deg, #8B5CF6, #EC4899)",
+            border: "none", color: "white", fontSize: 13, fontWeight: 700,
+            cursor: "pointer", fontFamily: "inherit",
+          }}>
+            حمّل التطبيق
+          </button>
+        </div>
       </nav>
 
       {/* ══════════════════════════════════════════

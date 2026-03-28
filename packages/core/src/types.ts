@@ -1,6 +1,6 @@
 export type CountryCode = "EG" | "SA";
-export type UserRole = "customer" | "driver" | "partner" | "admin" | "super_admin";
-export type AdminRole = "admin" | "super_admin";
+export type UserRole = "customer" | "driver" | "partner" | "admin" | "super_admin" | "accountant";
+export type AdminRole = "admin" | "super_admin" | "accountant";
 export type PartnerType = "restaurant" | "store" | "pharmacy" | "clinic";
 export type DeliveryType = "platform" | "self";
 export type PaymentMethod = "cash" | "wallet_transfer" | "card";
@@ -146,4 +146,25 @@ export type StoreAdmin = {
   user_id?: string;
   created_at: string;
   activated_at?: string;
+};
+
+export type WalletCodeTargetType = "customer" | "driver";
+export type WalletCodeApprovalStatus = "pending" | "approved" | "rejected";
+
+export type WalletCode = {
+  id: string;
+  code: string;
+  amount: number;
+  target_type: WalletCodeTargetType;
+  is_used: boolean;
+  created_by: string;
+  redeemed_by?: string;
+  redeemed_at?: string;
+  expires_at?: string;
+  approval_status: WalletCodeApprovalStatus;
+  approved_by?: string;
+  approved_at?: string;
+  batch_id?: string;
+  rejection_reason?: string;
+  created_at: string;
 };

@@ -36,6 +36,13 @@ export interface AdminPermissions {
   createAdmin: boolean;
   manageAdmins: boolean;
   viewAuditLogs: boolean;
+
+  // Wallet Codes
+  generateWalletCodes: boolean;
+  approveWalletCodes: boolean;
+
+  // Financial / Card Analytics
+  viewCardAnalytics: boolean;
 }
 
 export function useAdminPermissions(
@@ -60,6 +67,9 @@ export function useAdminPermissions(
     createAdmin: false,
     manageAdmins: false,
     viewAuditLogs: false,
+    generateWalletCodes: false,
+    approveWalletCodes: false,
+    viewCardAnalytics: false,
   });
 
   useEffect(() => {
@@ -85,10 +95,12 @@ export function useAdminPermissions(
       createAdmin: false,
       manageAdmins: false,
       viewAuditLogs: false,
+      generateWalletCodes: false,
+      approveWalletCodes: false,
+      viewCardAnalytics: false,
     };
 
     if (role === "super_admin") {
-      // Super Admin has all permissions
       setPermissions({
         ...basePermissions,
         manageUsers: true,
@@ -98,10 +110,35 @@ export function useAdminPermissions(
         createAdmin: true,
         manageAdmins: true,
         viewAuditLogs: true,
+        generateWalletCodes: true,
+        approveWalletCodes: true,
+        viewCardAnalytics: true,
+      });
+    } else if (role === "accountant") {
+      setPermissions({
+        ...basePermissions,
+        viewUsers: false,
+        manageUsers: false,
+        viewPartners: false,
+        managePartners: false,
+        approvePartners: false,
+        viewAssignedOrders: false,
+        manageOrders: false,
+        viewPayments: true,
+        managePayments: false,
+        settlePayments: false,
+        viewRevenue: true,
+        viewAnalytics: true,
+        generateWalletCodes: true,
+        approveWalletCodes: false,
+        viewCardAnalytics: true,
       });
     } else {
-      // Regular Admin (Frid Admin)
-      setPermissions(basePermissions);
+      // Regular Admin / Regional Manager
+      setPermissions({
+        ...basePermissions,
+        generateWalletCodes: true,
+      });
     }
   }, [role]);
 

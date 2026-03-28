@@ -5,14 +5,14 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useCart } from "../lib/cartStore";
-import { useDarkMode } from "../hooks/useDarkMode";
-import { useSupabase } from "../hooks/useSupabase";
-import { analyticsTracker } from "../utils/analyticsTracker";
-import { A11yPresets } from "../hooks/useAccessibility";
-import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
-import { SafeAreaScrollView } from "../components";
+import { useDarkMode } from "../src/hooks/useDarkMode";
+import { useSupabase } from "../src/hooks/useSupabase";
+import { analyticsTracker } from "../src/utils/analyticsTracker";
+import { A11yPresets } from "../src/hooks/useAccessibility";
+import { ANALYTICS_EVENTS } from "../src/constants/analyticsEvents";
+import { SafeAreaScrollView } from "../src/components";
 
-type PayMethod = "cash" | "instapay" | "etisalat" | "vodafone" | "card";
+type PayMethod = "cash" | "wallet" | "instapay" | "etisalat" | "vodafone" | "card";
 
 const FALLBACK_ACCOUNTS = {
   instapay:  { account: "@malmaghrabi77",  instructions: "افتح تطبيق InstaPay وحوّل المبلغ إلى الحساب التالي" },
@@ -22,6 +22,7 @@ const FALLBACK_ACCOUNTS = {
 
 const METHODS: { id: PayMethod; label: string; desc: string; icon: string; soon?: boolean }[] = [
   { id: "cash",      label: "كاش عند الاستلام", desc: "ادفع نقداً للمندوب",                           icon: "💵" },
+  { id: "wallet",    label: "المحفظة",            desc: "ادفع من رصيد محفظتك",                         icon: "👛" },
   { id: "instapay",  label: "InstaPay",           desc: `تحويل لحظي — حساب: ${FALLBACK_ACCOUNTS.instapay.account}`, icon: "📲" },
   { id: "etisalat",  label: "E& (اتصالات)",       desc: `تحويل رصيد — ${FALLBACK_ACCOUNTS.etisalat.phone}`,        icon: "📡" },
   { id: "vodafone",  label: "Vodafone Cash",       desc: "الحساب قيد التحديد — قريباً",                icon: "📱", soon: true },
@@ -45,6 +46,7 @@ export default function Checkout() {
     etisalat_phone:   string;
     vodafone_phone:   string;
   } | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
   const needsProof = method === "instapay" || method === "etisalat";
 
@@ -56,6 +58,16 @@ export default function Checkout() {
     supabase.auth.getUser().then(({ data }: any) => {
       const meta = data.user?.user_metadata as any;
       if (meta?.phone) setPhone(meta.phone);
+
+      // Fetch wallet balance
+      const userId = data.user?.id;
+      if (userId) {
+        supabase.rpc("get_wallet_balance", { p_customer_id: userId })
+          .then(({ data: bal }: any) => {
+            if (bal !== null && bal !== undefined) setWalletBalance(Number(bal));
+          })
+          .catch(() => {});
+      }
     }).catch(() => {});
 
     supabase
@@ -111,11 +123,20 @@ export default function Checkout() {
     setLoading(true);
 
     try {
-      const supabase = getSB();
       if (!supabase) throw new Error("خطأ في الاتصال");
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("يجب تسجيل الدخول أولاً");
+
+      // Wallet balance validation
+      if (method === "wallet") {
+        if (walletBalance === null || walletBalance < cart.total) {
+          const bal = walletBalance ?? 0;
+          setError(`رصيد المحفظة غير كافٍ (${bal.toFixed(2)} ج). المطلوب: ${cart.total} ج`);
+          setLoading(false);
+          return;
+        }
+      }
 
       let proofStorageUrl: string | null = null;
       if (proofUri && needsProof) {
@@ -137,6 +158,19 @@ export default function Checkout() {
         } finally {
           setUploadingProof(false);
         }
+      }
+
+      // Wallet deduction
+      if (method === "wallet") {
+        const { data: deductResult } = await supabase.rpc("deduct_wallet_balance", {
+          p_customer_id: user.id,
+          p_amount: cart.total,
+          p_description: `دفع طلب — ${cart.partnerName ?? "طلب"}`,
+        });
+        if (!deductResult?.success) {
+          throw new Error(deductResult?.error ?? "رصيد المحفظة غير كافٍ");
+        }
+        setWalletBalance(Number(deductResult.remaining));
       }
 
       const { data: order, error: insertError } = await supabase
@@ -180,6 +214,7 @@ export default function Checkout() {
     : FALLBACK_ACCOUNTS;
 
   return (
+    <View style={{ flex: 1 }}>
     <SafeAreaScrollView variant="modal">
       {/* ORDER SUMMARY */}
         <View style={{
@@ -262,18 +297,24 @@ export default function Checkout() {
         <Text style={{ fontSize: 15, fontWeight: "900", color: colors.text, marginBottom: 12 }}>
           طريقة الدفع
         </Text>
-        {METHODS.map(m => (
+        {METHODS.map(m => {
+          const isWallet = m.id === "wallet";
+          const walletInsufficient = isWallet && walletBalance !== null && walletBalance < cart.total;
+          const desc = isWallet && walletBalance !== null
+            ? `رصيدك: ${walletBalance.toFixed(2)} جنيه`
+            : m.desc;
+          return (
           <Pressable
             key={m.id}
-            onPress={() => !m.soon && handleSetMethod(m.id)}
-            {...A11yPresets.button(m.label, m.desc)}
+            onPress={() => !m.soon && !walletInsufficient && handleSetMethod(m.id)}
+            {...A11yPresets.button(m.label, desc)}
             style={{
               flexDirection: "row", alignItems: "center", gap: 14,
               padding: 16, borderRadius: 16, marginBottom: 10,
               backgroundColor: method === m.id ? colors.primarySoft : colors.surface,
               borderWidth: 2,
               borderColor: method === m.id ? colors.primary : colors.border,
-              opacity: m.soon ? 0.5 : 1,
+              opacity: m.soon || walletInsufficient ? 0.5 : 1,
             }}
           >
             <View style={{
@@ -464,6 +505,6 @@ export default function Checkout() {
           }
         </Pressable>
       </View>
-    </SafeAreaScrollView>
+    </View>
   );
 }

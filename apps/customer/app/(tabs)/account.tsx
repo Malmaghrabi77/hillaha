@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, ScrollView, Image, Linking } from "react-native";
+import { View, Text, Pressable, ScrollView, Image, Linking, Alert } from "react-native";
 import { router } from "expo-router";
-import { useDarkMode } from "../hooks/useDarkMode";
-import { useSupabase } from "../../hooks/useSupabase";
-import { analyticsTracker } from "../utils/analyticsTracker";
-import { A11yPresets } from "../hooks/useAccessibility";
-import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
-import { SafeAreaScrollView } from '../components';
+import { useDarkMode } from "../../src/hooks/useDarkMode";
+import { useSupabase } from "../../src/hooks/useSupabase";
+import { analyticsTracker } from "../../src/utils/analyticsTracker";
+import { A11yPresets } from "../../src/hooks/useAccessibility";
+import { ANALYTICS_EVENTS } from "../../src/constants/analyticsEvents";
+import { SafeAreaScrollView } from '../../src/components';
 
 // عناوين البريد الإلكتروني الرسمية لمنصة حلّها
 const EMAILS = {
   legal: "legal@hillaha.com",
   business: "business@hillaha.com",
   support: "support@hillaha.com",
+  info: "info@hillaha.com",
+  webmaster: "business@hillaha.com",
 } as const;
 
 const MENU = [
@@ -21,10 +23,12 @@ const MENU = [
   { icon: "❤️", label: "المفضلة",            route: "/favorites" },
   { icon: "🎟️", label: "أكود الخصم",        route: "/promo" },
   { icon: "🎁", label: "نقاط الولاء",        route: "/loyalty" },
-  { icon: "💳", label: "طرق الدفع",          route: null },
-  { icon: "🔔", label: "الإشعارات",          route: null },
+  { icon: "👛", label: "المحفظة",            route: "/wallet" },
+  { icon: "🔔", label: "الإشعارات",          route: "/notifications" },
+  { icon: "📢", label: "دعوة أصدقاء",        route: "/referrals" },
+  { icon: "⭐", label: "الاشتراكات",         route: "/subscriptions" },
   { icon: "📄", label: "الشروط والأحكام",    route: "/legal/consent" },
-  { icon: "🔒", label: "تغيير كلمة المرور", route: null },
+  { icon: "🔒", label: "تغيير كلمة المرور", route: "/change-password" },
 ];
 
 export default function Account() {
@@ -50,11 +54,11 @@ export default function Account() {
   async function handleLogout() {
     if (!supabase) return;
     await supabase.auth.signOut();
-    router.replace("/(auth)");
+    router.replace("/");
   }
 
   return (
-    <SafeAreaScrollView variant="page" backgroundColor={colors.bg} contentContainerStyle={{ paddingBottom: 80 }}>
+    <SafeAreaScrollView variant="page" safeBottom={false} backgroundColor={colors.bg} contentContainerStyle={{ paddingBottom: 80 }}>
       {/* HEADER */}
       <View style={{
         backgroundColor: colors.surface,
@@ -122,6 +126,8 @@ export default function Account() {
               if (item.route) {
                 analyticsTracker.trackEvent(ANALYTICS_EVENTS.NAVIGATION.MENU_ITEM_CLICKED, { label: item.label });
                 router.push(item.route as any);
+              } else {
+                Alert.alert("قريباً 🚀", "هذه الميزة قيد التطوير وستكون متاحة قريباً");
               }
             }}
             {...A11yPresets.button(item.label, `انقر للانتقال إلى ${item.label}`)}
@@ -151,6 +157,23 @@ export default function Account() {
           <Text style={{ fontWeight: "800", color: colors.textMuted, fontSize: 11, marginBottom: 10, letterSpacing: 1 }}>
             تواصل معنا
           </Text>
+          <Pressable
+            onPress={() => {
+              analyticsTracker.trackEvent(ANALYTICS_EVENTS.CONTACT.EMAIL_CLICKED, { type: 'support_chat' });
+              router.push("/chat/support" as any);
+            }}
+            {...A11yPresets.button("الدعم الفني المباشر", "انقر للتواصل مع الدعم الفني")}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 }}
+          >
+            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primarySoft, justifyContent: "center", alignItems: "center" }}>
+              <Text style={{ fontSize: 18 }}>💬</Text>
+            </View>
+            <View>
+              <Text style={{ fontWeight: "700", color: colors.text, fontSize: 14 }}>الدعم الفني المباشر</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12 }}>تواصل معنا عبر المحادثة</Text>
+            </View>
+          </Pressable>
+          <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 6 }} />
           <Pressable
             onPress={() => {
               analyticsTracker.trackEvent(ANALYTICS_EVENTS.CONTACT.EMAIL_CLICKED, { type: 'info' });

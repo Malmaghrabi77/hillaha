@@ -12,6 +12,7 @@ export interface AdminAuthContext {
   isSuperAdmin: boolean;
   isRegionalManager: boolean;
   isRegularAdmin: boolean;
+  isAccountant: boolean;
   adminType: "regional_manager" | "regular_admin" | null;
   loading: boolean;
 }
@@ -25,6 +26,7 @@ export function useAdminAuth(): AdminAuthContext {
     isSuperAdmin: false,
     isRegionalManager: false,
     isRegularAdmin: false,
+    isAccountant: false,
     adminType: null,
     loading: true,
   });
@@ -86,7 +88,7 @@ export function useAdminAuth(): AdminAuthContext {
         return;
       }
 
-      const isAdmin = role === "admin" || role === "super_admin";
+      const isAdmin = role === "admin" || role === "super_admin" || role === "accountant";
 
       if (!isAdmin) {
         console.warn("User does not have admin role. Role:", role);
@@ -96,6 +98,7 @@ export function useAdminAuth(): AdminAuthContext {
       }
 
       const isSuperAdmin = role === "super_admin";
+      const isAccountant = role === "accountant";
       const isRegionalManager = adminType === "regional_manager";
       const isRegularAdmin = adminType === "regular_admin";
 
@@ -104,6 +107,7 @@ export function useAdminAuth(): AdminAuthContext {
         role,
         adminType,
         isSuperAdmin,
+        isAccountant,
         isRegionalManager,
         isRegularAdmin,
       });
@@ -115,6 +119,7 @@ export function useAdminAuth(): AdminAuthContext {
         isSuperAdmin,
         isRegionalManager,
         isRegularAdmin,
+        isAccountant,
         adminType: (adminType as "regional_manager" | "regular_admin") || null,
         loading: false,
       });

@@ -4,12 +4,9 @@ import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { getSB } from "./_lib/constants";
 
 SplashScreen.hideAsync().catch(() => {});
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
 
 export default function RootLayout() {
   const [checking, setChecking] = useState(true);

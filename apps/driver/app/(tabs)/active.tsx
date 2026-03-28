@@ -4,20 +4,7 @@ import {
   StatusBar, Animated, Platform, Linking,
 } from "react-native";
 import * as Location from "expo-location";
-
-const C = {
-  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
-  pink: "#EC4899",       pinkSoft: "#FCE7F3",
-  bg: "#FAFAFF",         surface: "#FFFFFF",
-  border: "#E7E3FF",     text: "#1F1B2E",
-  textMuted: "#6B6480",  success: "#34D399",
-  warning: "#F59E0B",    danger: "#EF4444",
-  deepPurple: "#6D28D9",
-} as const;
-
-function getSB() {
-  try { return (require("@hillaha/core") as any).getSupabase?.() ?? null; } catch { return null; }
-}
+import { C, getSB } from "../_lib/constants";
 
 type DeliveryStep = 0 | 1 | 2 | 3;
 type LocationStatus = "idle" | "tracking" | "denied" | "stopped";

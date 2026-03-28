@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   View, Text, ScrollView, Pressable,
-  StatusBar, ActivityIndicator,
+  StatusBar, ActivityIndicator, Image,
 } from "react-native";
 import { router } from "expo-router";
 
@@ -32,6 +32,7 @@ interface ProfileData {
   completedOrders: number;
   totalEarnings: number;
   maxDistance: number | null;
+  avatarUrl: string | null;
 }
 
 export default function ProfileTab() {
@@ -53,9 +54,21 @@ export default function ProfileTab() {
 
     const { data: profileData } = await (supabase as any)
       .from("profiles")
-      .select("full_name, phone, vehicle_type, is_approved, rating, completed_orders, total_earnings, max_delivery_distance_km")
+      .select("full_name, phone, vehicle_type, is_approved, rating, completed_orders, total_earnings, max_delivery_distance_km, avatar_url")
       .eq("id", userId)
       .single();
+
+    // Fetch real stats from orders table
+    const { data: ordersData } = await (supabase as any)
+      .from("orders")
+      .select("delivery_fee")
+      .eq("driver_id", userId)
+      .eq("status", "delivered");
+
+    const deliveredCount = ordersData?.length ?? 0;
+    const realEarnings = (ordersData ?? []).reduce(
+      (sum: number, o: any) => sum + (Number(o.delivery_fee) || 0), 0
+    );
 
     setProfile({
       name: profileData?.full_name || meta?.full_name || userData.user.email?.split("@")[0] || "المندوب",
@@ -64,9 +77,10 @@ export default function ProfileTab() {
       vehicleType: profileData?.vehicle_type || null,
       isApproved: profileData?.is_approved ?? true,
       rating: profileData?.rating ? Number(profileData.rating) : 0,
-      completedOrders: profileData?.completed_orders || 0,
-      totalEarnings: profileData?.total_earnings ? Number(profileData.total_earnings) : 0,
+      completedOrders: deliveredCount,
+      totalEarnings: realEarnings,
       maxDistance: profileData?.max_delivery_distance_km ? Number(profileData.max_delivery_distance_km) : null,
+      avatarUrl: profileData?.avatar_url || null,
     });
     setLoading(false);
   }
@@ -94,8 +108,8 @@ export default function ProfileTab() {
     { label: "إجمالي الأرباح", value: `${profile.totalEarnings.toFixed(0)} ج`, color: "#059669", bg: "#D1FAE5" },
   ];
 
-  const MENU_ITEMS = [
-    { icon: "📋", label: "سجل التوصيلات" },
+  const MENU_ITEMS: { icon: string; label: string; onPress?: () => void }[] = [
+    { icon: "📋", label: "سجل التوصيلات", onPress: () => router.push("/(tabs)/earnings") },
     { icon: "💳", label: "بيانات الحساب البنكي" },
     { icon: "📞", label: "الدعم الفني" },
     { icon: "📄", label: "الشروط والأحكام" },
@@ -111,12 +125,17 @@ export default function ProfileTab() {
         alignItems: "center",
       }}>
         <View style={{
-          width: 72, height: 72, borderRadius: 36,
+          width: 80, height: 80, borderRadius: 40,
           backgroundColor: "rgba(255,255,255,0.2)",
           justifyContent: "center", alignItems: "center", marginBottom: 12,
           borderWidth: 2, borderColor: "rgba(255,255,255,0.4)",
+          overflow: "hidden",
         }}>
-          <Text style={{ fontSize: 32 }}>{vehicleIcon}</Text>
+          {profile.avatarUrl ? (
+            <Image source={{ uri: profile.avatarUrl }} style={{ width: 80, height: 80, borderRadius: 40 }} />
+          ) : (
+            <Text style={{ fontSize: 36 }}>{vehicleIcon}</Text>
+          )}
         </View>
         <Text style={{ fontSize: 18, fontWeight: "900", color: "white" }}>{profile.name}</Text>
         <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 3 }}>{profile.email}</Text>
@@ -190,6 +209,7 @@ export default function ProfileTab() {
           {MENU_ITEMS.map((item, i) => (
             <Pressable
               key={i}
+              onPress={item.onPress}
               style={{
                 flexDirection: "row", alignItems: "center", gap: 14,
                 padding: 16,

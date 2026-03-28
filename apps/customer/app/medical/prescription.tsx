@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, Pressable, Modal,
+  View, Text, Pressable, Modal, ScrollView,
   Platform, TextInput, Image, ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { useDarkMode } from '../hooks/useDarkMode';
-import { useSupabase } from '../../hooks/useSupabase';
-import { analyticsTracker } from '../utils/analyticsTracker';
-import { A11yPresets } from '../hooks/useAccessibility';
-import { LoadingAnimation, SuccessAnimation } from '../hooks/useLottieAnimations';
-import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
-import { SafeAreaScrollView } from '../components';
+import { useDarkMode } from '../../src/hooks/useDarkMode';
+import { useSupabase } from '../../src/hooks/useSupabase';
+import { analyticsTracker } from '../../src/utils/analyticsTracker';
+import { A11yPresets } from '../../src/hooks/useAccessibility';
+import { LoadingAnimation, SuccessAnimation } from '../../src/hooks/useLottieAnimations';
+import { ANALYTICS_EVENTS } from '../../src/constants/analyticsEvents';
+import { SafeAreaScrollView } from '../../src/components';
 
 export default function Prescription() {
   const { isDarkMode, colors } = useDarkMode();
@@ -57,7 +57,6 @@ export default function Prescription() {
     }
 
     setLoading(true);
-    const supabase = getSB();
     if (!supabase) { setLoading(false); return; }
 
     try {
@@ -97,7 +96,7 @@ export default function Prescription() {
 
       setSuccess(true);
       setTimeout(() => {
-        router.back();
+        router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
       }, 2000);
     } catch (error: any) {
       alert(`خطأ: ${error.message}`);
@@ -131,7 +130,7 @@ export default function Prescription() {
         paddingBottom: 24,
       }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/home")}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
           {...A11yPresets.button("العودة", "انقر للعودة إلى الخلف")}
         >
@@ -287,7 +286,6 @@ export default function Prescription() {
             </Text>
           )}
         </Pressable>
-      </View>
     </SafeAreaScrollView>
   );
 }

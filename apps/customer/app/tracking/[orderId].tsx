@@ -3,12 +3,12 @@ import {
   View, Text, Pressable, Animated, Platform, ScrollView, Linking,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
-import { useDarkMode } from "../hooks/useDarkMode";
-import { useSupabase } from "../../hooks/useSupabase";
-import { analyticsTracker } from "../utils/analyticsTracker";
-import { A11yPresets } from "../hooks/useAccessibility";
-import { SafeAreaDisplay } from "../components";
-import { LiveMap } from "../components/LiveMap";
+import { useDarkMode } from "../../src/hooks/useDarkMode";
+import { useSupabase } from "../../src/hooks/useSupabase";
+import { analyticsTracker } from "../../src/utils/analyticsTracker";
+import { A11yPresets } from "../../src/hooks/useAccessibility";
+import { SafeAreaDisplay } from "../../src/components";
+import { LiveMap } from "../../src/components/LiveMap";
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -314,7 +314,7 @@ export default function Tracking() {
       <Pressable
         onPress={() => {
           analyticsTracker.trackEvent("tracking_back");
-          router.back();
+          router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
         }}
         {...A11yPresets.pressable}
         style={{

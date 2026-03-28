@@ -4,12 +4,12 @@ import {
   Alert, Modal, ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
-import { useDarkMode } from '../hooks/useDarkMode';
-import { useSupabase } from '../hooks/useSupabase';
-import { analyticsTracker } from '../utils/analyticsTracker';
-import { A11yPresets } from '../hooks/useAccessibility';
-import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
-import { AppHeader } from '../components';
+import { useDarkMode } from '../src/hooks/useDarkMode';
+import { useSupabase } from '../src/hooks/useSupabase';
+import { analyticsTracker } from '../src/utils/analyticsTracker';
+import { A11yPresets } from '../src/hooks/useAccessibility';
+import { ANALYTICS_EVENTS } from '../src/constants/analyticsEvents';
+import { AppHeader, LocationPickerMap } from '../src/components';
 
 interface Address {
   id: string;
@@ -19,6 +19,8 @@ interface Address {
   floor: string;
   apartment: string;
   notes?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   is_default: boolean;
   created_at: string;
 }
@@ -38,6 +40,8 @@ export default function Addresses() {
     floor: "",
     apartment: "",
     notes: "",
+    latitude: null as number | null,
+    longitude: null as number | null,
   });
 
   useEffect(() => {
@@ -94,6 +98,8 @@ export default function Addresses() {
             floor: form.floor,
             apartment: form.apartment,
             notes: form.notes,
+            latitude: form.latitude,
+            longitude: form.longitude,
           })
           .eq("id", editingId);
       } else {
@@ -106,11 +112,13 @@ export default function Addresses() {
           floor: form.floor,
           apartment: form.apartment,
           notes: form.notes,
+          latitude: form.latitude,
+          longitude: form.longitude,
           is_default: addresses.length === 0,
         });
       }
 
-      setForm({ label: "", street: "", building: "", floor: "", apartment: "", notes: "" });
+      setForm({ label: "", street: "", building: "", floor: "", apartment: "", notes: "", latitude: null, longitude: null });
       setEditingId(null);
       setShowModal(false);
       fetchAddresses();
@@ -222,6 +230,11 @@ export default function Addresses() {
                           ملاحظات: {addr.notes}
                         </Text>
                       )}
+                      {addr.latitude && addr.longitude && (
+                        <Text style={{ fontSize: 11, color: colors.primary, marginTop: 3, fontWeight: "700" }}>
+                          📍 الموقع محدد على الخريطة
+                        </Text>
+                      )}
                     </View>
                   </View>
 
@@ -237,6 +250,8 @@ export default function Addresses() {
                           floor: addr.floor,
                           apartment: addr.apartment,
                           notes: addr.notes || "",
+                          latitude: addr.latitude ?? null,
+                          longitude: addr.longitude ?? null,
                         });
                         setShowModal(true);
                       }}
@@ -287,7 +302,7 @@ export default function Addresses() {
           onPress={() => {
             analyticsTracker.trackEvent(ANALYTICS_EVENTS.ADDRESS.ADD_INITIATED);
             setEditingId(null);
-            setForm({ label: "", street: "", building: "", floor: "", apartment: "", notes: "" });
+            setForm({ label: "", street: "", building: "", floor: "", apartment: "", notes: "", latitude: null, longitude: null });
             setShowModal(true);
           }}
           style={{
@@ -344,6 +359,18 @@ export default function Addresses() {
                       accessibilityLabel="اسم العنوان"
                     />
                   </View>
+                </View>
+
+                {/* Map Picker */}
+                <View>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.text, marginBottom: 6 }}>حدد الموقع على الخريطة</Text>
+                  <LocationPickerMap
+                    latitude={form.latitude}
+                    longitude={form.longitude}
+                    onLocationSelect={(lat, lng) => setForm(prev => ({ ...prev, latitude: lat, longitude: lng }))}
+                    height={200}
+                    colors={colors}
+                  />
                 </View>
 
                 {/* Street */}

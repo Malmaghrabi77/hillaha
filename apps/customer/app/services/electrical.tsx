@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
 import {
-  View, Text, Pressable, TextInput,
+  View, Text, Pressable, TextInput, ScrollView,
   StyleSheet, Platform, Modal, Alert,
 } from "react-native";
 import { router } from "expo-router";
-import { useDarkMode } from '../hooks/useDarkMode';
-import { useSupabase } from '../../hooks/useSupabase';
-import { analyticsTracker } from '../utils/analyticsTracker';
-import { A11yPresets } from '../hooks/useAccessibility';
-import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
-import { SafeAreaScrollView } from '../components';
+import { useDarkMode } from '../../src/hooks/useDarkMode';
+import { useSupabase } from '../../src/hooks/useSupabase';
+import { analyticsTracker } from '../../src/utils/analyticsTracker';
+import { A11yPresets } from '../../src/hooks/useAccessibility';
+import { ANALYTICS_EVENTS } from '../../src/constants/analyticsEvents';
+import { SafeAreaScrollView, LocationPickerMap } from '../../src/components';
 
 const SERVICES = [
   { id: "ac_service",   label: "صيانة مكيف",       desc: "فحص وتنظيف وإصلاح",  price: 150, icon: "❄️" },
@@ -28,6 +28,8 @@ export default function ElectricalScreen() {
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedTime, setSelectedTime]       = useState<string | null>(null);
   const [address, setAddress]                 = useState("");
+  const [addressLat, setAddressLat]           = useState<number | null>(null);
+  const [addressLng, setAddressLng]           = useState<number | null>(null);
   const [notes, setNotes]                     = useState("");
   const [showModal, setShowModal]             = useState(false);
 
@@ -47,16 +49,20 @@ export default function ElectricalScreen() {
       price: svc?.price,
     });
     if (supabase) {
-      const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-      await supabase.from("service_bookings").insert({
-        customer_id:    user?.id ?? null,
-        service_type:   "electrical",
-        service_name:   svc?.label ?? selectedService,
-        price:          svc?.price ?? 0,
-        address,
-        scheduled_time: selectedTime,
-        notes:          notes || null,
-      }).catch(() => {});
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("service_bookings").insert({
+          customer_id:    user?.id ?? null,
+          service_type:   "electrical",
+          service_name:   svc?.label ?? selectedService,
+          price:          svc?.price ?? 0,
+          address,
+          latitude:       addressLat,
+          longitude:      addressLng,
+          scheduled_time: selectedTime,
+          notes:          notes || null,
+        });
+      } catch {}
     }
     setShowModal(true);
   };
@@ -66,7 +72,7 @@ export default function ElectricalScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: Platform.OS === "android" ? 28 : 58, backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/home")}
           style={[styles.backBtn, { backgroundColor: colors.primarySoft }]}
           {...A11yPresets.button}
         >
@@ -115,15 +121,15 @@ export default function ElectricalScreen() {
                 }}
                 style={[
                   styles.serviceCard,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
                   selectedService === s.id && [styles.serviceCardActive, { borderColor: colors.primary, backgroundColor: colors.primarySoft }],
-                  { backgroundColor: colors.surface, borderColor: colors.border }
                 ]}
                 {...A11yPresets.button}
               >
                 <Text style={styles.serviceIcon}>{s.icon}</Text>
-                <Text style={[styles.serviceLabel, selectedService === s.id && { color: colors.primary }, { color: colors.text }]}>{s.label}</Text>
+                <Text style={[styles.serviceLabel, { color: colors.text }, selectedService === s.id && { color: colors.primary }]}>{s.label}</Text>
                 <Text style={[styles.serviceDesc, { color: colors.textMuted }]}>{s.desc}</Text>
-                <Text style={[styles.servicePrice, selectedService === s.id && { color: colors.primary }, { color: colors.text }]}>
+                <Text style={[styles.servicePrice, { color: colors.text }, selectedService === s.id && { color: colors.primary }]}>
                   يبدأ من {s.price} جنيه
                 </Text>
                 {selectedService === s.id && (
@@ -149,12 +155,12 @@ export default function ElectricalScreen() {
                 }}
                 style={[
                   styles.timeChip,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
                   selectedTime === t && [styles.timeChipActive, { backgroundColor: colors.primary, borderColor: colors.primary }],
-                  { backgroundColor: colors.surface, borderColor: colors.border }
                 ]}
                 {...A11yPresets.button}
               >
-                <Text style={[styles.timeText, selectedTime === t && { color: "white" }, { color: colors.text }]}>{t}</Text>
+                <Text style={[styles.timeText, { color: colors.text }, selectedTime === t && { color: "white" }]}>{t}</Text>
               </Pressable>
             ))}
           </View>
@@ -163,17 +169,25 @@ export default function ElectricalScreen() {
         {/* Address */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>العنوان</Text>
+          <LocationPickerMap
+            latitude={addressLat}
+            longitude={addressLng}
+            onLocationSelect={(lat, lng) => { setAddressLat(lat); setAddressLng(lng); }}
+            height={180}
+            colors={colors}
+          />
           <TextInput
-            placeholder="شارع، رقم المبنى، الطابق..."
+            placeholder="تفاصيل إضافية: شارع، رقم المبنى، الطابق..."
             value={address}
             onChangeText={setAddress}
             style={[
               styles.input,
               {
+                marginTop: 10,
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
                 color: colors.text,
-                borderWidth: isDarkMode ? 1.5 : 1.5,
+                borderWidth: 1.5,
               }
             ]}
             placeholderTextColor={colors.textMuted}
@@ -218,7 +232,7 @@ export default function ElectricalScreen() {
           </View>
         </View>
 
-      </View>
+      </ScrollView>
 
       {/* Bottom CTA */}
       <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -256,10 +270,17 @@ export default function ElectricalScreen() {
             </View>
             <Pressable
               style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+              onPress={() => { setShowModal(false); router.push("/(tabs)/orders"); }}
+              {...A11yPresets.button}
+            >
+              <Text style={{ color: "white", fontWeight: "900", fontSize: 15 }}>متابعة طلباتي</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.modalBtn, { backgroundColor: "transparent", borderWidth: 1.5, borderColor: colors.border, marginTop: 8 }]}
               onPress={() => { setShowModal(false); router.push("/(tabs)/home"); }}
               {...A11yPresets.button}
             >
-              <Text style={{ color: "white", fontWeight: "900", fontSize: 15 }}>العودة للرئيسية</Text>
+              <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>العودة للرئيسية</Text>
             </Pressable>
           </View>
         </View>

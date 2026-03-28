@@ -4,11 +4,11 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
-import { useDarkMode } from "../hooks/useDarkMode";
-import { useSupabase } from "../../hooks/useSupabase";
-import { analyticsTracker } from "../utils/analyticsTracker";
-import { A11yPresets } from "../hooks/useAccessibility";
-import { SafeAreaScrollView } from "../components";
+import { useDarkMode } from "../../src/hooks/useDarkMode";
+import { useSupabase } from "../../src/hooks/useSupabase";
+import { analyticsTracker } from "../../src/utils/analyticsTracker";
+import { A11yPresets } from "../../src/hooks/useAccessibility";
+import { SafeAreaScrollView } from "../../src/components";
 
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",
@@ -130,7 +130,7 @@ export default function ReferralsScreen() {
         <Pressable
           onPress={() => {
             analyticsTracker.trackEvent("referrals_back");
-            router.back();
+            router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
           }}
           {...A11yPresets.pressable}
           style={{ flexDirection: "row", alignItems: "center", gap: 8 }}

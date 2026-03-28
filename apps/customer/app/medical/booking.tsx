@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, Pressable, Modal, FlatList,
+  View, Text, Pressable, Modal, FlatList, ScrollView,
   Platform, TextInput, ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { useDarkMode } from '../hooks/useDarkMode';
-import { useSupabase } from '../../hooks/useSupabase';
-import { analyticsTracker } from '../utils/analyticsTracker';
-import { A11yPresets } from '../hooks/useAccessibility';
-import { LoadingAnimation } from '../hooks/useLottieAnimations';
-import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
-import { SafeAreaScrollView } from '../components';
+import { useDarkMode } from '../../src/hooks/useDarkMode';
+import { useSupabase } from '../../src/hooks/useSupabase';
+import { analyticsTracker } from '../../src/utils/analyticsTracker';
+import { A11yPresets } from '../../src/hooks/useAccessibility';
+import { LoadingAnimation } from '../../src/hooks/useLottieAnimations';
+import { ANALYTICS_EVENTS } from '../../src/constants/analyticsEvents';
+import { SafeAreaScrollView } from '../../src/components';
 
 interface Doctor {
   id: string;
@@ -51,7 +51,6 @@ export default function Booking() {
 
   const loadDoctors = async (spec: string) => {
     setLoading(true);
-    const supabase = getSB();
     if (!supabase) { setLoading(false); return; }
 
     try {
@@ -83,7 +82,6 @@ export default function Booking() {
     }
 
     setLoading(true);
-    const supabase = getSB();
     if (!supabase) { setLoading(false); return; }
 
     try {
@@ -109,7 +107,7 @@ export default function Booking() {
       });
 
       alert('تم حجز الموعد بنجاح! سيتلقى الطبيب طلبك قريباً.');
-      router.back();
+      router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
     } catch (error: any) {
       alert(`خطأ: ${error.message}`);
     } finally {
@@ -128,7 +126,7 @@ export default function Booking() {
           paddingBottom: 24,
         }}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/home")}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}
             {...A11yPresets.button("العودة", "انقر للعودة إلى الخلف")}
           >

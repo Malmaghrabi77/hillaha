@@ -4,12 +4,12 @@ import {
   ActivityIndicator, Image, Modal,
 } from "react-native";
 import { router } from "expo-router";
-import { useDarkMode } from "../hooks/useDarkMode";
-import { useSupabase } from "../hooks/useSupabase";
-import { analyticsTracker } from "../utils/analyticsTracker";
-import { A11yPresets } from "../hooks/useAccessibility";
-import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
-import { AppHeader, SafeAreaDisplay, SafeAreaScrollView } from '../components';
+import { useDarkMode } from "../../src/hooks/useDarkMode";
+import { useSupabase } from "../../src/hooks/useSupabase";
+import { analyticsTracker } from "../../src/utils/analyticsTracker";
+import { A11yPresets } from "../../src/hooks/useAccessibility";
+import { ANALYTICS_EVENTS } from "../../src/constants/analyticsEvents";
+import { AppHeader, SafeAreaDisplay, SafeAreaScrollView } from '../../src/components';
 
 interface Partner {
   id: string;
@@ -111,7 +111,7 @@ export default function Search() {
   }, [sortBy]);
 
   return (
-    <SafeAreaDisplay variant="page" backgroundColor={colors.bg}>
+    <SafeAreaDisplay variant="page" safeBottom={false} backgroundColor={colors.bg}>
       <AppHeader
         title="بحث"
         showBackButton={false}

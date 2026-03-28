@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { ScrollView, View, Text, Pressable, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { useDarkMode } from "../hooks/useDarkMode";
-import { analyticsTracker } from "../utils/analyticsTracker";
-import { A11yPresets } from "../hooks/useAccessibility";
+import { useDarkMode } from "../../src/hooks/useDarkMode";
+import { analyticsTracker } from "../../src/utils/analyticsTracker";
+import { A11yPresets } from "../../src/hooks/useAccessibility";
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -146,7 +146,7 @@ export default function ConsentScreen() {
         <Pressable
           onPress={() => {
             analyticsTracker.trackEvent("consent_back");
-            router.back();
+            router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
           }}
           {...A11yPresets.pressable}
           style={{ marginTop: 14, alignItems: "center" }}

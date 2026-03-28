@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable, Platform, ActivityIndicator, Alert } from "react-native";
 import { router } from "expo-router";
-import { useDarkMode } from "../hooks/useDarkMode";
-import { useSupabase } from "../../hooks/useSupabase";
-import { analyticsTracker } from "../utils/analyticsTracker";
-import { A11yPresets } from "../hooks/useAccessibility";
-import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
-import { SafeAreaScrollView } from "../components";
+import { useDarkMode } from "../../src/hooks/useDarkMode";
+import { useSupabase } from "../../src/hooks/useSupabase";
+import { analyticsTracker } from "../../src/utils/analyticsTracker";
+import { A11yPresets } from "../../src/hooks/useAccessibility";
+import { ANALYTICS_EVENTS } from "../../src/constants/analyticsEvents";
+import { SafeAreaScrollView } from "../../src/components";
 
 export default function EditProfile() {
   const { isDarkMode, colors } = useDarkMode();
@@ -48,7 +48,6 @@ export default function EditProfile() {
     }
 
     setSaving(true);
-    const supabase = getSB();
     if (!supabase) { setSaving(false); return; }
 
     try {
@@ -65,7 +64,7 @@ export default function EditProfile() {
       setSaved(true);
       setTimeout(() => {
         setSaved(false);
-        router.back();
+        router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
       }, 1500);
     } catch (error) {
       Alert.alert("خطأ", "حدث خطأ أثناء حفظ البيانات");
@@ -93,7 +92,7 @@ export default function EditProfile() {
         flexDirection: "row", alignItems: "center", gap: 12,
       }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/home")}
           {...A11yPresets.button("العودة", "انقر للعودة")}
           style={{
             width: 40, height: 40, borderRadius: 12,

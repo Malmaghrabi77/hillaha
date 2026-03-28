@@ -4,12 +4,12 @@ import {
   Alert, ActivityIndicator,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { useDarkMode } from "../hooks/useDarkMode";
-import { useSupabase } from "../hooks/useSupabase";
-import { analyticsTracker } from "../utils/analyticsTracker";
-import { A11yPresets } from "../hooks/useAccessibility";
-import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
-import { AppHeader, SafeAreaScrollView } from '../components';
+import { useDarkMode } from "../src/hooks/useDarkMode";
+import { useSupabase } from "../src/hooks/useSupabase";
+import { analyticsTracker } from "../src/utils/analyticsTracker";
+import { A11yPresets } from "../src/hooks/useAccessibility";
+import { ANALYTICS_EVENTS } from "../src/constants/analyticsEvents";
+import { AppHeader, SafeAreaScrollView } from '../src/components';
 
 interface Coupon {
   id: string;
@@ -49,7 +49,6 @@ export default function PromoCode() {
   );
 
   async function fetchCoupons() {
-    const supabase = getSB();
     if (!supabase) { setLoading(false); return; }
 
     try {
@@ -80,7 +79,6 @@ export default function PromoCode() {
     }
 
     setApplying(true);
-    const supabase = getSB();
     if (!supabase) { setApplying(false); return; }
 
     try {

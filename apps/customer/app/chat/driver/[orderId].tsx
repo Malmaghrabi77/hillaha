@@ -4,12 +4,12 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useDarkMode } from "../../hooks/useDarkMode";
-import { useSupabase } from "../../../hooks/useSupabase";
-import { analyticsTracker } from "../../utils/analyticsTracker";
-import { A11yPresets } from "../../hooks/useAccessibility";
-import { ANALYTICS_EVENTS } from "../../constants/analyticsEvents";
-import { AppHeader, SafeAreaDisplay } from '../../components';
+import { useDarkMode } from "../../../src/hooks/useDarkMode";
+import { useSupabase } from "../../../src/hooks/useSupabase";
+import { analyticsTracker } from "../../../src/utils/analyticsTracker";
+import { A11yPresets } from "../../../src/hooks/useAccessibility";
+import { ANALYTICS_EVENTS } from "../../../src/constants/analyticsEvents";
+import { AppHeader, SafeAreaDisplay } from '../../../src/components';
 
 interface Message {
   id: string;
@@ -78,7 +78,6 @@ export default function DriverChat() {
     load();
 
     // Subscribe to new messages
-    const supabase = getSB();
     if (supabase) {
       const channel = supabase
         .channel(`chat-order-${orderId}`)
@@ -104,7 +103,6 @@ export default function DriverChat() {
   async function sendMessage() {
     if (!newMessage.trim() || !orderId) return;
 
-    const supabase = getSB();
     if (!supabase) return;
 
     try {

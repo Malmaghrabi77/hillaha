@@ -4,11 +4,11 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useDarkMode } from "../../hooks/useDarkMode";
-import { useSupabase } from "../../../hooks/useSupabase";
-import { analyticsTracker } from "../../utils/analyticsTracker";
-import { A11yPresets } from "../../hooks/useAccessibility";
-import { SafeAreaDisplay } from "../../components";
+import { useDarkMode } from "../../../src/hooks/useDarkMode";
+import { useSupabase } from "../../../src/hooks/useSupabase";
+import { analyticsTracker } from "../../../src/utils/analyticsTracker";
+import { A11yPresets } from "../../../src/hooks/useAccessibility";
+import { SafeAreaDisplay } from "../../../src/components";
 
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",
@@ -143,7 +143,7 @@ export default function PartnerChat() {
         <Pressable
           onPress={() => {
             analyticsTracker.trackEvent("chat_back");
-            router.back();
+            router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
           }}
           {...A11yPresets.pressable}
           style={{

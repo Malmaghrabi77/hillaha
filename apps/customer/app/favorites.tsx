@@ -4,12 +4,12 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { useDarkMode } from "../hooks/useDarkMode";
-import { useSupabase } from "../hooks/useSupabase";
-import { analyticsTracker } from "../utils/analyticsTracker";
-import { A11yPresets } from "../hooks/useAccessibility";
-import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
-import { AppHeader, SafeAreaScrollView } from '../components';
+import { useDarkMode } from "../src/hooks/useDarkMode";
+import { useSupabase } from "../src/hooks/useSupabase";
+import { analyticsTracker } from "../src/utils/analyticsTracker";
+import { A11yPresets } from "../src/hooks/useAccessibility";
+import { ANALYTICS_EVENTS } from "../src/constants/analyticsEvents";
+import { AppHeader, SafeAreaScrollView } from '../src/components';
 
 interface FavoritePartner {
   id: string;

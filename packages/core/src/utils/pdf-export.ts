@@ -1,5 +1,14 @@
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+// Lazy-load jsPDF to avoid crashing React Native (fast-png uses latin1 TextDecoder)
+let _jsPDF: typeof import("jspdf").default | null = null;
+
+const getJsPDF = async () => {
+  if (!_jsPDF) {
+    const mod = await import("jspdf");
+    _jsPDF = mod.default;
+    await import("jspdf-autotable");
+  }
+  return _jsPDF;
+};
 
 interface MonthlyData {
   month: string;
@@ -19,7 +28,7 @@ interface PartnerInfo {
  * Generate a financial report PDF
  * Reports monthly sales, commissions, and profit
  */
-export const generateFinanceReport = (
+export const generateFinanceReport = async (
   monthlyData: MonthlyData[],
   partner: PartnerInfo,
   options?: {
@@ -27,7 +36,8 @@ export const generateFinanceReport = (
     includeCharts?: boolean;
   }
 ) => {
-  const pdf = new jsPDF({
+  const JsPDF = await getJsPDF();
+  const pdf = new JsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4",
@@ -132,7 +142,7 @@ export const generateFinanceReport = (
 /**
  * Generate an order summary report
  */
-export const generateOrderReport = (
+export const generateOrderReport = async (
   orders: Array<{
     id: string;
     customerName: string;
@@ -144,7 +154,8 @@ export const generateOrderReport = (
   partner: PartnerInfo,
   period?: string
 ) => {
-  const pdf = new jsPDF({
+  const JsPDF = await getJsPDF();
+  const pdf = new JsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4",
@@ -219,7 +230,7 @@ export const generateOrderReport = (
 /**
  * Generate daily sales summary
  */
-export const generateDailySummary = (
+export const generateDailySummary = async (
   date: string,
   stats: {
     totalOrders: number;
@@ -230,7 +241,8 @@ export const generateDailySummary = (
   },
   partner: PartnerInfo
 ) => {
-  const pdf = new jsPDF({
+  const JsPDF = await getJsPDF();
+  const pdf = new JsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4",
@@ -298,7 +310,7 @@ export const generateDailySummary = (
 /**
  * Generate a comprehensive financial report for a partner
  */
-export const generatePartnerFinancialReport = (
+export const generatePartnerFinancialReport = async (
   partnerId: string,
   partnerData: {
     name: string;
@@ -311,7 +323,8 @@ export const generatePartnerFinancialReport = (
   },
   period: string = "Last 6 months"
 ) => {
-  const pdf = new jsPDF({
+  const JsPDF = await getJsPDF();
+  const pdf = new JsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4",
@@ -378,7 +391,7 @@ export const generatePartnerFinancialReport = (
 /**
  * Generate a settlement/payment report for a partner
  */
-export const generatePartnerSettlementReport = (
+export const generatePartnerSettlementReport = async (
   partnerId: string,
   settlementData: {
     partnerName: string;
@@ -392,7 +405,8 @@ export const generatePartnerSettlementReport = (
     totalPending: number;
   }
 ) => {
-  const pdf = new jsPDF({
+  const JsPDF = await getJsPDF();
+  const pdf = new JsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4",
@@ -455,7 +469,7 @@ export const generatePartnerSettlementReport = (
 /**
  * Generate a performance report for a driver
  */
-export const generateDriverPerformanceReport = (
+export const generateDriverPerformanceReport = async (
   driverId: string,
   driverData: {
     name: string;
@@ -469,7 +483,8 @@ export const generateDriverPerformanceReport = (
   },
   period: string = "Last 6 months"
 ) => {
-  const pdf = new jsPDF({
+  const JsPDF = await getJsPDF();
+  const pdf = new JsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4",
@@ -535,7 +550,7 @@ export const generateDriverPerformanceReport = (
 /**
  * Generate an earnings report for a driver
  */
-export const generateDriverEarningsReport = (
+export const generateDriverEarningsReport = async (
   driverId: string,
   earningsData: {
     driverName: string;
@@ -551,7 +566,8 @@ export const generateDriverEarningsReport = (
   },
   period: string = "Last 6 months"
 ) => {
-  const pdf = new jsPDF({
+  const JsPDF = await getJsPDF();
+  const pdf = new JsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4",
@@ -617,7 +633,7 @@ export const generateDriverEarningsReport = (
 /**
  * Generate a comprehensive report for a regional manager
  */
-export const generateRegionalManagerReport = (
+export const generateRegionalManagerReport = async (
   managerId: string,
   managerData: {
     managerName: string;
@@ -631,7 +647,8 @@ export const generateRegionalManagerReport = (
   },
   period: string = "Last 6 months"
 ) => {
-  const pdf = new jsPDF({
+  const JsPDF = await getJsPDF();
+  const pdf = new JsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4",
@@ -703,7 +720,7 @@ export const generateRegionalManagerReport = (
 /**
  * Generate a comprehensive platform report for super admin
  */
-export const generateSuperAdminReport = (
+export const generateSuperAdminReport = async (
   platformData: {
     totalRevenue: number;
     totalOrders: number;
@@ -718,7 +735,8 @@ export const generateSuperAdminReport = (
   },
   period: string = "Last 6 months"
 ) => {
-  const pdf = new jsPDF({
+  const JsPDF = await getJsPDF();
+  const pdf = new JsPDF({
     orientation: "landscape",
     unit: "mm",
     format: "a4",

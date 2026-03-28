@@ -1,6 +1,7 @@
 import React from "react";
-import { Text } from "react-native";
+import { Text, Platform } from "react-native";
 import { Tabs } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
   pink: "#EC4899",       pinkSoft: "#FCE7F3",
@@ -12,6 +13,9 @@ const C = {
 } as const;
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(insets.bottom, 8);
+
   return (
     <Tabs screenOptions={{
       headerShown: false,
@@ -20,8 +24,8 @@ export default function TabsLayout() {
       tabBarStyle: {
         borderTopColor: C.border,
         backgroundColor: C.surface,
-        height: 60,
-        paddingBottom: 8,
+        height: 56 + bottomPadding,
+        paddingBottom: bottomPadding,
         paddingTop: 6,
       },
       tabBarLabelStyle: {

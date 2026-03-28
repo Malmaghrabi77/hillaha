@@ -4,12 +4,12 @@ import {
   ActivityIndicator, Alert,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
-import { useDarkMode } from "../hooks/useDarkMode";
-import { useSupabase } from "../hooks/useSupabase";
-import { analyticsTracker } from "../utils/analyticsTracker";
-import { A11yPresets } from "../hooks/useAccessibility";
-import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
-import { AppHeader, SafeAreaScrollView } from '../components';
+import { useDarkMode } from "../src/hooks/useDarkMode";
+import { useSupabase } from "../src/hooks/useSupabase";
+import { analyticsTracker } from "../src/utils/analyticsTracker";
+import { A11yPresets } from "../src/hooks/useAccessibility";
+import { ANALYTICS_EVENTS } from "../src/constants/analyticsEvents";
+import { AppHeader, SafeAreaScrollView } from '../src/components';
 
 interface OrderInfo {
   id: string;
@@ -67,7 +67,6 @@ export default function RateOrder() {
     }
 
     setSubmitting(true);
-    const supabase = getSB();
     if (!supabase) { setSubmitting(false); return; }
 
     try {

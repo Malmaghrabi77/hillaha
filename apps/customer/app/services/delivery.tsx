@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
 import {
-  View, Text, Pressable, TextInput,
+  View, Text, Pressable, TextInput, ScrollView,
   StyleSheet, Platform, Modal, Alert,
 } from "react-native";
 import { router } from "expo-router";
-import { useDarkMode } from '../hooks/useDarkMode';
-import { useSupabase } from '../../hooks/useSupabase';
-import { analyticsTracker } from '../utils/analyticsTracker';
-import { A11yPresets } from '../hooks/useAccessibility';
-import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
-import { SafeAreaScrollView } from '../components';
+import { useDarkMode } from '../../src/hooks/useDarkMode';
+import { useSupabase } from '../../src/hooks/useSupabase';
+import { analyticsTracker } from '../../src/utils/analyticsTracker';
+import { A11yPresets } from '../../src/hooks/useAccessibility';
+import { ANALYTICS_EVENTS } from '../../src/constants/analyticsEvents';
+import { SafeAreaScrollView, LocationPickerMap } from '../../src/components';
 
 const SIZES = [
   { id: "small",  label: "صغير",   desc: "يحمله بيد واحدة", icon: "📦", note: "مستندات، ملابس" },
@@ -24,7 +24,11 @@ export default function P2PDeliveryScreen() {
   const supabase = useSupabase();
   const [size, setSize]               = useState<string | null>(null);
   const [fromAddress, setFromAddress] = useState("");
+  const [fromLat, setFromLat]         = useState<number | null>(null);
+  const [fromLng, setFromLng]         = useState<number | null>(null);
   const [toAddress, setToAddress]     = useState("");
+  const [toLat, setToLat]             = useState<number | null>(null);
+  const [toLng, setToLng]             = useState<number | null>(null);
   const [senderName, setSenderName]   = useState("");
   const [senderPhone, setSenderPhone] = useState("");
   const [receiverName, setReceiverName]   = useState("");
@@ -55,20 +59,26 @@ export default function P2PDeliveryScreen() {
     const code = generateTracking();
     setTrackingCode(code);
     if (supabase) {
-      const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-      await supabase.from("delivery_requests").insert({
-        sender_id:      user?.id ?? null,
-        package_size:   size,
-        from_address:   fromAddress,
-        to_address:     toAddress,
-        sender_name:    senderName || null,
-        sender_phone:   senderPhone,
-        receiver_name:  receiverName || null,
-        receiver_phone: receiverPhone,
-        delivery_fee:   fee ?? 25,
-        notes:          notes || null,
-        tracking_code:  code,
-      }).catch(() => {});
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("delivery_requests").insert({
+          sender_id:      user?.id ?? null,
+          package_size:   size,
+          from_address:   fromAddress,
+          from_latitude:  fromLat,
+          from_longitude: fromLng,
+          to_address:     toAddress,
+          to_latitude:    toLat,
+          to_longitude:   toLng,
+          sender_name:    senderName || null,
+          sender_phone:   senderPhone,
+          receiver_name:  receiverName || null,
+          receiver_phone: receiverPhone,
+          delivery_fee:   fee ?? 25,
+          notes:          notes || null,
+          tracking_code:  code,
+        });
+      } catch {}
     }
     setShowModal(true);
   };
@@ -78,7 +88,7 @@ export default function P2PDeliveryScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: Platform.OS === "android" ? 28 : 58, backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/home")}
           style={[styles.backBtn, { backgroundColor: colors.primarySoft }]}
           {...A11yPresets.button}
         >
@@ -122,18 +132,18 @@ export default function P2PDeliveryScreen() {
               }}
               style={[
                 styles.sizeRow,
+                { backgroundColor: colors.surface, borderColor: colors.border },
                 size === s.id && [styles.sizeRowActive, { borderColor: colors.primary, backgroundColor: colors.primarySoft }],
-                { backgroundColor: colors.surface, borderColor: colors.border }
               ]}
               {...A11yPresets.button}
             >
               <Text style={{ fontSize: 28 }}>{s.icon}</Text>
               <View style={{ flex: 1, marginHorizontal: 12 }}>
-                <Text style={[styles.sizeLabel, size === s.id && { color: colors.primary }, { color: colors.text }]}>{s.label}</Text>
+                <Text style={[styles.sizeLabel, { color: colors.text }, size === s.id && { color: colors.primary }]}>{s.label}</Text>
                 <Text style={[styles.sizeDesc, { color: colors.textMuted }]}>{s.desc} — {s.note}</Text>
               </View>
               <View style={{ alignItems: "flex-end" }}>
-                <Text style={[styles.sizeFee, size === s.id && { color: colors.primary }, { color: colors.text }]}>
+                <Text style={[styles.sizeFee, { color: colors.text }, size === s.id && { color: colors.primary }]}>
                   {DELIVERY_FEES[s.id]} جنيه
                 </Text>
                 {size === s.id && (
@@ -174,13 +184,20 @@ export default function P2PDeliveryScreen() {
             textAlign="right"
             accessibilityLabel="رقم هاتف المرسل"
           />
+          <LocationPickerMap
+            latitude={fromLat}
+            longitude={fromLng}
+            onLocationSelect={(lat, lng) => { setFromLat(lat); setFromLng(lng); }}
+            height={160}
+            colors={colors}
+          />
           <TextInput
-            placeholder="عنوان الاستلام (من) *"
+            placeholder="تفاصيل عنوان الاستلام (من) *"
             value={fromAddress}
             onChangeText={setFromAddress}
             style={[
               styles.input,
-              { height: 72, textAlignVertical: "top", paddingTop: 10, backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }
+              { marginTop: 10, height: 56, textAlignVertical: "top", paddingTop: 10, backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }
             ]}
             multiline
             placeholderTextColor={colors.textMuted}
@@ -217,13 +234,20 @@ export default function P2PDeliveryScreen() {
             textAlign="right"
             accessibilityLabel="رقم هاتف المستلم"
           />
+          <LocationPickerMap
+            latitude={toLat}
+            longitude={toLng}
+            onLocationSelect={(lat, lng) => { setToLat(lat); setToLng(lng); }}
+            height={160}
+            colors={colors}
+          />
           <TextInput
-            placeholder="عنوان التوصيل (إلى) *"
+            placeholder="تفاصيل عنوان التوصيل (إلى) *"
             value={toAddress}
             onChangeText={setToAddress}
             style={[
               styles.input,
-              { height: 72, textAlignVertical: "top", paddingTop: 10, backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }
+              { marginTop: 10, height: 56, textAlignVertical: "top", paddingTop: 10, backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }
             ]}
             multiline
             placeholderTextColor={colors.textMuted}
@@ -264,7 +288,7 @@ export default function P2PDeliveryScreen() {
           </View>
         </View>
 
-      </View>
+      </ScrollView>
 
       {/* Bottom CTA */}
       <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -309,10 +333,17 @@ export default function P2PDeliveryScreen() {
             </View>
             <Pressable
               style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+              onPress={() => { setShowModal(false); router.push("/(tabs)/orders"); }}
+              {...A11yPresets.button}
+            >
+              <Text style={{ color: "white", fontWeight: "900", fontSize: 15 }}>متابعة طلباتي</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.modalBtn, { backgroundColor: "transparent", borderWidth: 1.5, borderColor: colors.border, marginTop: 8 }]}
               onPress={() => { setShowModal(false); router.push("/(tabs)/home"); }}
               {...A11yPresets.button}
             >
-              <Text style={{ color: "white", fontWeight: "900", fontSize: 15 }}>العودة للرئيسية</Text>
+              <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>العودة للرئيسية</Text>
             </Pressable>
           </View>
         </View>

@@ -1,13 +1,13 @@
 import React, { useRef } from "react";
 import {
-  View, Text, Pressable, Animated, Alert, Image,
+  View, Text, Pressable, Animated, Alert, Image, ScrollView,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCart } from "../../lib/cartStore";
-import { useDarkMode } from "../hooks/useDarkMode";
-import { analyticsTracker } from "../utils/analyticsTracker";
-import { A11yPresets } from "../hooks/useAccessibility";
-import { SafeAreaScrollView, SafeAreaDisplay } from "../components";
+import { useDarkMode } from "../../src/hooks/useDarkMode";
+import { analyticsTracker } from "../../src/utils/analyticsTracker";
+import { A11yPresets } from "../../src/hooks/useAccessibility";
+import { SafeAreaScrollView, SafeAreaDisplay } from "../../src/components";
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -260,7 +260,7 @@ export default function Restaurant() {
         <Pressable
           onPress={() => {
             analyticsTracker.trackEvent("restaurant_close");
-            router.back();
+            router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
           }}
           {...A11yPresets.pressable}
           style={{
@@ -273,6 +273,24 @@ export default function Restaurant() {
           }}
         >
           <Text style={{ fontSize: 18 }}>✕</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            analyticsTracker.trackEvent("restaurant_chat", { partnerId });
+            router.push(`/chat/partner/${partnerId}` as any);
+          }}
+          {...A11yPresets.pressable}
+          style={{
+            position: "absolute", top: 52, right: 62,
+            width: 38, height: 38, borderRadius: 19,
+            backgroundColor: colors.surface,
+            justifyContent: "center", alignItems: "center",
+            shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2, shadowRadius: 6, elevation: 4,
+          }}
+        >
+          <Text style={{ fontSize: 18 }}>💬</Text>
         </Pressable>
 
         <View style={{ position: "absolute", bottom: 18, left: 18, right: 18 }}>

@@ -1,9 +1,9 @@
 import React, { useEffect } from "react";
 import { View, Text, Pressable, ScrollView, StatusBar, Platform, Image, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
-import { useDarkMode } from "./hooks/useDarkMode";
-import { analyticsTracker } from "./utils/analyticsTracker";
-import { A11yPresets } from "./hooks/useAccessibility";
+import { useDarkMode } from "../src/hooks/useDarkMode";
+import { analyticsTracker } from "../src/utils/analyticsTracker";
+import { A11yPresets } from "../src/hooks/useAccessibility";
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -71,7 +71,7 @@ export default function Medical() {
         <Pressable
           onPress={() => {
             analyticsTracker.trackEvent("medical_back");
-            router.back();
+            router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
           }}
           {...A11yPresets.pressable}
           style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}

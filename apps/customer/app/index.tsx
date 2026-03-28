@@ -11,9 +11,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useDarkMode } from "./hooks/useDarkMode";
-import { analyticsTracker } from "./utils/analyticsTracker";
-import { A11yPresets } from "./hooks/useAccessibility";
+import { useDarkMode } from "../src/hooks/useDarkMode";
+import { analyticsTracker } from "../src/utils/analyticsTracker";
+import { A11yPresets } from "../src/hooks/useAccessibility";
 
 // ── Force RTL ─────────────────────────────────────────────────────────────────
 I18nManager.allowRTL(true);

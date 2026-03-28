@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { View, Text, Pressable, TextInput, Image } from "react-native";
 import { router } from "expo-router";
 import { useCart } from "../lib/cartStore";
-import { useDarkMode } from "../hooks/useDarkMode";
-import { analyticsTracker } from "../utils/analyticsTracker";
-import { A11yPresets } from "../hooks/useAccessibility";
-import { ANALYTICS_EVENTS } from "../constants/analyticsEvents";
-import { SafeAreaScrollView, SafeAreaDisplay } from "../components";
+import { useDarkMode } from "../src/hooks/useDarkMode";
+import { analyticsTracker } from "../src/utils/analyticsTracker";
+import { A11yPresets } from "../src/hooks/useAccessibility";
+import { ANALYTICS_EVENTS } from "../src/constants/analyticsEvents";
+import { SafeAreaScrollView, SafeAreaDisplay } from "../src/components";
 
 export default function Cart() {
   const { isDarkMode, colors } = useDarkMode();
@@ -95,7 +95,7 @@ export default function Cart() {
           <Pressable
             onPress={() => {
               analyticsTracker.trackEvent(ANALYTICS_EVENTS.CART.ADD_MORE_ITEMS, {});
-              router.back();
+              router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
             }}
             {...A11yPresets.button("إضافة المزيد", "انقر لإضافة منتجات أخرى")}
           >

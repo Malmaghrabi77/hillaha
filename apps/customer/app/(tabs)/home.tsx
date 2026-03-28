@@ -5,12 +5,12 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useDarkMode } from '../hooks/useDarkMode';
-import { useSupabase } from '../../hooks/useSupabase';
-import { analyticsTracker } from '../utils/analyticsTracker';
-import { A11yPresets } from '../hooks/useAccessibility';
-import { ANALYTICS_EVENTS } from '../constants/analyticsEvents';
-import { SafeAreaDisplay } from '../components';
+import { useDarkMode } from '../../src/hooks/useDarkMode';
+import { useSupabase } from '../../src/hooks/useSupabase';
+import { analyticsTracker } from '../../src/utils/analyticsTracker';
+import { A11yPresets } from '../../src/hooks/useAccessibility';
+import { ANALYTICS_EVENTS } from '../../src/constants/analyticsEvents';
+import { SafeAreaDisplay } from '../../src/components';
 
 const SCREEN = Dimensions.get("window");
 
@@ -87,6 +87,17 @@ const DEFAULT_SERVICES = [
     route: "/services/delivery",
     badge: "سريع",
     badgeBg: "#7C3AED",
+  },
+  {
+    id: "medical",
+    title: "خدمات طبية",
+    subtitle: "حجز دكتور، رفع روشتة",
+    icon: "🏥",
+    color: "#2563EB",
+    bgColor: "#DBEAFE",
+    route: "/medical",
+    badge: "جديد",
+    badgeBg: "#2563EB",
   },
 ];
 
@@ -500,7 +511,7 @@ export default function Home() {
   );
 
   return (
-    <SafeAreaDisplay variant="page" backgroundColor={colors.bg}>
+    <SafeAreaDisplay variant="page" safeBottom={false} backgroundColor={colors.bg}>
       {/* ── HEADER ─────────────────────────────────────────── */}
       <View style={{
         paddingBottom: 14,

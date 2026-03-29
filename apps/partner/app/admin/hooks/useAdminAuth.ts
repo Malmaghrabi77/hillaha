@@ -124,6 +124,7 @@ export function useAdminAuth(): AdminAuthContext {
         isRegionalManager,
         isRegularAdmin,
         isAccountant,
+        isCustomerService,
         adminType: (adminType as "regional_manager" | "regular_admin") || null,
         loading: false,
       });

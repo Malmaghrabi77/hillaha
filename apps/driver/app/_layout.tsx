@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Stack, Redirect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
 import { getSB } from "../lib/constants";
 
@@ -47,7 +48,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
@@ -67,6 +68,6 @@ export default function RootLayout() {
 
       {/* Navigate once auth check is done */}
       {target && <Redirect href={target} />}
-    </>
+    </SafeAreaProvider>
   );
 }

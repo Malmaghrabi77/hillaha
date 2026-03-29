@@ -96,10 +96,11 @@ export default function ProfileTab() {
   ];
 
   const MENU_ITEMS: { icon: string; label: string; onPress?: () => void }[] = [
+    { icon: "👛", label: "المحفظة", onPress: () => router.push("/(tabs)/wallet") },
     { icon: "📋", label: "سجل التوصيلات", onPress: () => router.push("/(tabs)/earnings") },
-    { icon: "💳", label: "بيانات الحساب البنكي" },
-    { icon: "📞", label: "الدعم الفني" },
-    { icon: "📄", label: "الشروط والأحكام" },
+    { icon: "💳", label: "بيانات الحساب البنكي", onPress: () => router.push("/bank-details") },
+    { icon: "📞", label: "الدعم الفني", onPress: () => router.push("/support") },
+    { icon: "📄", label: "الشروط والأحكام", onPress: () => router.push("/terms") },
   ];
 
   return (

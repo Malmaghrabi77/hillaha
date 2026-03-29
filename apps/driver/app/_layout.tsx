@@ -53,6 +53,10 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="bank-details" />
+        <Stack.Screen name="support" />
+        <Stack.Screen name="terms" />
+        <Stack.Screen name="withdraw" />
       </Stack>
 
       {/* Loading overlay while checking auth */}

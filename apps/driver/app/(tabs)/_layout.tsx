@@ -32,6 +32,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="home"     options={{ title: "الطلبات",  tabBarIcon: () => <TabIcon emoji="📦" /> }} />
       <Tabs.Screen name="active"   options={{ title: "توصيل نشط", tabBarIcon: () => <TabIcon emoji="🛵" /> }} />
       <Tabs.Screen name="earnings" options={{ title: "الأرباح",   tabBarIcon: () => <TabIcon emoji="💰" /> }} />
+      <Tabs.Screen name="wallet"   options={{ title: "المحفظة",  tabBarIcon: () => <TabIcon emoji="👛" /> }} />
       <Tabs.Screen name="profile"  options={{ title: "حسابي",    tabBarIcon: () => <TabIcon emoji="👤" /> }} />
     </Tabs>
   );

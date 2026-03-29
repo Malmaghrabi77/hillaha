@@ -3,6 +3,7 @@ import {
   View, Text, Pressable, ScrollView,
   StatusBar, Animated, Platform, Linking,
 } from "react-native";
+import { router } from "expo-router";
 import * as Location from "expo-location";
 import { C, getSB } from "../../lib/constants";
 
@@ -445,6 +446,19 @@ export default function ActiveTab() {
               </Text>
             </Pressable>
           ) : null}
+          <Pressable
+            onPress={() => router.push(`/chat/${order._uuid}` as any)}
+            style={{
+              marginTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "center",
+              gap: 8, paddingVertical: 11, borderRadius: 12,
+              backgroundColor: C.primarySoft, borderWidth: 1, borderColor: C.primary,
+            }}
+          >
+            <Text style={{ fontSize: 16 }}>💬</Text>
+            <Text style={{ fontSize: 13, fontWeight: "900", color: C.primary }}>
+              محادثة مع العميل
+            </Text>
+          </Pressable>
         </View>
 
         {/* ORDER SUMMARY */}

@@ -54,6 +54,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="bank-details" />
+        <Stack.Screen name="chat/[orderId]" />
         <Stack.Screen name="support" />
         <Stack.Screen name="terms" />
         <Stack.Screen name="withdraw" />

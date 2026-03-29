@@ -24,6 +24,7 @@ const NAV = [
   { href: "/dashboard/reviews",  icon: "⭐", label: "التقييمات" },
   { href: "/dashboard/drivers",  icon: "👨", label: "المندوبون" },
   { href: "/dashboard/notifications", icon: "🔔", label: "الإشعارات" },
+  { href: "/dashboard/support", icon: "🎧", label: "الدعم الفني" },
   { href: "/dashboard/settings", icon: "⚙️", label: "الإعدادات" },
 ];
 

@@ -1,6 +1,6 @@
 export type CountryCode = "EG" | "SA";
-export type UserRole = "customer" | "driver" | "partner" | "admin" | "super_admin" | "accountant";
-export type AdminRole = "admin" | "super_admin" | "accountant";
+export type UserRole = "customer" | "driver" | "partner" | "admin" | "super_admin" | "accountant" | "customer_service";
+export type AdminRole = "admin" | "super_admin" | "accountant" | "customer_service";
 export type PartnerType = "restaurant" | "store" | "pharmacy" | "clinic";
 export type DeliveryType = "platform" | "self";
 export type PaymentMethod = "cash" | "wallet_transfer" | "card";
@@ -81,7 +81,7 @@ export type AdminInvitation = {
   email: string;
   name: string;
   phone: string;
-  admin_type: "regional_manager" | "regular_admin";
+  admin_type: "regional_manager" | "regular_admin" | "accountant" | "customer_service";
   invited_by: string;
   status: "pending" | "accepted" | "rejected";
   super_admin_approval: "pending" | "approved" | "rejected";

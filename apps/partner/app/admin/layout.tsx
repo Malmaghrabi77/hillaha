@@ -110,7 +110,9 @@ export default function AdminLayout({
       { href: "/admin/approve-wallet-codes", label: "اعتماد أكواد المحفظة", icon: "✅" },
       { href: "/admin/card-analytics", label: "تقارير البطاقات", icon: "📊" },
       { href: "/admin/security-alerts", label: "مركز الأمان", icon: "🛡️" },
-      { href: "/admin/invite-partners", label: "دعوة شريك جديد", icon: "🤝" }
+      { href: "/admin/invite-partners", label: "دعوة شريك جديد", icon: "🤝" },
+      { href: "/admin/invite-customer-service", label: "دعوة خدمة عملاء", icon: "🎧" },
+      { href: "/admin/invite-accountant", label: "دعوة محاسب", icon: "💰" }
     );
   }
 
@@ -126,7 +128,8 @@ export default function AdminLayout({
     adminManagementItems.push(
       { href: "/admin/admin-management/invite-regular-admin", label: "دعوة مدير عادي", icon: "👤" },
       { href: "/admin/admin-management/invite-partners-regional-manager", label: "دعوة شريك جديد", icon: "🤝" },
-      { href: "/admin/admin-management/approve-partners-regional-manager", label: "موافقة دعوات الشركاء", icon: "✅" }
+      { href: "/admin/admin-management/approve-partners-regional-manager", label: "موافقة دعوات الشركاء", icon: "✅" },
+      { href: "/admin/invite-customer-service", label: "دعوة خدمة عملاء", icon: "🎧" }
     );
   }
 
@@ -165,6 +168,8 @@ export default function AdminLayout({
               ? "Super Admin"
               : auth.isAccountant
               ? "المحاسب"
+              : auth.isCustomerService
+              ? "خدمة العملاء"
               : auth.isRegionalManager
               ? "المدير الإقليمي"
               : auth.isRegularAdmin

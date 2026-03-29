@@ -67,15 +67,18 @@ export default function AdminLoginPage() {
       console.log("User role:", role);
 
       // Check if user has admin role
-      if (role !== "super_admin" && role !== "admin") {
+      if (role !== "super_admin" && role !== "admin" && role !== "accountant" && role !== "customer_service") {
         setError("هذا الحساب لا يمتلك صلاحيات الادمن");
         await sb.auth.signOut();
         return;
       }
 
-      // Success - redirect to admin dashboard
-      console.log("Admin login successful, redirecting to /admin");
-      router.push("/admin");
+      // Redirect based on role
+      if (role === "customer_service") {
+        router.push("/cs");
+      } else {
+        router.push("/admin");
+      }
     } catch (e: any) {
       console.error("Login error:", e);
       const msg = e?.message ?? "";

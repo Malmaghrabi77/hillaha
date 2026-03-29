@@ -82,28 +82,39 @@ export default function LandingPage() {
           <img src="/logo.png" alt="حلّها" style={{ width: 34, height: 34, objectFit: "contain" }} />
           <span style={{ fontWeight: 900, fontSize: 18, color: C.text }}>حلّها</span>
         </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <a
             href="/admin-login"
             style={{
-              padding: "8px 18px", borderRadius: 10,
+              padding: "8px 14px", borderRadius: 10,
               border: `1.5px solid ${C.primary}`,
-              color: C.primary, fontWeight: 700, fontSize: 13,
-              transition: "all 0.15s",
+              color: C.primary, fontWeight: 700, fontSize: 12,
+              transition: "all 0.15s", textDecoration: "none",
             }}
           >
             👑 ادمن
           </a>
           <a
-            href="/login"
+            href="/admin-login"
             style={{
-              padding: "8px 18px", borderRadius: 10,
-              border: `1.5px solid ${C.primary}`,
-              color: "white", background: C.primary, fontWeight: 700, fontSize: 13,
-              transition: "all 0.15s",
+              padding: "8px 14px", borderRadius: 10,
+              border: `1.5px solid #10B981`,
+              color: "#10B981", fontWeight: 700, fontSize: 12,
+              transition: "all 0.15s", textDecoration: "none",
             }}
           >
-            شريك؟ سجّل الدخول
+            🎧 خدمة العملاء
+          </a>
+          <a
+            href="/login"
+            style={{
+              padding: "8px 14px", borderRadius: 10,
+              border: `1.5px solid ${C.primary}`,
+              color: "white", background: C.primary, fontWeight: 700, fontSize: 12,
+              transition: "all 0.15s", textDecoration: "none",
+            }}
+          >
+            🏪 شريك
           </a>
         </div>
       </header>

@@ -1,28 +1,31 @@
 import React, { useEffect, useState } from "react";
-import { Stack } from "expo-router";
+import { Stack, Redirect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator } from "react-native";
-import { router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { getSB } from "./_lib/constants";
+import { getSB } from "../lib/constants";
 
 SplashScreen.hideAsync().catch(() => {});
 
+type Route = "/(auth)/login" | "/(auth)/pending-approval" | "/(auth)/rejected" | "/(tabs)/home";
+
 export default function RootLayout() {
-  const [checking, setChecking] = useState(true);
+  const [target, setTarget] = useState<Route | null>(null);
 
   useEffect(() => {
-    const supabase = getSB();
-    if (!supabase) { setChecking(false); return; }
+    checkAuth();
+  }, []);
 
-    supabase.auth.getSession().then(async ({ data }: any) => {
+  async function checkAuth() {
+    try {
+      const supabase = getSB();
+
+      const { data } = await supabase.auth.getSession();
       if (!data.session) {
-        setChecking(false);
-        router.replace("/(auth)/login");
+        setTarget("/(auth)/login");
         return;
       }
 
-      // Check driver approval status
       const userId = data.session.user.id;
       const { data: profile } = await (supabase as any)
         .from("profiles")
@@ -30,61 +33,17 @@ export default function RootLayout() {
         .eq("id", userId)
         .single();
 
-      setChecking(false);
-
-      if (!profile) {
-        router.replace("/(tabs)/home");
-        return;
-      }
-
-      const status = profile.driver_application_status;
-
+      const status = profile?.driver_application_status;
       if (status === "pending") {
-        router.replace("/(auth)/pending-approval");
+        setTarget("/(auth)/pending-approval");
       } else if (status === "rejected") {
-        router.replace("/(auth)/rejected");
+        setTarget("/(auth)/rejected");
       } else {
-        // approved or null (legacy drivers)
-        router.replace("/(tabs)/home");
+        setTarget("/(tabs)/home");
       }
-    }).catch(() => {
-      setChecking(false);
-      router.replace("/(auth)/login");
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: any) => {
-      if (event === "SIGNED_OUT") {
-        router.replace("/(auth)/login");
-        return;
-      }
-      if (event === "SIGNED_IN" && session) {
-        // Check approval status on sign-in
-        const { data: profile } = await (supabase as any)
-          .from("profiles")
-          .select("driver_application_status, is_approved")
-          .eq("id", session.user.id)
-          .single();
-
-        const status = profile?.driver_application_status;
-        if (status === "pending") {
-          router.replace("/(auth)/pending-approval");
-        } else if (status === "rejected") {
-          router.replace("/(auth)/rejected");
-        } else {
-          router.replace("/(tabs)/home");
-        }
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (checking) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAFAFF" }}>
-        <ActivityIndicator size="large" color="#8B5CF6" />
-      </View>
-    );
+    } catch {
+      setTarget("/(auth)/login");
+    }
   }
 
   return (
@@ -94,6 +53,20 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
       </Stack>
+
+      {/* Loading overlay while checking auth */}
+      {!target && (
+        <View style={{
+          position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+          justifyContent: "center", alignItems: "center",
+          backgroundColor: "#FAFAFF",
+        }}>
+          <ActivityIndicator size="large" color="#8B5CF6" />
+        </View>
+      )}
+
+      {/* Navigate once auth check is done */}
+      {target && <Redirect href={target} />}
     </>
   );
 }

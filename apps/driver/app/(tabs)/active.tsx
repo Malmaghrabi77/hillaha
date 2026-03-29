@@ -4,7 +4,7 @@ import {
   StatusBar, Animated, Platform, Linking,
 } from "react-native";
 import * as Location from "expo-location";
-import { C, getSB } from "../_lib/constants";
+import { C, getSB } from "../../lib/constants";
 
 type DeliveryStep = 0 | 1 | 2 | 3;
 type LocationStatus = "idle" | "tracking" | "denied" | "stopped";

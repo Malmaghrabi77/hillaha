@@ -6,7 +6,7 @@ import {
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
-import { C, getSB } from "../_lib/constants";
+import { C, getSB } from "../../lib/constants";
 
 const STORE_EMAIL = "hillaha_driver_email";
 const STORE_PASS  = "hillaha_driver_pass";

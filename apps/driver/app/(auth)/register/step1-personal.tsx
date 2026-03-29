@@ -3,8 +3,8 @@ import {
   View, Text, TextInput, Pressable, StatusBar, ScrollView,
 } from "react-native";
 import { router } from "expo-router";
-import { useRegistration } from "../../_lib/registration-context";
-import { C } from "../../_lib/constants";
+import { useRegistration } from "../../../lib/registration-context";
+import { C } from "../../../lib/constants";
 
 const TOTAL_STEPS = 7;
 

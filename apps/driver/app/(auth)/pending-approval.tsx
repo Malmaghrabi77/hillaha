@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, StatusBar } from "react-native";
 import { router } from "expo-router";
-import { C, getSB } from "../_lib/constants";
+import { C, getSB } from "../../lib/constants";
 
 export default function PendingApproval() {
   async function handleLogout() {

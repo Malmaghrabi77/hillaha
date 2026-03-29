@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, StatusBar, Pressable, ActivityIndicator } from "react-native";
-import { C, getSB } from "../_lib/constants";
+import { C, getSB } from "../../lib/constants";
 
 const PERIODS = ["هذا الأسبوع", "هذا الشهر", "الكل"] as const;
 type Period = typeof PERIODS[number];

@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, Pressable,
   StatusBar, RefreshControl,
 } from "react-native";
-import { C, getSB, haversineDistance, MAX_BICYCLE_DISTANCE_KM } from "../_lib/constants";
+import { C, getSB, haversineDistance, MAX_BICYCLE_DISTANCE_KM } from "../../lib/constants";
 
 interface AvailableOrder {
   _uuid:             string;

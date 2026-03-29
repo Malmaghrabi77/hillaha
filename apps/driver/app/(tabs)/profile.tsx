@@ -4,7 +4,7 @@ import {
   StatusBar, ActivityIndicator, Image,
 } from "react-native";
 import { router } from "expo-router";
-import { C, getSB } from "../_lib/constants";
+import { C, getSB } from "../../lib/constants";
 
 const VEHICLE_LABELS: Record<string, string> = { car: "سيارة", scooter: "سكوتر / فيسبا", bicycle: "دراجة هوائية" };
 const VEHICLE_ICONS: Record<string, string> = { car: "🚗", scooter: "🛵", bicycle: "🚲" };

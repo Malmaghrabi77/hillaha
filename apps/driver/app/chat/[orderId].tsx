@@ -52,7 +52,6 @@ export default function CustomerChat() {
 
         if (msgData) setMessages(msgData as Message[]);
       } catch (error) {
-        console.log("Error loading chat:", error);
       } finally {
         setLoading(false);
       }
@@ -94,7 +93,6 @@ export default function CustomerChat() {
       });
       setNewMessage("");
     } catch (error) {
-      console.log("Error sending message:", error);
     }
   }
 

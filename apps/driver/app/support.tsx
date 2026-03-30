@@ -95,7 +95,6 @@ export default function SupportScreen() {
           if (msgData) setMessages(msgData as Message[]);
         }
       } catch (error) {
-        console.log("Error loading support chat:", error);
       } finally {
         setLoading(false);
       }
@@ -143,7 +142,6 @@ export default function SupportScreen() {
       });
       setNewMessage("");
     } catch (error) {
-      console.log("Error sending support message:", error);
     }
   }
 

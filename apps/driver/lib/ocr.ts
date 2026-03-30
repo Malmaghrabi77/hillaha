@@ -10,7 +10,7 @@ export async function extractTextFromImage(imageUri: string): Promise<string> {
   try {
     const apiKey = process.env.EXPO_PUBLIC_GOOGLE_VISION_API_KEY;
     if (!apiKey) {
-      console.warn("OCR: No API key configured");
+      // No API key configured
       return "";
     }
 
@@ -36,7 +36,6 @@ export async function extractTextFromImage(imageUri: string): Promise<string> {
     if (!annotations || annotations.length === 0) return "";
     return annotations[0]?.description ?? "";
   } catch (err) {
-    console.warn("OCR extraction failed:", err);
     return "";
   }
 }

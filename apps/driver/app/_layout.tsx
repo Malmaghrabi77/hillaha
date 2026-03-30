@@ -6,7 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
 import { getSB } from "../lib/constants";
 
-SplashScreen.hideAsync().catch(() => {});
+try { SplashScreen.preventAutoHideAsync(); } catch {}
 
 type Route = "/(auth)/login" | "/(auth)/pending-approval" | "/(auth)/rejected" | "/(tabs)/home";
 
@@ -44,6 +44,8 @@ export default function RootLayout() {
       }
     } catch {
       setTarget("/(auth)/login");
+    } finally {
+      SplashScreen.hideAsync().catch(() => {});
     }
   }
 

@@ -58,7 +58,6 @@ export default function BankDetailsScreen() {
         }
       }
     } catch (e) {
-      console.error("Error loading payment info:", e);
     } finally {
       setLoading(false);
     }

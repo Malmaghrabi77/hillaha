@@ -8,14 +8,19 @@ let _sb: ReturnType<typeof createClient> | null = null;
 
 export function getCustomerSupabase() {
   if (!_sb) {
-    _sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        storage: AsyncStorage,
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-      },
-    });
+    try {
+      _sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          storage: AsyncStorage,
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: false,
+        },
+      });
+    } catch (e) {
+      console.error("Supabase client creation failed:", e);
+      return null;
+    }
   }
   return _sb;
 }

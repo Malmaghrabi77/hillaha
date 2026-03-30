@@ -5,11 +5,15 @@ import {
   Modal, FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as LocalAuthentication from "expo-local-authentication";
-import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
 import { getCustomerSupabase as getSupabase } from "../../lib/supabase";
 import { COUNTRIES, detectCountryIndex, searchCountries } from "../../src/constants/countryCodes";
+
+// Lazy-load native modules to prevent crash if they fail to initialize
+let LocalAuthentication: typeof import("expo-local-authentication") | null = null;
+let SecureStore: typeof import("expo-secure-store") | null = null;
+try { LocalAuthentication = require("expo-local-authentication"); } catch {}
+try { SecureStore = require("expo-secure-store"); } catch {}
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -50,6 +54,7 @@ export default function Login() {
   useEffect(() => {
     async function checkBiometric() {
       try {
+        if (!LocalAuthentication || !SecureStore) { setBioReady(false); return; }
         const hasHw      = await LocalAuthentication.hasHardwareAsync();
         const enrolled   = await LocalAuthentication.isEnrolledAsync();
         const savedEmail = await SecureStore.getItemAsync(STORE_EMAIL);
@@ -87,9 +92,13 @@ export default function Login() {
       if (err) throw err;
 
       // Save credentials for future biometric login
-      await SecureStore.setItemAsync(STORE_EMAIL, email.trim().toLowerCase());
-      await SecureStore.setItemAsync(STORE_PASS, password);
-      setBioReady(true);
+      if (SecureStore) {
+        try {
+          await SecureStore.setItemAsync(STORE_EMAIL, email.trim().toLowerCase());
+          await SecureStore.setItemAsync(STORE_PASS, password);
+          setBioReady(true);
+        } catch {}
+      }
 
       router.replace("/(tabs)/home");
     } catch (e: any) {
@@ -111,6 +120,12 @@ export default function Login() {
     setBioLoading(true);
     setError("");
     try {
+      if (!LocalAuthentication || !SecureStore) {
+        setError("المصادقة الحيوية غير متاحة");
+        setBioLoading(false);
+        return;
+      }
+
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage:  "تسجيل الدخول بالسمات الحيوية",
         cancelLabel:    "إلغاء",
@@ -123,8 +138,8 @@ export default function Login() {
         return;
       }
 
-      const savedEmail = await SecureStore.getItemAsync(STORE_EMAIL);
-      const savedPass  = await SecureStore.getItemAsync(STORE_PASS);
+      const savedEmail = await SecureStore!.getItemAsync(STORE_EMAIL);
+      const savedPass  = await SecureStore!.getItemAsync(STORE_PASS);
 
       if (!savedEmail || !savedPass) {
         setError("يرجى تسجيل الدخول بالبريد وكلمة المرور مرة واحدة أولاً");

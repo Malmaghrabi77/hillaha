@@ -1,4 +1,4 @@
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, findNodeHandle } from 'react-native';
 import { useEffect, useState } from 'react';
 
 /**
@@ -234,6 +234,3 @@ export const A11yPresets = {
     accessibilityState: { disabled: state === 'disabled', selected: state === 'selected' },
   }),
 };
-
-// Re-export for convenience
-import { findNodeHandle } from 'react-native';

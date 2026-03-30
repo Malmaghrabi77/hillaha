@@ -15,10 +15,6 @@ import { useDarkMode } from "../src/hooks/useDarkMode";
 import { analyticsTracker } from "../src/utils/analyticsTracker";
 import { A11yPresets } from "../src/hooks/useAccessibility";
 
-// ── Force RTL ─────────────────────────────────────────────────────────────────
-I18nManager.allowRTL(true);
-I18nManager.forceRTL(true);
-
 // ── Palette ───────────────────────────────────────────────────────────────────
 const C = {
   bg:          "#0F0A1E",

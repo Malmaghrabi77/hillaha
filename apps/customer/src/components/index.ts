@@ -1,9 +1,9 @@
 /**
  * ✅ Customer App Components Barrel Export
- * Central location for importing all reusable components
+ * Only export lightweight components here.
+ * Heavy components (LiveMap, LocationPickerMap) should be imported directly
+ * to avoid eagerly loading react-native-webview and expo-location.
  */
 
 export { AppHeader } from './AppHeader';
 export { SafeAreaDisplay, SafeAreaScrollView, getFlatListInsets } from './SafeAreaDisplay';
-export { LiveMap } from './LiveMap';
-export { LocationPickerMap } from './LocationPickerMap';

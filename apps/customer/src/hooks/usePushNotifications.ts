@@ -16,16 +16,24 @@ interface NotificationContent {
   badge?: number;
 }
 
-// تعريف معالج الإشعارات
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// تعريف معالج الإشعارات — deferred to avoid module-level native calls
+let _handlerSet = false;
+function ensureNotificationHandler() {
+  if (_handlerSet) return;
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+    _handlerSet = true;
+  } catch {}
+}
 
 export const usePushNotifications = () => {
+  ensureNotificationHandler();
   const [expoPushToken, setExpoPushToken] = useState<string>("");
   const [notification, setNotification] = useState<any>(undefined);
   const notificationListener = useRef<any>();
@@ -33,7 +41,7 @@ export const usePushNotifications = () => {
 
   const supabase = (() => {
     try {
-      return getCustomerSupabase() ?? null;
+      return getCustomerSupabase();
     } catch {
       return null;
     }

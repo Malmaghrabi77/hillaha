@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, Pressable } from "react-native";
+import { View, Text, ScrollView, Pressable, I18nManager } from "react-native";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -9,7 +9,7 @@ import { getCustomerSupabase } from "../lib/supabase";
 import { DarkModeProvider } from "../src/hooks/useDarkMode";
 
 // ── Prevent auto-hide: we control dismiss timing ──────────────────────────────
-SplashScreen.preventAutoHideAsync().catch(() => {});
+try { SplashScreen.preventAutoHideAsync(); } catch {};
 
 // ── Global ErrorBoundary for production crash debugging ──────────────────────
 class GlobalErrorBoundary extends React.Component<
@@ -92,6 +92,9 @@ export default function RootLayout() {
 
     const init = async () => {
       try {
+        // Force RTL for Arabic
+        try { I18nManager.allowRTL(true); I18nManager.forceRTL(true); } catch {}
+
         SplashScreen.hideAsync().catch(() => {});
 
         const sb = getCustomerSupabase();

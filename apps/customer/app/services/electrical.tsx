@@ -9,7 +9,8 @@ import { useSupabase } from '../../src/hooks/useSupabase';
 import { analyticsTracker } from '../../src/utils/analyticsTracker';
 import { A11yPresets } from '../../src/hooks/useAccessibility';
 import { ANALYTICS_EVENTS } from '../../src/constants/analyticsEvents';
-import { SafeAreaScrollView, LocationPickerMap } from '../../src/components';
+import { SafeAreaScrollView } from '../../src/components';
+import { LocationPickerMap } from '../../src/components/LocationPickerMap';
 
 const SERVICES = [
   { id: "ac_service",   label: "صيانة مكيف",       desc: "فحص وتنظيف وإصلاح",  price: 150, icon: "❄️" },

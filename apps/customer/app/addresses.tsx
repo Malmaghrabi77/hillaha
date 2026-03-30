@@ -9,7 +9,8 @@ import { useSupabase } from '../src/hooks/useSupabase';
 import { analyticsTracker } from '../src/utils/analyticsTracker';
 import { A11yPresets } from '../src/hooks/useAccessibility';
 import { ANALYTICS_EVENTS } from '../src/constants/analyticsEvents';
-import { AppHeader, LocationPickerMap } from '../src/components';
+import { AppHeader } from '../src/components';
+import { LocationPickerMap } from '../src/components/LocationPickerMap';
 
 interface Address {
   id: string;

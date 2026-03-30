@@ -45,13 +45,18 @@ export class AnalyticsTracker {
   private metricsKey = 'analytics_metrics';
   private readonly MAX_LOCAL_EVENTS = 500; // حد أقصى للأحداث المحفوظة محلياً
 
-  private supabase = (() => {
-    try {
-      return getCustomerSupabase() ?? null;
-    } catch {
-      return null;
+  private _supabase: ReturnType<typeof getCustomerSupabase> | null | undefined = undefined;
+
+  private get supabase() {
+    if (this._supabase === undefined) {
+      try {
+        this._supabase = getCustomerSupabase() ?? null;
+      } catch {
+        this._supabase = null;
+      }
     }
-  })();
+    return this._supabase;
+  }
 
   // ✅ Initialize analytics
   async initialize() {
@@ -383,5 +388,5 @@ export class AnalyticsTracker {
 // ✅ Singleton instance
 export const analyticsTracker = new AnalyticsTracker();
 
-// ✅ Initialize on app start
-analyticsTracker.initialize().catch(console.error);
+// ✅ Initialize on app start — deferred to avoid module-level async side effects
+setTimeout(() => analyticsTracker.initialize().catch(() => {}), 100);

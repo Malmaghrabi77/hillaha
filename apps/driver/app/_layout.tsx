@@ -1,63 +1,104 @@
-import React, { useEffect, useState } from "react";
+import React, { Component, useEffect, useState } from "react";
 import { Stack, Redirect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, ActivityIndicator } from "react-native";
+import { View, Text, ActivityIndicator, Image, Pressable } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import * as SplashScreen from "expo-splash-screen";
-import { getSB } from "../lib/constants";
 
-try { SplashScreen.preventAutoHideAsync(); } catch {}
+// NO SplashScreen API — let native splash auto-hide when React renders.
+// This prevents the frozen splash issue entirely.
 
 type Route = "/(auth)/login" | "/(auth)/pending-approval" | "/(auth)/rejected" | "/(tabs)/home";
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
-  ]);
+// ── Error Boundary ──────────────────────────────────────────────────
+class GlobalErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: string }
+> {
+  state = { hasError: false, error: "" };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error: error?.message || "خطأ غير معروف" };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FAFAFF", padding: 24 }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>⚠️</Text>
+          <Text style={{ fontSize: 18, fontWeight: "900", color: "#1F1B2E", textAlign: "center", marginBottom: 8 }}>
+            حدث خطأ في التطبيق
+          </Text>
+          <Text style={{ fontSize: 13, color: "#6B6480", textAlign: "center", marginBottom: 24 }}>
+            {this.state.error}
+          </Text>
+          <Pressable
+            onPress={() => this.setState({ hasError: false, error: "" })}
+            style={{ backgroundColor: "#8B5CF6", paddingVertical: 12, paddingHorizontal: 32, borderRadius: 12 }}
+          >
+            <Text style={{ color: "white", fontWeight: "800", fontSize: 15 }}>إعادة المحاولة</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
 }
 
-export default function RootLayout() {
+// ── Main Layout ─────────────────────────────────────────────────────
+function RootLayoutInner() {
   const [target, setTarget] = useState<Route | null>(null);
 
   useEffect(() => {
-    checkAuth();
+    let mounted = true;
+
+    // Safety fallback: go to login after 5s no matter what
+    const fallback = setTimeout(() => {
+      if (mounted && !target) setTarget("/(auth)/login");
+    }, 5000);
+
+    (async () => {
+      try {
+        // Lazy require to avoid top-level import crash
+        const { getSB } = require("../lib/constants");
+        const supabase = getSB();
+        if (!supabase) { if (mounted) setTarget("/(auth)/login"); return; }
+
+        const sessionResult = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<null>((r) => setTimeout(() => r(null), 4000)),
+        ]);
+
+        if (!sessionResult || !(sessionResult as any).data?.session) {
+          if (mounted) setTarget("/(auth)/login");
+          return;
+        }
+
+        const userId = (sessionResult as any).data.session.user.id;
+
+        const profileResult = await Promise.race([
+          (supabase as any)
+            .from("profiles")
+            .select("driver_application_status, is_approved")
+            .eq("id", userId)
+            .single(),
+          new Promise<null>((r) => setTimeout(() => r(null), 4000)),
+        ]);
+
+        if (!mounted) return;
+
+        const status = (profileResult as any)?.data?.driver_application_status;
+        if (status === "pending") setTarget("/(auth)/pending-approval");
+        else if (status === "rejected") setTarget("/(auth)/rejected");
+        else setTarget("/(tabs)/home");
+      } catch {
+        if (mounted) setTarget("/(auth)/login");
+      } finally {
+        clearTimeout(fallback);
+      }
+    })();
+
+    return () => { mounted = false; };
   }, []);
-
-  async function checkAuth() {
-    try {
-      const supabase = getSB();
-
-      const { data } = await withTimeout(supabase.auth.getSession(), 4000);
-      if (!data.session) {
-        setTarget("/(auth)/login");
-        return;
-      }
-
-      const userId = data.session.user.id;
-      const { data: profile } = await withTimeout(
-        (supabase as any)
-          .from("profiles")
-          .select("driver_application_status, is_approved")
-          .eq("id", userId)
-          .single(),
-        4000
-      );
-
-      const status = profile?.driver_application_status;
-      if (status === "pending") {
-        setTarget("/(auth)/pending-approval");
-      } else if (status === "rejected") {
-        setTarget("/(auth)/rejected");
-      } else {
-        setTarget("/(tabs)/home");
-      }
-    } catch {
-      setTarget("/(auth)/login");
-    } finally {
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }
 
   return (
     <SafeAreaProvider>
@@ -79,12 +120,26 @@ export default function RootLayout() {
           justifyContent: "center", alignItems: "center",
           backgroundColor: "#FAFAFF",
         }}>
+          <Image
+            source={require("../assets/halha-logo.png")}
+            style={{ width: 120, height: 120, resizeMode: "contain", marginBottom: 24 }}
+          />
           <ActivityIndicator size="large" color="#8B5CF6" />
+          <Text style={{ marginTop: 16, color: "#6B6480", fontSize: 13, fontWeight: "600" }}>
+            جاري التحميل...
+          </Text>
         </View>
       )}
 
-      {/* Navigate once auth check is done */}
       {target && <Redirect href={target} />}
     </SafeAreaProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <GlobalErrorBoundary>
+      <RootLayoutInner />
+    </GlobalErrorBoundary>
   );
 }

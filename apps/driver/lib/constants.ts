@@ -27,14 +27,18 @@ let _sb: ReturnType<typeof createClient> | null = null;
 
 export function getSB() {
   if (!_sb) {
-    _sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        storage: AsyncStorage,
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-      },
-    });
+    try {
+      _sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          storage: AsyncStorage,
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: false,
+        },
+      });
+    } catch {
+      return null;
+    }
   }
   return _sb;
 }

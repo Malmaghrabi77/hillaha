@@ -81,8 +81,7 @@ export default function SupportChat() {
             setMessages(msgData as Message[]);
           }
         }
-      } catch (error) {
-        console.log("Error loading support chat:", error);
+      } catch {
       } finally {
         setLoading(false);
       }
@@ -136,8 +135,7 @@ export default function SupportChat() {
         sender_id: user?.id,
       });
       setNewMessage("");
-    } catch (error) {
-      console.log("Error sending support message:", error);
+    } catch {
     }
   }
 

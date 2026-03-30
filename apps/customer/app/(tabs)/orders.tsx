@@ -86,7 +86,6 @@ export default function Orders() {
           .limit(30);
 
         if (ordersError) {
-          console.error("Orders fetch error:", JSON.stringify(ordersError));
         }
 
         if (ordersData) {
@@ -131,7 +130,7 @@ export default function Orders() {
             });
           }
         }
-      } catch (e) { console.error("Orders section error:", e); }
+      } catch {}
 
       // 2. Service bookings (cleaning, electrical)
       try {

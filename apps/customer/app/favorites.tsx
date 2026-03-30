@@ -61,8 +61,7 @@ export default function Favorites() {
         .order("created_at", { ascending: false });
 
       if (data) setFavorites(data as any);
-    } catch (error) {
-      console.log("Error fetching favorites:", error);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -87,8 +86,7 @@ export default function Favorites() {
         .eq("partner_id", partnerId);
 
       fetchFavorites();
-    } catch (error) {
-      console.log("Error removing favorite:", error);
+    } catch {
     }
   }
 

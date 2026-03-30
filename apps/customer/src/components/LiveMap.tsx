@@ -84,7 +84,7 @@ export const LiveMap: React.FC<LiveMapProps> = ({
         // Add markers
         L.marker([${driverLat}, ${driverLng}], { icon: driverIcon })
           .addTo(map)
-          .bindPopup('<strong>🛵 موقع المندوب</strong><br>يتحدث مباشرة', { className: 'marker-label' });
+          .bindPopup('<strong>🛵 موقع المندوب</strong><br>يتحدّث مباشرة', { className: 'marker-label' });
 
         L.marker([${customerLat}, ${customerLng}], { icon: customerIcon })
           .addTo(map)

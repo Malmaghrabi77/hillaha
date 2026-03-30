@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, Pressable, I18nManager } from "react-native";
+import { View, Text, Pressable, I18nManager } from "react-native";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -34,14 +34,9 @@ class GlobalErrorBoundary extends React.Component<
           <Text style={{ color: "#EF4444", fontSize: 18, fontWeight: "900", marginBottom: 12, textAlign: "center" }}>
             حدث خطأ في التطبيق
           </Text>
-          <ScrollView style={{ maxHeight: 300, width: "100%", backgroundColor: "#1A1040", borderRadius: 12, padding: 12, marginBottom: 16 }}>
-            <Text style={{ color: "#F87171", fontSize: 12, fontFamily: "monospace" }}>
-              {this.state.error?.message ?? "Unknown error"}
-            </Text>
-            <Text style={{ color: "#9CA3AF", fontSize: 10, marginTop: 8, fontFamily: "monospace" }}>
-              {this.state.error?.stack?.slice(0, 800) ?? ""}
-            </Text>
-          </ScrollView>
+          <Text style={{ color: "#9CA3AF", fontSize: 13, textAlign: "center", marginBottom: 20, paddingHorizontal: 20 }}>
+            نأسف لهذا الخطأ. يرجى إعادة المحاولة.
+          </Text>
           <Pressable
             onPress={() => this.setState({ hasError: false, error: null })}
             style={{ backgroundColor: "#8B5CF6", paddingVertical: 14, paddingHorizontal: 32, borderRadius: 14 }}
@@ -62,14 +57,9 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => voi
       <Text style={{ color: "#EF4444", fontSize: 18, fontWeight: "900", marginBottom: 12, textAlign: "center" }}>
         حدث خطأ في الصفحة
       </Text>
-      <ScrollView style={{ maxHeight: 300, width: "100%", backgroundColor: "#1A1040", borderRadius: 12, padding: 12, marginBottom: 16 }}>
-        <Text style={{ color: "#F87171", fontSize: 12, fontFamily: "monospace" }}>
-          {error?.message ?? "Unknown error"}
-        </Text>
-        <Text style={{ color: "#9CA3AF", fontSize: 10, marginTop: 8, fontFamily: "monospace" }}>
-          {error?.stack?.slice(0, 800) ?? ""}
-        </Text>
-      </ScrollView>
+      <Text style={{ color: "#9CA3AF", fontSize: 13, textAlign: "center", marginBottom: 20, paddingHorizontal: 20 }}>
+        نأسف لهذا الخطأ. يرجى إعادة المحاولة.
+      </Text>
       <Pressable
         onPress={retry}
         style={{ backgroundColor: "#8B5CF6", paddingVertical: 14, paddingHorizontal: 32, borderRadius: 14 }}

@@ -341,8 +341,7 @@ export default function Home() {
       } else {
         setHasMorePartners(false);
       }
-    } catch (error) {
-      console.error("Error loading more partners:", error);
+    } catch {
     } finally {
       setIsLoadingMore(false);
     }
@@ -360,8 +359,7 @@ export default function Home() {
           setPage(p + 1);
         }
       }
-    } catch (error) {
-      console.error("Error loading cached partners:", error);
+    } catch {
     }
   };
 
@@ -434,8 +432,7 @@ export default function Home() {
             }));
             setServices(mapped as Service[]);
           }
-        } catch (error) {
-          console.log("Error fetching home data:", error);
+        } catch {
         } finally {
           setLoading(false);
         }
@@ -473,8 +470,7 @@ export default function Home() {
           await AsyncStorage.setItem("partners_page_0", JSON.stringify(partnersData));
         }
       }
-    } catch (error) {
-      console.error("Error refreshing:", error);
+    } catch {
     } finally {
       setRefreshing(false);
     }
@@ -531,16 +527,18 @@ export default function Home() {
               توصيل إلى
             </Text>
             <Pressable
+              onPress={() => router.push("/addresses")}
               {...A11yPresets.button()}
               style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
               <Text style={{ fontSize: 15, fontWeight: "900", color: "white" }}>
-                📍 قنا، وسط المدينة
+                📍 موقع التوصيل
               </Text>
               <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12 }}>▾</Text>
             </Pressable>
           </View>
           <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
             <Pressable
+              onPress={() => router.push("/notifications")}
               {...A11yPresets.button()}
               style={{
               width: 38,
@@ -884,7 +882,7 @@ export default function Home() {
                 fontWeight: "900",
                 marginTop: 2,
               }}>
-                47 نقطة = 47 جنيه خصم
+                نقاطك تُحوّل لخصومات!
               </Text>
               <Text style={{
                 color: "rgba(255,255,255,0.6)",
@@ -1021,6 +1019,7 @@ export default function Home() {
                 ⚡ عروض مميزة
               </Text>
               <Pressable
+                onPress={() => router.push("/(tabs)/search")}
                 {...A11yPresets.button()}>
                 <Text style={{
                   color: colors.primary,

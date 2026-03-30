@@ -2,11 +2,11 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, TextInput, Pressable,
   ScrollView, Image, ActivityIndicator,
-  Modal, FlatList,
+  Modal, FlatList, Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { getCustomerSupabase as getSupabase } from "../../lib/supabase";
+import { getCustomerSupabase as getSupabase, getCustomerSupabase } from "../../lib/supabase";
 import { COUNTRIES, detectCountryIndex, searchCountries } from "../../src/constants/countryCodes";
 
 // Lazy-load native modules to prevent crash if they fail to initialize
@@ -190,7 +190,6 @@ export default function Login() {
       setTimeout(() => otpRefs.current[0]?.focus(), 300);
     } catch (e: any) {
       const msg = e?.message ?? "";
-      console.error("Phone OTP error:", { message: msg });
       if (msg.includes("Phone provider") || msg.includes("not enabled") || msg.includes("phone_provider_disabled")) {
         setError("خدمة الرسائل القصيرة غير متاحة حالياً — يرجى الدخول بالبريد الإلكتروني");
       } else if (msg.includes("rate limit") || msg.includes("too many")) {
@@ -492,7 +491,23 @@ export default function Login() {
               </View>
             </View>
 
-            <Pressable style={{ alignSelf: "flex-start", marginBottom: 24 }}>
+            <Pressable
+              onPress={() => {
+                if (!email.trim()) {
+                  setErrMsg("أدخل بريدك الإلكتروني أولاً لإعادة تعيين كلمة المرور");
+                  return;
+                }
+                setLoading(true);
+                const sb = getCustomerSupabase();
+                if (sb) {
+                  sb.auth.resetPasswordForEmail(email.trim())
+                    .then(() => { Alert.alert("تم الإرسال", "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني"); })
+                    .catch(() => { Alert.alert("خطأ", "تعذّر إرسال رابط إعادة التعيين، تأكد من صحة البريد الإلكتروني"); })
+                    .finally(() => setLoading(false));
+                } else { setLoading(false); }
+              }}
+              style={{ alignSelf: "flex-start", marginBottom: 24 }}
+            >
               <Text style={{ color: C.primary, fontWeight: "700", fontSize: 13 }}>نسيت كلمة المرور؟</Text>
             </Pressable>
 

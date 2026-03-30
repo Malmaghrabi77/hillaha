@@ -65,8 +65,7 @@ export class AnalyticsTracker {
       if (stored) {
         this.events = JSON.parse(stored);
       }
-    } catch (error) {
-      console.error("Analytics initialization error:", error);
+    } catch {
     }
   }
 
@@ -88,16 +87,12 @@ export class AnalyticsTracker {
     }
 
     // ✅ Save locally (non-blocking)
-    this.saveEvents().catch(err => console.error("Failed to save events:", err));
+    this.saveEvents().catch(() => {});
 
     // ✅ Send to server if available (non-blocking)
     if (this.supabase) {
-      this.sendToServer(eventName, data).catch(err =>
-        console.log("Analytics server tracking error:", err)
-      );
+      this.sendToServer(eventName, data).catch(() => {});
     }
-
-    console.log(`📊 Event tracked: ${eventName}`, data);
   }
 
   // ✅ Helper: Send event to server (non-blocking)
@@ -112,9 +107,8 @@ export class AnalyticsTracker {
           created_at: new Date().toISOString(),
         });
       }
-    } catch (error) {
+    } catch {
       // Silent catch - non-blocking operation
-      console.log("Server tracking skipped:", error);
     }
   }
 
@@ -122,8 +116,7 @@ export class AnalyticsTracker {
   private async saveEvents() {
     try {
       await AsyncStorage.setItem(this.analyticsKey, JSON.stringify(this.events));
-    } catch (error) {
-      console.error("Error saving events:", error);
+    } catch {
     }
   }
 
@@ -255,8 +248,7 @@ export class AnalyticsTracker {
         retentionDays,
         loyaltyTier,
       };
-    } catch (error) {
-      console.error("Error getting user analytics:", error);
+    } catch {
       return this.getDefaultAnalytics();
     }
   }
@@ -277,8 +269,7 @@ export class AnalyticsTracker {
       };
 
       return metrics;
-    } catch (error) {
-      console.error("Error getting metrics:", error);
+    } catch {
       return {
         appOpens: 0,
         searchQueries: 0,
@@ -366,7 +357,6 @@ export class AnalyticsTracker {
   async clearAnalytics() {
     this.events = [];
     await AsyncStorage.removeItem(this.analyticsKey);
-    console.log("✅ Analytics cleared");
   }
 
   // ✅ Export analytics
@@ -378,8 +368,7 @@ export class AnalyticsTracker {
         totalEvents: this.events.length,
       };
       return JSON.stringify(data, null, 2);
-    } catch (error) {
-      console.error("Error exporting analytics:", error);
+    } catch {
       return null;
     }
   }

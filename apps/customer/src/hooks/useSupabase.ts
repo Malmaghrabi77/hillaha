@@ -35,8 +35,7 @@ export const withSupabase = async <T,>(
     const supabase = getCustomerSupabase();
     if (!supabase) return fallback;
     return await operation(supabase);
-  } catch (error) {
-    console.error("Supabase operation error:", error);
+  } catch {
     return fallback;
   }
 };

@@ -89,8 +89,7 @@ export default function ReferralsScreen() {
         const totalEarnings = referralData.reduce((sum, ref) => sum + (ref.used ? ref.reward_amount : 0), 0);
         setEarnings(totalEarnings);
       }
-    } catch (error) {
-      console.error("Error loading referral data:", error);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -104,8 +103,7 @@ export default function ReferralsScreen() {
         message,
         title: "كود الإحالة",
       });
-    } catch (error) {
-      console.error("Share error:", error);
+    } catch {
     }
   };
 
@@ -114,8 +112,7 @@ export default function ReferralsScreen() {
       analyticsTracker.trackEvent("copy_referral_code");
       await Clipboard.setStringAsync(referralCode);
       Alert.alert("✓", "تم نسخ الكود إلى الحافظة");
-    } catch (error) {
-      console.error("Copy error:", error);
+    } catch {
     }
   };
 

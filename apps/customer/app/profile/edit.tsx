@@ -34,8 +34,7 @@ export default function EditProfile() {
       const metadata = user.user_metadata as any;
       setFullName(metadata?.full_name ?? "");
       setPhone(metadata?.phone ?? "");
-    } catch (error) {
-      console.log("Error loading user data:", error);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -68,7 +67,6 @@ export default function EditProfile() {
       }, 1500);
     } catch (error) {
       Alert.alert("خطأ", "حدث خطأ أثناء حفظ البيانات");
-      console.log("Error saving data:", error);
     } finally {
       setSaving(false);
     }
@@ -108,9 +106,7 @@ export default function EditProfile() {
       </View>
 
       <View
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        keyboardShouldPersistTaps="handled"
+        style={{ flex: 1, padding: 16, paddingBottom: 40 }}
       >
         {/* Avatar */}
         <View style={{ alignItems: "center", marginBottom: 28 }}>
@@ -126,6 +122,17 @@ export default function EditProfile() {
             <Text style={{ fontSize: 48 }}>👤</Text>
           </View>
           <Pressable
+            onPress={async () => {
+              try {
+                const ImagePicker = require("expo-image-picker");
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (status !== "granted") { Alert.alert("تنبيه", "يجب السماح بالوصول للصور"); return; }
+                const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+                if (!result.canceled && result.assets?.[0]?.uri) {
+                  Alert.alert("تم", "سيتم تفعيل تحديث الصورة الشخصية قريباً");
+                }
+              } catch { Alert.alert("خطأ", "تعذّر فتح المعرض"); }
+            }}
             {...A11yPresets.button("تحميل صورة", "انقر لتحميل صورة ملف شخصي")}
             style={{
               paddingVertical: 7, paddingHorizontal: 18, borderRadius: 20,

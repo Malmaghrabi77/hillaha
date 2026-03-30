@@ -68,8 +68,7 @@ export default function DriverChat() {
         if (msgData) {
           setMessages(msgData as Message[]);
         }
-      } catch (error) {
-        console.log("Error loading chat:", error);
+      } catch {
       } finally {
         setLoading(false);
       }
@@ -120,8 +119,7 @@ export default function DriverChat() {
         sender_id: user?.id,
       });
       setNewMessage("");
-    } catch (error) {
-      console.log("Error sending message:", error);
+    } catch {
     }
   }
 

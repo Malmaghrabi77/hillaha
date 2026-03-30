@@ -407,7 +407,6 @@ export const exportPDF = async (html: string, filename: string) => {
 
     return pdfPath;
   } catch (error) {
-    console.error("Error exporting PDF:", error);
     throw error;
   }
 };

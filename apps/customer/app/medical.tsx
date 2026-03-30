@@ -56,17 +56,17 @@ export default function Medical() {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.surface} />
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.surface} />
 
       {/* Header */}
       <View style={{
-        backgroundColor: C.surface,
+        backgroundColor: colors.surface,
         paddingTop: Platform.OS === "android" ? 18 : 54,
         paddingHorizontal: 18,
         paddingBottom: 24,
         borderBottomWidth: 1,
-        borderBottomColor: C.border,
+        borderBottomColor: colors.border,
       }}>
         <Pressable
           onPress={() => {
@@ -76,12 +76,12 @@ export default function Medical() {
           {...A11yPresets.pressable}
           style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}
         >
-          <Text style={{ fontSize: 20, color: C.text }}>←</Text>
+          <Text style={{ fontSize: 20, color: colors.text }}>←</Text>
         </Pressable>
-        <Text style={{ fontSize: 28, fontWeight: "900", color: C.text, marginBottom: 6 }}>
+        <Text style={{ fontSize: 28, fontWeight: "900", color: colors.text, marginBottom: 6 }}>
           🏥 الخدمات الطبية
         </Text>
-        <Text style={{ fontSize: 13, color: C.textMuted }}>
+        <Text style={{ fontSize: 13, color: colors.textMuted }}>
           احصل على استشارات طبية وإدارة الأدوية
         </Text>
       </View>
@@ -98,11 +98,11 @@ export default function Medical() {
               }}
               {...A11yPresets.pressable}
               style={{
-                backgroundColor: C.surface,
+                backgroundColor: colors.surface,
                 borderRadius: 20,
                 padding: 20,
                 borderWidth: 1,
-                borderColor: C.border,
+                borderColor: colors.border,
                 shadowColor: "#000",
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.05,
@@ -126,12 +126,12 @@ export default function Medical() {
                 {/* Content */}
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                    <Text style={{ fontSize: 17, fontWeight: "900", color: C.text }}>
+                    <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text }}>
                       {service.title}
                     </Text>
                     {service.badge && (
                       <View style={{
-                        backgroundColor: C.primary,
+                        backgroundColor: colors.primary,
                         paddingVertical: 3,
                         paddingHorizontal: 10,
                         borderRadius: 8,
@@ -142,10 +142,10 @@ export default function Medical() {
                       </View>
                     )}
                   </View>
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: C.primary, marginBottom: 6 }}>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primary, marginBottom: 6 }}>
                     {service.subtitle}
                   </Text>
-                  <Text style={{ fontSize: 12, color: C.textMuted, lineHeight: 18 }}>
+                  <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 18 }}>
                     {service.description}
                   </Text>
                 </View>
@@ -155,7 +155,7 @@ export default function Medical() {
                   width: 36,
                   height: 36,
                   borderRadius: 12,
-                  backgroundColor: C.primarySoft,
+                  backgroundColor: colors.primarySoft,
                   justifyContent: "center",
                   alignItems: "center",
                 }}>
@@ -190,13 +190,13 @@ export default function Medical() {
 
         {/* Features List */}
         <View style={{
-          backgroundColor: C.surface,
+          backgroundColor: colors.surface,
           borderRadius: 18,
           padding: 18,
           borderWidth: 1,
-          borderColor: C.border,
+          borderColor: colors.border,
         }}>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: C.text, marginBottom: 12 }}>
+          <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 12 }}>
             ✨ المميزات
           </Text>
           {[
@@ -207,7 +207,7 @@ export default function Medical() {
           ].map((feature, i) => (
             <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: i < 3 ? 10 : 0 }}>
               <Text style={{ fontSize: 16 }}>{feature.icon}</Text>
-              <Text style={{ fontSize: 13, color: C.textMuted, fontWeight: "600" }}>{feature.text}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, fontWeight: "600" }}>{feature.text}</Text>
             </View>
           ))}
         </View>

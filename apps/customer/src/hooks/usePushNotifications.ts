@@ -57,8 +57,7 @@ export const usePushNotifications = () => {
     });
 
     // Listen to notification responses
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log("Notification response:", response.notification.request.content.data);
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(() => {
     });
 
     return () => {
@@ -69,7 +68,6 @@ export const usePushNotifications = () => {
 
   async function registerForPushNotificationsAsync() {
     if (!Device.isDevice) {
-      console.log("⚠️ Must use physical device for Push Notifications");
       return;
     }
 
@@ -83,7 +81,6 @@ export const usePushNotifications = () => {
       }
 
       if (finalStatus !== 'granted') {
-        console.log("⚠️ Permission not granted for push notifications");
         return;
       }
 
@@ -115,9 +112,7 @@ export const usePushNotifications = () => {
         });
       }
 
-      console.log("✅ Push notifications registered:", token);
-    } catch (error) {
-      console.error("Error registering for push notifications:", error);
+    } catch {
     }
   }
 
@@ -135,9 +130,7 @@ export const usePushNotifications = () => {
         trigger: { seconds: 1 },
       });
 
-      console.log("✅ Local notification scheduled");
-    } catch (error) {
-      console.error("Error scheduling notification:", error);
+    } catch {
     }
   };
 

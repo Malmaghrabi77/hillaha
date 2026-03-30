@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, Pressable, Modal, FlatList, ScrollView,
-  Platform, TextInput, ActivityIndicator,
+  Platform, TextInput, ActivityIndicator, Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useDarkMode } from '../../src/hooks/useDarkMode';
@@ -62,8 +62,7 @@ export default function Booking() {
         .limit(20);
 
       setDoctors((data as Doctor[]) ?? []);
-    } catch (error) {
-      console.log('Error loading doctors:', error);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -77,7 +76,7 @@ export default function Booking() {
 
   const bookAppointment = async () => {
     if (!selectedDoctor || !date || !time) {
-      alert('يرجى ملء جميع الحقول المطلوبة');
+      Alert.alert('تنبيه', 'يرجى ملء جميع الحقول المطلوبة');
       return;
     }
 
@@ -106,10 +105,10 @@ export default function Booking() {
         consultationType,
       });
 
-      alert('تم حجز الموعد بنجاح! سيتلقى الطبيب طلبك قريباً.');
+      Alert.alert('تم', 'تم حجز الموعد بنجاح! سيتلقى الطبيب طلبك قريباً.');
       router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
     } catch (error: any) {
-      alert(`خطأ: ${error.message}`);
+      Alert.alert('خطأ', error.message);
     } finally {
       setLoading(false);
     }

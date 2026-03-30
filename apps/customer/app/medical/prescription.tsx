@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, Pressable, Modal, ScrollView,
-  Platform, TextInput, Image, ActivityIndicator,
+  Platform, TextInput, Image, ActivityIndicator, Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -31,7 +31,7 @@ export default function Prescription() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        alert('يجب السماح بالوصول للصور لرفع الروشتة');
+        Alert.alert('تنبيه', 'يجب السماح بالوصول للصور لرفع الروشتة');
         return;
       }
 
@@ -46,13 +46,13 @@ export default function Prescription() {
         setPrescriptionImage(result.assets[0].uri);
       }
     } catch (error) {
-      alert('تعذّر فتح المعرج، حاول مرة أخرى');
+      Alert.alert('خطأ', 'تعذّر فتح المعرض، حاول مرة أخرى');
     }
   };
 
   const uploadPrescription = async () => {
     if (!prescriptionImage || !pharmacy.trim()) {
-      alert('يرجى اختيار صورة الروشتة واختيار صيدلية');
+      Alert.alert('تنبيه', 'يرجى اختيار صورة الروشتة واختيار صيدلية');
       return;
     }
 
@@ -99,7 +99,7 @@ export default function Prescription() {
         router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
       }, 2000);
     } catch (error: any) {
-      alert(`خطأ: ${error.message}`);
+      Alert.alert('خطأ', error.message);
     } finally {
       setLoading(false);
       setUploadingImage(false);
@@ -173,7 +173,7 @@ export default function Prescription() {
         ) : (
           <Pressable
             onPress={pickPrescriptionImage}
-            {...A11yPresets.button("اختر صورة الروشتة", "انقر لاختيار صورة من المعرج")}
+            {...A11yPresets.button("اختر صورة الروشتة", "انقر لاختيار صورة من المعرض")}
             style={{
               height: 200,
               borderRadius: 16,

@@ -80,7 +80,6 @@ export default function Register() {
       setSuccess(true);
     } catch (e: any) {
       const msg = e?.message ?? "";
-      console.error("Registration error:", { message: msg, fullError: JSON.stringify(e) });
       if (msg.includes("already registered") || msg.includes("User already registered")) {
         setError("هذا البريد الإلكتروني مسجل بالفعل — يمكنك تسجيل الدخول");
       } else if (msg.includes("Password should be")) {
@@ -118,7 +117,6 @@ export default function Register() {
       setTimeout(() => otpRefs.current[0]?.focus(), 300);
     } catch (e: any) {
       const msg = e?.message ?? "";
-      console.error("Phone OTP error:", { message: msg });
       if (msg.includes("Phone provider") || msg.includes("not enabled") || msg.includes("phone_provider_disabled")) {
         setError("خدمة الرسائل القصيرة غير متاحة حالياً — يرجى التسجيل بالبريد الإلكتروني");
       } else if (msg.includes("rate limit") || msg.includes("too many")) {

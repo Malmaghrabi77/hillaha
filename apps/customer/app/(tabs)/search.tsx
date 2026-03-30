@@ -83,8 +83,7 @@ export default function Search() {
 
       const { data } = await queryBuilder.limit(30);
       setResults((data as Partner[]) ?? []);
-    } catch (error) {
-      console.log("Search error:", error);
+    } catch {
       setResults([]);
     } finally {
       setLoading(false);

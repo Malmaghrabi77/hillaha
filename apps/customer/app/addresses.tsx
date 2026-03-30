@@ -65,8 +65,7 @@ export default function Addresses() {
         .order("created_at", { ascending: false });
 
       if (data) setAddresses(data as Address[]);
-    } catch (error) {
-      console.log("Error fetching addresses:", error);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -125,7 +124,6 @@ export default function Addresses() {
       fetchAddresses();
     } catch (error) {
       Alert.alert("خطأ", "حدث خطأ أثناء حفظ العنوان");
-      console.log("Error saving address:", error);
     }
   }
 
@@ -170,8 +168,7 @@ export default function Addresses() {
         .eq("id", id);
 
       fetchAddresses();
-    } catch (error) {
-      console.log("Error setting default:", error);
+    } catch {
     }
   }
 

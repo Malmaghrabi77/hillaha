@@ -65,8 +65,7 @@ export default function PromoCode() {
         .eq("coupons.is_active", true);
 
       if (data) setCoupons(data as any);
-    } catch (error) {
-      console.log("Error fetching coupons:", error);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -138,7 +137,6 @@ export default function PromoCode() {
       fetchCoupons();
     } catch (error) {
       Alert.alert("خطأ", "حدث خطأ أثناء إضافة الكود");
-      console.log("Error applying coupon:", error);
     } finally {
       setApplying(false);
     }

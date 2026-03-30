@@ -148,8 +148,7 @@ export const useDarkModeHook = () => {
       if (saved !== null) {
         setUserPreference(JSON.parse(saved));
       }
-    } catch (error) {
-      console.error("Error loading dark mode setting:", error);
+    } catch {
     } finally {
       setLoaded(true);
     }
@@ -160,8 +159,7 @@ export const useDarkModeHook = () => {
       const newValue = !isDarkMode;
       setUserPreference(newValue);
       await AsyncStorage.setItem('darkMode', JSON.stringify(newValue));
-    } catch (error) {
-      console.error("Error saving dark mode setting:", error);
+    } catch {
     }
   };
 

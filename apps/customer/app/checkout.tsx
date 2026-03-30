@@ -238,7 +238,6 @@ export default function Checkout() {
         .single();
 
       if (insertError) {
-        console.error("Order insert error:", JSON.stringify(insertError));
         throw insertError;
       }
 
@@ -559,7 +558,7 @@ export default function Checkout() {
 
             <Pressable
               onPress={pickProof}
-              {...A11yPresets.button("اختر صورة من المعرج", "انقر لاختيار صورة إثبات التحويل")}
+              {...A11yPresets.button("اختر صورة من المعرض", "انقر لاختيار صورة إثبات التحويل")}
               style={{
                 paddingVertical: 12, borderRadius: 12, alignItems: "center",
                 backgroundColor: proofUri ? colors.pinkSoft : colors.primarySoft,
@@ -571,7 +570,7 @@ export default function Checkout() {
                 fontWeight: "900", fontSize: 14,
                 color: proofUri ? colors.pink : colors.primary,
               }}>
-                {proofUri ? "تغيير الصورة" : "اختر صورة من المعرج"}
+                {proofUri ? "تغيير الصورة" : "اختر صورة من المعرض"}
               </Text>
             </Pressable>
 

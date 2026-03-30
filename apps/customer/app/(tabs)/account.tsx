@@ -96,7 +96,7 @@ export default function Account() {
             borderRadius: 20, borderWidth: 1, borderColor: colors.pink,
           }}>
             <Text style={{ fontSize: 14 }}>🎁</Text>
-            <Text style={{ fontWeight: "900", color: colors.pink, fontSize: 13 }}>120 نقطة ولاء</Text>
+            <Text style={{ fontWeight: "900", color: colors.pink, fontSize: 13 }}>نقاط الولاء</Text>
           </View>
         </View>
 

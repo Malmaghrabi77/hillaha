@@ -24,8 +24,7 @@ export const useAccessibility = () => {
     try {
       const enabled = await AccessibilityInfo.isScreenReaderEnabled();
       setA11yEnabled(enabled);
-    } catch (error) {
-      console.log("Accessibility check error:", error);
+    } catch {
     }
   };
 
@@ -150,8 +149,7 @@ export const useAccessibility = () => {
       if (a11yEnabled) {
         await AccessibilityInfo.announceForAccessibility(message);
       }
-    } catch (error) {
-      console.log("Announce error:", error);
+    } catch {
     }
   };
 
@@ -164,8 +162,7 @@ export const useAccessibility = () => {
           await AccessibilityInfo.setAccessibilityFocus(tag);
         }
       }
-    } catch (error) {
-      console.log("Focus error:", error);
+    } catch {
     }
   };
 

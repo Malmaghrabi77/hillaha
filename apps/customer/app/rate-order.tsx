@@ -53,8 +53,7 @@ export default function RateOrder() {
         .maybeSingle();
 
       if (data) setOrder(data as any);
-    } catch (error) {
-      console.log("Error loading order:", error);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -103,7 +102,6 @@ export default function RateOrder() {
       ]);
     } catch (error) {
       Alert.alert("خطأ", "حدث خطأ أثناء حفظ التقييم");
-      console.log("Error submitting rating:", error);
     } finally {
       setSubmitting(false);
     }

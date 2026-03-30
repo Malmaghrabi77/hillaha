@@ -36,8 +36,7 @@ export const useLocalCache = <T = any>(key: string): UseCacheReturn<T> => {
       if (cached) {
         setData(JSON.parse(cached) as T);
       }
-    } catch (error) {
-      console.error("Cache load error:", error);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -47,8 +46,7 @@ export const useLocalCache = <T = any>(key: string): UseCacheReturn<T> => {
     try {
       await AsyncStorage.setItem(key, JSON.stringify(newData));
       setData(newData);
-    } catch (error) {
-      console.error("Cache save error:", error);
+    } catch {
     }
   };
 
@@ -56,8 +54,7 @@ export const useLocalCache = <T = any>(key: string): UseCacheReturn<T> => {
     try {
       await AsyncStorage.removeItem(key);
       setData(null);
-    } catch (error) {
-      console.error("Cache clear error:", error);
+    } catch {
     }
   };
 

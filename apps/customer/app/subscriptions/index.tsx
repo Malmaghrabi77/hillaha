@@ -69,8 +69,7 @@ export default function SubscriptionsScreen() {
 
       setPlans(plansData || []);
       setCurrentSubscription(userSub);
-    } catch (error) {
-      console.error("Error loading plans:", error);
+    } catch {
       Alert.alert("خطأ", "فشل في تحميل الخطط");
     } finally {
       setLoading(false);
@@ -115,8 +114,7 @@ export default function SubscriptionsScreen() {
 
       Alert.alert("نجح", "✅ تم تفعيل الخطة بنجاح");
       await loadPlans();
-    } catch (error) {
-      console.error("Error subscribing:", error);
+    } catch {
       Alert.alert("خطأ", "فشل الاشتراك في الخطة");
     } finally {
       setSubscribing(null);

@@ -552,7 +552,7 @@ export default function Tracking() {
                     transform: [{ scale: pulseAnim }],
                   }} />
                   <Text style={{ fontSize: 12, fontWeight: "700", color: "#065F46" }}>
-                    موقع المندوب يتحدث مباشرة على الخريطة
+                    موقع المندوب يتحدّث مباشرة على الخريطة
                   </Text>
                 </View>
               )}
@@ -565,6 +565,7 @@ export default function Tracking() {
               <Pressable
                 onPress={() => {
                   analyticsTracker.trackEvent("rate_order", { orderId });
+                  router.push(`/rate-order?orderId=${orderId}`);
                 }}
                 {...A11yPresets.pressable}
                 style={{

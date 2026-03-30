@@ -67,8 +67,7 @@ export default function PartnerChat() {
         if (msgData) {
           setMessages(msgData as Message[]);
         }
-      } catch (error) {
-        console.log("Error loading chat:", error);
+      } catch {
       } finally {
         setLoading(false);
       }
@@ -114,8 +113,7 @@ export default function PartnerChat() {
         sender_id: user?.id,
       });
       setNewMessage("");
-    } catch (error) {
-      console.log("Error sending message:", error);
+    } catch {
     }
   }
 

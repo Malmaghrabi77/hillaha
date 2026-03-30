@@ -620,7 +620,7 @@ export default function Home() {
         }
       >
         {/* ── BANNER CAROUSEL ────────────────────────────────── */}
-        <View>
+        <View style={{ marginHorizontal: -16 }}>
           <ScrollView
             ref={bannerRef}
             horizontal

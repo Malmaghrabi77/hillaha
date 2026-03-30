@@ -13,6 +13,7 @@
     "@expo/metro-runtime": "~6.1.2",
     "@hillaha/core": "workspace:*",
     "@hillaha/ui": "workspace:*",
+    "@supabase/supabase-js": "^2.49.4",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",
     "expo-image-picker": "~17.0.10",

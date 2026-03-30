@@ -8,7 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
-import { getSupabase } from "@hillaha/core";
+import { getCustomerSupabase as getSupabase } from "../../lib/supabase";
 import { COUNTRIES, detectCountryIndex, searchCountries } from "../../src/constants/countryCodes";
 
 const C = {
@@ -22,8 +22,7 @@ const C = {
 } as const;
 
 const STORE_EMAIL = "hillaha_customer_email";
-const STORE_ACCESS_TOKEN = "hillaha_access_token";
-const STORE_REFRESH_TOKEN = "hillaha_refresh_token";
+const STORE_PASS  = "hillaha_customer_pass";
 
 type AuthMode = "email" | "phone";
 
@@ -50,10 +49,15 @@ export default function Login() {
   // Check if biometric login is available
   useEffect(() => {
     async function checkBiometric() {
-      const hasHw      = await LocalAuthentication.hasHardwareAsync();
-      const enrolled   = await LocalAuthentication.isEnrolledAsync();
-      const savedEmail = await SecureStore.getItemAsync(STORE_EMAIL);
-      setBioReady(hasHw && enrolled && !!savedEmail);
+      try {
+        const hasHw      = await LocalAuthentication.hasHardwareAsync();
+        const enrolled   = await LocalAuthentication.isEnrolledAsync();
+        const savedEmail = await SecureStore.getItemAsync(STORE_EMAIL);
+        const savedPass  = await SecureStore.getItemAsync(STORE_PASS);
+        setBioReady(hasHw && enrolled && !!savedEmail && !!savedPass);
+      } catch {
+        setBioReady(false);
+      }
     }
     checkBiometric();
   }, []);
@@ -82,14 +86,9 @@ export default function Login() {
       });
       if (err) throw err;
 
-      // Save email and tokens for future biometric login
+      // Save credentials for future biometric login
       await SecureStore.setItemAsync(STORE_EMAIL, email.trim().toLowerCase());
-      if (data.session?.access_token) {
-        await SecureStore.setItemAsync(STORE_ACCESS_TOKEN, data.session.access_token);
-      }
-      if (data.session?.refresh_token) {
-        await SecureStore.setItemAsync(STORE_REFRESH_TOKEN, data.session.refresh_token);
-      }
+      await SecureStore.setItemAsync(STORE_PASS, password);
       setBioReady(true);
 
       router.replace("/(tabs)/home");
@@ -125,11 +124,10 @@ export default function Login() {
       }
 
       const savedEmail = await SecureStore.getItemAsync(STORE_EMAIL);
-      const accessToken = await SecureStore.getItemAsync(STORE_ACCESS_TOKEN);
-      const refreshToken = await SecureStore.getItemAsync(STORE_REFRESH_TOKEN);
+      const savedPass  = await SecureStore.getItemAsync(STORE_PASS);
 
-      if (!savedEmail || !accessToken) {
-        setError("يرجى تسجيل الدخول بالبريد والكلمة مرة واحدة أولاً");
+      if (!savedEmail || !savedPass) {
+        setError("يرجى تسجيل الدخول بالبريد وكلمة المرور مرة واحدة أولاً");
         setBioLoading(false);
         return;
       }
@@ -137,15 +135,13 @@ export default function Login() {
       const supabase = getSupabase();
       if (!supabase) throw new Error("خطأ في الاتصال — تأكد من استقرار الإنترنت");
 
-      const { error: err } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken || "",
+      const { error: err } = await supabase.auth.signInWithPassword({
+        email: savedEmail,
+        password: savedPass,
       });
 
       if (err) {
-        await SecureStore.deleteItemAsync(STORE_ACCESS_TOKEN);
-        await SecureStore.deleteItemAsync(STORE_REFRESH_TOKEN);
-        setError("انتهت صلاحية جلستك، يرجى تسجيل الدخول مرة أخرى");
+        setError("فشل تسجيل الدخول — تأكد من صحة بياناتك أو سجّل دخول يدوياً");
         setBioLoading(false);
         return;
       }

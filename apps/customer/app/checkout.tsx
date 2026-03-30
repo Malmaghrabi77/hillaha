@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, Pressable, TextInput,
-  ActivityIndicator, Image,
+  ActivityIndicator, Image, Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useCart } from "../lib/cartStore";
@@ -10,7 +10,21 @@ import { useSupabase } from "../src/hooks/useSupabase";
 import { analyticsTracker } from "../src/utils/analyticsTracker";
 import { A11yPresets } from "../src/hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../src/constants/analyticsEvents";
-import { SafeAreaScrollView } from "../src/components";
+import { SafeAreaScrollView, LocationPickerMap } from "../src/components";
+import * as ImagePicker from "expo-image-picker";
+
+interface SavedAddress {
+  id: string;
+  label: string;
+  street: string;
+  building: string;
+  floor: string;
+  apartment: string;
+  notes?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  is_default: boolean;
+}
 
 type PayMethod = "cash" | "wallet" | "instapay" | "etisalat" | "vodafone" | "card";
 
@@ -41,6 +55,11 @@ export default function Checkout() {
   const [error, setError]               = useState("");
   const [proofUri, setProofUri]         = useState<string | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [showMap, setShowMap]           = useState(false);
+  const [mapLat, setMapLat]             = useState<number | null>(null);
+  const [mapLng, setMapLng]             = useState<number | null>(null);
   const [liveAccounts, setLiveAccounts] = useState<{
     instapay_account: string;
     etisalat_phone:   string;
@@ -65,6 +84,29 @@ export default function Checkout() {
         supabase.rpc("get_wallet_balance", { p_customer_id: userId })
           .then(({ data: bal }: any) => {
             if (bal !== null && bal !== undefined) setWalletBalance(Number(bal));
+          })
+          .catch(() => {});
+
+        // Fetch saved addresses
+        (supabase as any)
+          .from("addresses")
+          .select("*")
+          .eq("user_id", userId)
+          .order("is_default", { ascending: false })
+          .order("created_at", { ascending: false })
+          .then(({ data: addrs }: any) => {
+            if (addrs?.length) {
+              setSavedAddresses(addrs);
+              // Auto-select default address
+              const defaultAddr = addrs.find((a: SavedAddress) => a.is_default) || addrs[0];
+              if (defaultAddr) {
+                setSelectedAddressId(defaultAddr.id);
+                const fullAddr = [defaultAddr.street, defaultAddr.building, defaultAddr.floor ? `دور ${defaultAddr.floor}` : "", defaultAddr.apartment ? `شقة ${defaultAddr.apartment}` : ""].filter(Boolean).join("، ");
+                setAddress(fullAddr);
+                if (defaultAddr.latitude) setMapLat(defaultAddr.latitude);
+                if (defaultAddr.longitude) setMapLng(defaultAddr.longitude);
+              }
+            }
           })
           .catch(() => {});
       }
@@ -95,7 +137,6 @@ export default function Checkout() {
 
   async function pickProof() {
     try {
-      const ImagePicker = require("expo-image-picker") as any;
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
         setError("يجب السماح بالوصول للصور لرفع إثبات التحويل");
@@ -179,6 +220,8 @@ export default function Checkout() {
           customer_id:       user.id,
           partner_id:        cart.partnerId,
           delivery_address:  address.trim(),
+          delivery_lat:      mapLat,
+          delivery_lng:      mapLng,
           customer_phone:    phone.trim() || null,
           customer_note:     note.trim()  || null,
           items:             cart.itemList.map(i => ({ name: i.nameAr, qty: i.qty, price: i.price })),
@@ -193,7 +236,14 @@ export default function Checkout() {
         .select("id")
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("Order insert error:", JSON.stringify(insertError));
+        throw insertError;
+      }
+
+      if (!order?.id) {
+        throw new Error("لم يتم إنشاء الطلب بشكل صحيح");
+      }
 
       analyticsTracker.trackOrderCompleted(order.id, cart.total, cart.partnerId!, method);
       cart.clearCart();
@@ -255,9 +305,93 @@ export default function Checkout() {
           <Text style={{ fontWeight: "900", color: colors.text, fontSize: 14, marginBottom: 10 }}>
             📍 عنوان التوصيل
           </Text>
+
+          {/* Saved addresses selector */}
+          {savedAddresses.length > 0 && (
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8, textAlign: "right" }}>
+                اختر من عناوينك المحفوظة:
+              </Text>
+              {savedAddresses.map(addr => {
+                const isSelected = selectedAddressId === addr.id;
+                const fullAddr = [addr.label, addr.street, addr.building].filter(Boolean).join(" — ");
+                return (
+                  <Pressable
+                    key={addr.id}
+                    onPress={() => {
+                      setSelectedAddressId(addr.id);
+                      const parts = [addr.street, addr.building, addr.floor ? `دور ${addr.floor}` : "", addr.apartment ? `شقة ${addr.apartment}` : ""].filter(Boolean).join("، ");
+                      setAddress(parts);
+                      setShowMap(false);
+                      if (addr.latitude) setMapLat(addr.latitude);
+                      if (addr.longitude) setMapLng(addr.longitude);
+                    }}
+                    style={{
+                      flexDirection: "row", alignItems: "center", gap: 10,
+                      padding: 12, borderRadius: 12, marginBottom: 6,
+                      backgroundColor: isSelected ? colors.primarySoft : colors.bg,
+                      borderWidth: 1.5,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    }}
+                  >
+                    <View style={{
+                      width: 20, height: 20, borderRadius: 10,
+                      borderWidth: 2, borderColor: isSelected ? colors.primary : colors.border,
+                      backgroundColor: isSelected ? colors.primary : "transparent",
+                      justifyContent: "center", alignItems: "center",
+                    }}>
+                      {isSelected && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "white" }} />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontWeight: "800", color: colors.text, fontSize: 13 }}>
+                        {addr.label || "عنوان"} {addr.is_default ? "⭐" : ""}
+                      </Text>
+                      <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{fullAddr}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+
+          {/* New address via map */}
+          <Pressable
+            onPress={() => {
+              setSelectedAddressId(null);
+              setShowMap(!showMap);
+            }}
+            style={{
+              flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+              paddingVertical: 10, borderRadius: 12, marginBottom: 10,
+              backgroundColor: showMap ? colors.primarySoft : colors.bg,
+              borderWidth: 1.5,
+              borderColor: showMap ? colors.primary : colors.border,
+            }}
+          >
+            <Text style={{ fontSize: 16 }}>🗺️</Text>
+            <Text style={{ fontWeight: "800", color: showMap ? colors.primary : colors.text, fontSize: 13 }}>
+              {savedAddresses.length > 0 ? "تحديد عنوان جديد على الخريطة" : "حدد موقعك على الخريطة"}
+            </Text>
+          </Pressable>
+
+          {showMap && (
+            <View style={{ marginBottom: 10 }}>
+              <LocationPickerMap
+                latitude={mapLat}
+                longitude={mapLng}
+                onLocationSelect={(lat, lng) => {
+                  setMapLat(lat);
+                  setMapLng(lng);
+                }}
+                height={200}
+                colors={colors}
+              />
+            </View>
+          )}
+
           <TextInput
             value={address}
-            onChangeText={setAddress}
+            onChangeText={(t) => { setAddress(t); if (selectedAddressId) setSelectedAddressId(null); }}
             placeholder="مثال: شارع التحرير، المعادي، الدور 3"
             placeholderTextColor={colors.textMuted}
             multiline
@@ -338,7 +472,8 @@ export default function Checkout() {
               </View>
             )}
           </Pressable>
-        ))}
+        );
+        })}
 
         {/* TRANSFER INSTRUCTIONS */}
         {(method === "instapay" || method === "etisalat") && (() => {

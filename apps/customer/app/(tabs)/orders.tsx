@@ -78,22 +78,44 @@ export default function Orders() {
 
       // 1. Restaurant/store orders
       try {
-        const { data: ordersData } = await supabase
+        const { data: ordersData, error: ordersError } = await supabase
           .from("orders")
-          .select("id, status, total, created_at, items, partners(name_ar)")
+          .select("id, status, total, created_at, items, partner_id")
           .eq("customer_id", user.id)
           .order("created_at", { ascending: false })
           .limit(30);
 
+        if (ordersError) {
+          console.error("Orders fetch error:", JSON.stringify(ordersError));
+        }
+
         if (ordersData) {
+          // Fetch partner names separately to avoid join failures
+          const partnerIds = [...new Set((ordersData as any[]).map((o: any) => o.partner_id).filter(Boolean))];
+          let partnerMap: Record<string, string> = {};
+          if (partnerIds.length > 0) {
+            try {
+              const { data: partners } = await supabase
+                .from("partners")
+                .select("id, name_ar")
+                .in("id", partnerIds);
+              if (partners) {
+                for (const p of partners as any[]) {
+                  partnerMap[p.id] = p.name_ar;
+                }
+              }
+            } catch {}
+          }
+
           for (const o of ordersData as any[]) {
             const items = o.items ?? [];
             const itemCount = items.reduce((s: number, i: any) => s + (i.qty ?? 1), 0);
+            const partnerName = partnerMap[o.partner_id] ?? "طلب مطعم";
             all.push({
               id: o.id,
               source: "order",
               status: o.status,
-              title: o.partners?.name_ar ?? "طلب مطعم",
+              title: partnerName,
               subtitle: itemCount > 0
                 ? `${itemCount} ${itemCount === 1 ? "منتج" : "منتجات"}${items[0] ? ` • ${items[0].name}` : ""}${items.length > 1 ? ` و${items.length - 1} آخرين` : ""}`
                 : "طلب",
@@ -102,14 +124,14 @@ export default function Orders() {
               icon: "🍽️",
               details: {
                 "نوع الطلب": "طلب مطعم / متجر",
-                "المتجر": o.partners?.name_ar ?? "-",
+                "المتجر": partnerName,
                 "المنتجات": items.map((i: any) => `${i.name} × ${i.qty}`).join("، ") || "-",
                 "الإجمالي": `${Number(o.total)} جنيه`,
               },
             });
           }
         }
-      } catch {}
+      } catch (e) { console.error("Orders section error:", e); }
 
       // 2. Service bookings (cleaning, electrical)
       try {

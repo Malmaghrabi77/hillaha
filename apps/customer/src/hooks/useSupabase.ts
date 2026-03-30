@@ -1,8 +1,10 @@
-import { useCallback } from 'react';
+import { useMemo } from 'react';
+import { getCustomerSupabase } from '../../lib/supabase';
 
 /**
  * ✅ Centralized Supabase Client Hook
  * يوفر وصول آمن وموحد إلى عميل Supabase
+ * يستخدم AsyncStorage لحفظ الجلسة في React Native
  *
  * الاستخدام:
  * const supabase = useSupabase();
@@ -12,13 +14,13 @@ import { useCallback } from 'react';
  */
 
 export const useSupabase = () => {
-  return useCallback(() => {
+  return useMemo(() => {
     try {
-      return (require("@hillaha/core") as any).getSupabase?.() ?? null;
+      return getCustomerSupabase();
     } catch {
       return null;
     }
-  }, [])();
+  }, []);
 };
 
 /**
@@ -30,14 +32,7 @@ export const withSupabase = async <T,>(
   fallback?: T
 ): Promise<T | undefined> => {
   try {
-    const supabase = (() => {
-      try {
-        return (require("@hillaha/core") as any).getSupabase?.() ?? null;
-      } catch {
-        return null;
-      }
-    })();
-
+    const supabase = getCustomerSupabase();
     if (!supabase) return fallback;
     return await operation(supabase);
   } catch (error) {

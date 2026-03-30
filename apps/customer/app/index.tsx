@@ -80,7 +80,7 @@ export default function AppEntry() {
               resizeMode="contain"
             />
           </Animated.View>
-          <Text style={styles.splashArabic}>حلها يحلها</Text>
+          <Text style={[styles.splashArabic, { width: "100%" }]}>حلها يحلها</Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
             <Text style={styles.splashEnglish}>7illaha</Text>
             <Image
@@ -107,7 +107,7 @@ export default function AppEntry() {
             style={styles.authLogo}
             resizeMode="contain"
           />
-          <Text style={styles.authBrand}>حلها يحلها</Text>
+          <Text style={[styles.authBrand, { width: "100%" }]}>حلها يحلها</Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 }}>
             <Text style={styles.authTagline}>7illaha</Text>
             <Image
@@ -130,7 +130,7 @@ export default function AppEntry() {
         <View style={styles.buttons}>
           <Pressable
             style={({ pressed }) => [styles.btnPrimary, pressed && { opacity: 0.85 }]}
-            {...A11yPresets.pressable}
+            {...A11yPresets.button("إنشاء حساب جديد", "الانتقال لصفحة التسجيل")}
             onPress={() => {
               analyticsTracker.trackEvent("entry_register");
               router.push("/(auth)/register");
@@ -141,7 +141,7 @@ export default function AppEntry() {
 
           <Pressable
             style={({ pressed }) => [styles.btnSecondary, pressed && { backgroundColor: "rgba(139,92,246,0.1)" }]}
-            {...A11yPresets.pressable}
+            {...A11yPresets.button("تسجيل الدخول", "الانتقال لصفحة تسجيل الدخول")}
             onPress={() => {
               analyticsTracker.trackEvent("entry_login");
               router.push("/(auth)/login");
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   splashLogo:    { width: 120, height: 120, marginBottom: 24 },
-  splashArabic:  { fontSize: 28, fontWeight: "900", color: C.white, letterSpacing: -1 },
+  splashArabic:  { fontSize: 28, fontWeight: "900", color: C.white, letterSpacing: -1, writingDirection: "rtl", textAlign: "center" },
   splashEnglish: { fontSize: 22, fontWeight: "700", color: C.purpleGlow, marginTop: 2, letterSpacing: 3 },
   splashTagline: { fontSize: 15, color: C.whiteAlpha, marginTop: 12, textAlign: "center" },
 
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   },
   authTop:    { alignItems: "center", marginBottom: 32 },
   authLogo:   { width: 80, height: 80, marginBottom: 12 },
-  authBrand:  { fontSize: 24, fontWeight: "900", color: C.white, letterSpacing: -0.5 },
+  authBrand:  { fontSize: 24, fontWeight: "900", color: C.white, letterSpacing: -0.5, writingDirection: "rtl", textAlign: "center" },
   authTagline:{ fontSize: 14, color: C.whiteAlpha, marginTop: 6 },
 
   chips: {

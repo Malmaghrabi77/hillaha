@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getCustomerSupabase } from '../../lib/supabase';
 
 /**
  * ✅ Advanced Analytics
@@ -46,7 +47,7 @@ export class AnalyticsTracker {
 
   private supabase = (() => {
     try {
-      return (require("@hillaha/core") as any).getSupabase?.() ?? null;
+      return getCustomerSupabase() ?? null;
     } catch {
       return null;
     }

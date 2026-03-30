@@ -31,6 +31,13 @@
           "locationAlwaysAndWhenInUsePermission": "حلّها يحتاج الوصول لموقعك لتتبع رحلة التوصيل",
           "locationWhenInUsePermission": "حلّها يحتاج الوصول لموقعك لتتبع رحلة التوصيل"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/hillaha-icon-1024.png",
+          "color": "#8B5CF6"
+        }
       ]
     ],
     "android": {

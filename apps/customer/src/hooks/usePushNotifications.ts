@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { useEffect, useRef, useState } from 'react';
+import { getCustomerSupabase } from '../../lib/supabase';
 
 /**
  * ✅ Push Notifications Hook
@@ -32,7 +33,7 @@ export const usePushNotifications = () => {
 
   const supabase = (() => {
     try {
-      return (require("@hillaha/core") as any).getSupabase?.() ?? null;
+      return getCustomerSupabase() ?? null;
     } catch {
       return null;
     }

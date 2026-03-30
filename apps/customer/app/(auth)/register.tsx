@@ -6,7 +6,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { getSupabase } from "@hillaha/core";
+import { getCustomerSupabase as getSupabase } from "../../lib/supabase";
 import { COUNTRIES, detectCountryIndex, searchCountries, type CountryCode } from "../../src/constants/countryCodes";
 
 const C = {

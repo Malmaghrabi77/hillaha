@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { CartProvider } from "../lib/cartStore";
 import { LocaleProvider } from "../lib/i18n";
+import { getCustomerSupabase } from "../lib/supabase";
 import { DarkModeProvider } from "../src/hooks/useDarkMode";
 
 // ── Prevent auto-hide: we control dismiss timing ──────────────────────────────
@@ -23,9 +24,7 @@ export default function RootLayout() {
       try {
         SplashScreen.hideAsync().catch(() => {});
 
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { getSupabase } = require("@hillaha/core") as any;
-        const sb = getSupabase?.();
+        const sb = getCustomerSupabase();
 
         if (!sb) {
           setBooted(true);
@@ -97,8 +96,8 @@ export default function RootLayout() {
               <Stack.Screen name="favorites"            options={{ headerShown: true,  title: "المفضلة" }} />
               <Stack.Screen name="promo"                options={{ headerShown: true,  title: "العروض والخصومات" }} />
               <Stack.Screen name="rate-order"           options={{ headerShown: true,  title: "تقييم الطلب" }} />
-              <Stack.Screen name="referrals"            options={{ headerShown: true,  title: "الإحالات" }} />
-              <Stack.Screen name="subscriptions"        options={{ headerShown: true,  title: "الاشتراكات" }} />
+              <Stack.Screen name="referrals/index"       options={{ headerShown: true,  title: "الإحالات" }} />
+              <Stack.Screen name="subscriptions/index"   options={{ headerShown: true,  title: "الاشتراكات" }} />
               <Stack.Screen name="wallet"               options={{ headerShown: true,  title: "المحفظة" }} />
               <Stack.Screen name="chat/driver/[orderId]"    options={{ headerShown: true,  title: "محادثة السائق" }} />
               <Stack.Screen name="chat/partner/[partnerId]" options={{ headerShown: true,  title: "محادثة المتجر" }} />

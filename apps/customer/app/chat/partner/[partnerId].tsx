@@ -77,6 +77,7 @@ export default function PartnerChat() {
     load();
 
     // Subscribe to new messages
+    if (!supabase) return;
     const channel = supabase
       .channel(`chat-partner-${partnerId}`)
         .on(

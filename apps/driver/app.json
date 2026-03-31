@@ -15,6 +15,13 @@
       "expo-router",
       "@sentry/react-native/expo",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/halha-icon-1024.png",
+          "color": "#8B5CF6"
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "حلّها يحتاج الوصول للصور لاختيار صورتك الشخصية",
@@ -48,7 +55,8 @@
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT",
         "android.permission.RECORD_AUDIO",
-        "android.permission.FOREGROUND_SERVICE_LOCATION"
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "ios": {

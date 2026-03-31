@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { View, Text, ActivityIndicator, Image, Pressable } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Sentry from "@sentry/react-native";
+import { usePushNotifications } from "../lib/usePushNotifications";
 
 // NO SplashScreen API — let native splash auto-hide when React renders.
 // This prevents the frozen splash issue entirely.
@@ -61,6 +62,11 @@ class GlobalErrorBoundary extends Component<
 // ── Main Layout ─────────────────────────────────────────────────────
 function RootLayoutInner() {
   const [target, setTarget] = useState<Route | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [sbInstance, setSbInstance] = useState<any>(null);
+
+  // Register push notifications once we have a logged-in user
+  usePushNotifications(sbInstance, userId);
 
   useEffect(() => {
     let mounted = true;
@@ -76,6 +82,7 @@ function RootLayoutInner() {
         const { getSB } = require("../lib/constants");
         const supabase = getSB();
         if (!supabase) { if (mounted) setTarget("/(auth)/login"); return; }
+        if (mounted) setSbInstance(supabase);
 
         const sessionResult = await Promise.race([
           supabase.auth.getSession(),
@@ -88,6 +95,7 @@ function RootLayoutInner() {
         }
 
         const userId = (sessionResult as any).data.session.user.id;
+        if (mounted) setUserId(userId);
 
         const profileResult = await Promise.race([
           (supabase as any)

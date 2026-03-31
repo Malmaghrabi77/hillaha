@@ -92,13 +92,15 @@ export const usePushNotifications = () => {
       if (supabase) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          await supabase.from('push_tokens').upsert({
+          await (supabase as any).from('push_tokens').upsert({
             user_id: user.id,
             token: token,
             device_type: Device.osName,
             device_model: Device.modelName,
+            app_type: 'customer',
+            is_active: true,
             updated_at: new Date().toISOString(),
-          });
+          }, { onConflict: 'user_id,app_type' });
         }
       }
 

@@ -7,9 +7,19 @@ import { CartProvider } from "../lib/cartStore";
 import { LocaleProvider } from "../lib/i18n";
 import { getCustomerSupabase } from "../lib/supabase";
 import { DarkModeProvider } from "../src/hooks/useDarkMode";
+import * as Sentry from "@sentry/react-native";
 
 // ── Prevent auto-hide: we control dismiss timing ──────────────────────────────
 try { SplashScreen.preventAutoHideAsync(); } catch {};
+
+// ── Initialize Sentry for production error tracking ─────────────────────────
+try {
+  Sentry.init({
+    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || "",
+    tracesSampleRate: 0.2,
+    enabled: !__DEV__,
+  });
+} catch {}
 
 // ── Global ErrorBoundary for production crash debugging ──────────────────────
 class GlobalErrorBoundary extends React.Component<
@@ -25,6 +35,7 @@ class GlobalErrorBoundary extends React.Component<
   }
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("GlobalErrorBoundary caught:", error, errorInfo);
+    try { Sentry.captureException(error); } catch {}
   }
   render() {
     if (this.state.hasError) {

@@ -3,9 +3,19 @@ import { Stack, Redirect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View, Text, ActivityIndicator, Image, Pressable } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import * as Sentry from "@sentry/react-native";
 
 // NO SplashScreen API — let native splash auto-hide when React renders.
 // This prevents the frozen splash issue entirely.
+
+// ── Initialize Sentry for production error tracking ─────────────────────────
+try {
+  Sentry.init({
+    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || "",
+    tracesSampleRate: 0.2,
+    enabled: !__DEV__,
+  });
+} catch {}
 
 type Route = "/(auth)/login" | "/(auth)/pending-approval" | "/(auth)/rejected" | "/(tabs)/home";
 
@@ -18,6 +28,10 @@ class GlobalErrorBoundary extends Component<
 
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error: error?.message || "خطأ غير معروف" };
+  }
+
+  componentDidCatch(error: Error) {
+    try { Sentry.captureException(error); } catch {}
   }
 
   render() {

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, Pressable, TextInput,
-  ActivityIndicator, Image, Alert,
+  ActivityIndicator, Image, Alert, Modal,
 } from "react-native";
 import { router } from "expo-router";
+import { WebView } from "react-native-webview";
 import { useCart } from "../lib/cartStore";
 import { useDarkMode } from "../src/hooks/useDarkMode";
 import { useSupabase } from "../src/hooks/useSupabase";
@@ -41,7 +42,7 @@ const METHODS: { id: PayMethod; label: string; desc: string; icon: string; soon?
   { id: "instapay",  label: "InstaPay",           desc: `تحويل لحظي — حساب: ${FALLBACK_ACCOUNTS.instapay.account}`, icon: "📲" },
   { id: "etisalat",  label: "E& (اتصالات)",       desc: `تحويل رصيد — ${FALLBACK_ACCOUNTS.etisalat.phone}`,        icon: "📡" },
   { id: "vodafone",  label: "Vodafone Cash",       desc: "الحساب قيد التحديد — قريباً",                icon: "📱", soon: true },
-  { id: "card",      label: "بطاقة بنكية",         desc: "فيزا / ماستر كارد (قريباً)",                 icon: "💳", soon: true },
+  { id: "card",      label: "بطاقة بنكية",         desc: "فيزا / ماستر كارد — دفع آمن عبر PayMob",     icon: "💳" },
 ];
 
 export default function Checkout() {
@@ -67,6 +68,8 @@ export default function Checkout() {
     vodafone_phone:   string;
   } | null>(null);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [paymobUrl, setPaymobUrl]         = useState<string | null>(null);
+  const [paymobOrderId, setPaymobOrderId] = useState<string | null>(null);
 
   const needsProof = method === "instapay" || method === "etisalat";
 
@@ -170,6 +173,19 @@ export default function Checkout() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("يجب تسجيل الدخول أولاً");
 
+      // Rate limit check
+      const { data: rlAllowed } = await supabase.rpc("check_rate_limit", {
+        p_user_id: user.id,
+        p_action: "create_order",
+        p_max_attempts: 5,
+        p_window_minutes: 60,
+      });
+      if (rlAllowed === false) {
+        setError("تجاوزت الحد المسموح من الطلبات. حاول مرة أخرى بعد قليل.");
+        setLoading(false);
+        return;
+      }
+
       // Wallet balance validation
       if (method === "wallet") {
         if (walletBalance === null || walletBalance < cart.total) {
@@ -180,78 +196,138 @@ export default function Checkout() {
         }
       }
 
-      let proofStorageUrl: string | null = null;
-      if (proofUri && needsProof) {
-        setUploadingProof(true);
+      // PayMob card payment flow
+      if (method === "card") {
         try {
-          const response = await fetch(proofUri);
-          const blob = await response.blob();
-          const ext  = proofUri.split(".").pop()?.split("?")[0] ?? "jpg";
-          const path = `${user.id}/${Date.now()}.${ext}`;
-          const { error: uploadErr } = await supabase.storage
-            .from("payment-proofs")
-            .upload(path, blob, { contentType: `image/${ext}`, upsert: true });
-          if (!uploadErr) {
-            const { data: { publicUrl } } = supabase.storage
-              .from("payment-proofs")
-              .getPublicUrl(path);
-            proofStorageUrl = publicUrl;
+          const { data: intentData, error: intentError } = await supabase.functions.invoke("paymob-intent", {
+            body: {
+              amount_cents: Math.round(cart.total * 100),
+              order_id: `temp_${Date.now()}`,
+              customer_email: user.email || "",
+              customer_phone: phone.trim() || "",
+              customer_name: user.user_metadata?.full_name || "",
+            },
+          });
+          if (intentError || !intentData?.payment_url) {
+            throw new Error(intentData?.error || "تعذّر إنشاء رابط الدفع");
           }
-        } finally {
-          setUploadingProof(false);
+          setPaymobUrl(intentData.payment_url);
+          setPaymobOrderId(intentData.paymob_order_id || null);
+          setLoading(false);
+          return; // WebView will handle the rest
+        } catch (e: any) {
+          throw new Error(e?.message || "تعذّر الاتصال ببوابة الدفع");
         }
       }
 
-      // Wallet deduction
-      if (method === "wallet") {
-        const { data: deductResult } = await supabase.rpc("deduct_wallet_balance", {
-          p_customer_id: user.id,
-          p_amount: cart.total,
-          p_description: `دفع طلب — ${cart.partnerName ?? "طلب"}`,
-        });
-        if (!deductResult?.success) {
-          throw new Error(deductResult?.error ?? "رصيد المحفظة غير كافٍ");
-        }
-        setWalletBalance(Number(deductResult.remaining));
-      }
-
-      const { data: order, error: insertError } = await supabase
-        .from("orders")
-        .insert({
-          customer_id:       user.id,
-          partner_id:        cart.partnerId,
-          delivery_address:  address.trim(),
-          delivery_lat:      mapLat,
-          delivery_lng:      mapLng,
-          customer_phone:    phone.trim() || null,
-          customer_note:     note.trim()  || null,
-          items:             cart.itemList.map(i => ({ name: i.nameAr, qty: i.qty, price: i.price })),
-          subtotal:          cart.subtotal,
-          delivery_fee:      cart.deliveryFee,
-          discount:          0,
-          total:             cart.total,
-          payment_method:    (method === "cash" || method === "card") ? method : "wallet_transfer",
-          payment_proof_url: proofStorageUrl,
-          status:            "pending",
-        })
-        .select("id")
-        .single();
-
-      if (insertError) {
-        throw insertError;
-      }
-
-      if (!order?.id) {
-        throw new Error("لم يتم إنشاء الطلب بشكل صحيح");
-      }
-
-      analyticsTracker.trackOrderCompleted(order.id, cart.total, cart.partnerId!, method);
-      cart.clearCart();
-      router.replace(`/tracking/${order.id}`);
+      await createOrder(user, null);
     } catch (e: any) {
       setError(e?.message ?? "حدث خطأ، حاول مرة أخرى");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function createOrder(user: any, paymobTransactionId: string | null) {
+    if (!supabase) throw new Error("خطأ في الاتصال");
+
+    let proofStorageUrl: string | null = null;
+    if (proofUri && needsProof) {
+      setUploadingProof(true);
+      try {
+        const response = await fetch(proofUri);
+        const blob = await response.blob();
+        const ext  = proofUri.split(".").pop()?.split("?")[0] ?? "jpg";
+        const path = `${user.id}/${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from("payment-proofs")
+          .upload(path, blob, { contentType: `image/${ext}`, upsert: true });
+        if (!uploadErr) {
+          const { data: { publicUrl } } = supabase.storage
+            .from("payment-proofs")
+            .getPublicUrl(path);
+          proofStorageUrl = publicUrl;
+        }
+      } finally {
+        setUploadingProof(false);
+      }
+    }
+
+    // Wallet deduction
+    if (method === "wallet") {
+      const { data: deductResult } = await supabase.rpc("deduct_wallet_balance", {
+        p_customer_id: user.id,
+        p_amount: cart.total,
+        p_description: `دفع طلب — ${cart.partnerName ?? "طلب"}`,
+      });
+      if (!deductResult?.success) {
+        throw new Error(deductResult?.error ?? "رصيد المحفظة غير كافٍ");
+      }
+      setWalletBalance(Number(deductResult.remaining));
+    }
+
+    const orderInsert: Record<string, any> = {
+      customer_id:       user.id,
+      partner_id:        cart.partnerId,
+      delivery_address:  address.trim(),
+      delivery_lat:      mapLat,
+      delivery_lng:      mapLng,
+      customer_phone:    phone.trim() || null,
+      customer_note:     note.trim()  || null,
+      items:             cart.itemList.map(i => ({ name: i.nameAr, qty: i.qty, price: i.price })),
+      subtotal:          cart.subtotal,
+      delivery_fee:      cart.deliveryFee,
+      discount:          0,
+      total:             cart.total,
+      payment_method:    (method === "cash" || method === "card") ? method : "wallet_transfer",
+      payment_proof_url: proofStorageUrl,
+      status:            "pending",
+    };
+
+    if (method === "card") {
+      orderInsert.payment_status = "paid";
+      if (paymobTransactionId) orderInsert.paymob_transaction_id = paymobTransactionId;
+      if (paymobOrderId) orderInsert.paymob_order_id = paymobOrderId;
+    }
+
+    const { data: order, error: insertError } = await supabase
+      .from("orders")
+      .insert(orderInsert)
+      .select("id")
+      .single();
+
+    if (insertError) {
+      throw insertError;
+    }
+
+    if (!order?.id) {
+      throw new Error("لم يتم إنشاء الطلب بشكل صحيح");
+    }
+
+    analyticsTracker.trackOrderCompleted(order.id, cart.total, cart.partnerId!, method);
+    cart.clearCart();
+    router.replace(`/tracking/${order.id}`);
+  }
+
+  function handlePaymobResult(url: string) {
+    // PayMob redirects to a success/failure URL with query params
+    const isSuccess = url.includes("success=true") || url.includes("txn_response_code=APPROVED");
+    const transactionMatch = url.match(/transaction_id=(\d+)/);
+    const transactionId = transactionMatch ? transactionMatch[1] : null;
+
+    setPaymobUrl(null);
+
+    if (isSuccess) {
+      setLoading(true);
+      supabase?.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          createOrder(user, transactionId)
+            .catch((e: any) => setError(e?.message ?? "حدث خطأ في إنشاء الطلب"))
+            .finally(() => setLoading(false));
+        }
+      });
+    } else {
+      setError("فشل الدفع بالبطاقة. حاول مرة أخرى أو اختر طريقة دفع أخرى.");
     }
   }
 
@@ -640,6 +716,47 @@ export default function Checkout() {
           }
         </Pressable>
       </View>
+
+      {/* PayMob WebView Modal */}
+      <Modal visible={!!paymobUrl} animationType="slide" onRequestClose={() => setPaymobUrl(null)}>
+        <View style={{ flex: 1, backgroundColor: colors.bg }}>
+          <View style={{
+            flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+            paddingHorizontal: 16, paddingTop: 50, paddingBottom: 12,
+            backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border,
+          }}>
+            <Pressable onPress={() => {
+              Alert.alert("إلغاء الدفع", "هل تريد إلغاء عملية الدفع؟", [
+                { text: "متابعة الدفع", style: "cancel" },
+                { text: "إلغاء", style: "destructive", onPress: () => setPaymobUrl(null) },
+              ]);
+            }}>
+              <Text style={{ color: colors.danger, fontWeight: "800", fontSize: 14 }}>إلغاء</Text>
+            </Pressable>
+            <Text style={{ fontWeight: "900", color: colors.text, fontSize: 15 }}>الدفع الإلكتروني</Text>
+            <View style={{ width: 40 }} />
+          </View>
+          {paymobUrl && (
+            <WebView
+              source={{ uri: paymobUrl }}
+              onNavigationStateChange={(navState) => {
+                const url = navState.url || "";
+                if (url.includes("paymob-callback") || url.includes("txn_response_code")) {
+                  handlePaymobResult(url);
+                }
+              }}
+              startInLoadingState
+              renderLoading={() => (
+                <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.bg }}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={{ marginTop: 12, color: colors.textMuted, fontSize: 13 }}>جاري تحميل صفحة الدفع...</Text>
+                </View>
+              )}
+              style={{ flex: 1 }}
+            />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }

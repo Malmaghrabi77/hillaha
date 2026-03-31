@@ -14,6 +14,7 @@
     "@hillaha/core": "workspace:*",
     "@hillaha/ui": "workspace:*",
     "@react-native-async-storage/async-storage": "2.1.2",
+    "@sentry/react-native": "^8.6.0",
     "@supabase/supabase-js": "^2.49.1",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",

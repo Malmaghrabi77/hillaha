@@ -91,6 +91,7 @@ export default function HomeTab() {
         .from("orders")
         .select("*, partners(name, address, lat, lng)")
         .eq("status", "ready")
+        .eq("delivery_type", "platform")
         .is("driver_id", null)
         .order("created_at", { ascending: false });
       if (data) setOrders(data.map(mapOrder));
@@ -102,7 +103,10 @@ export default function HomeTab() {
       .channel("driver-ready-orders")
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: "orders", filter: "status=eq.ready" },
-        (payload) => { setOrders(prev => [mapOrder(payload.new), ...prev]); }
+        (payload) => {
+          if (payload.new.delivery_type === "self") return;
+          setOrders(prev => [mapOrder(payload.new), ...prev]);
+        }
       )
       .on("postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders" },
@@ -141,6 +145,7 @@ export default function HomeTab() {
         .from("orders")
         .select("*, partners(name, address, lat, lng)")
         .eq("status", "ready")
+        .eq("delivery_type", "platform")
         .is("driver_id", null)
         .order("created_at", { ascending: false });
       if (data) setOrders(data.map(mapOrder));

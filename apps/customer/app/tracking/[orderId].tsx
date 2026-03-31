@@ -61,6 +61,7 @@ interface OrderInfo {
   customerLng:   number;
   partnerType:  string;  // restaurant, pharmacy, clinic, store
   serviceName?: string;  // service name if applicable (e.g., "Home Cleaning", "سباكة")
+  deliveryType: "platform" | "self";
 }
 
 // Calculate distance between two coordinates (in km)
@@ -146,7 +147,7 @@ export default function Tracking() {
       const { data } = await supabase!
         .from("orders")
         .select(`
-          id, status, total, delivery_fee,
+          id, status, total, delivery_fee, delivery_type,
           driver_lat, driver_lng, driver_heading,
           partners(name, address, lat, lng, type),
           profiles!orders_customer_id_fkey(full_name, phone),
@@ -178,7 +179,8 @@ export default function Tracking() {
           customerLat:   custLat,
           customerLng:   custLng,
           partnerType:   (data.partners as any)?.type ?? "restaurant",
-          serviceName:   (data.partners as any)?.name,  // service name from partner name field if available
+          serviceName:   (data.partners as any)?.name,
+          deliveryType:  (data as any).delivery_type ?? "platform",
         };
 
         setOrderInfo(orderObj);
@@ -242,7 +244,16 @@ export default function Tracking() {
   }, [orderId, supabase]);
 
   const isDelivered   = step === 3;
+  const isSelfDelivery = orderInfo?.deliveryType === "self";
   const stepCfg       = STEP_CONFIG[step];
+
+  // Override step descriptions for self-delivery
+  const activeStepDesc = isSelfDelivery && step === 2
+    ? "موظف المتجر في الطريق إليك"
+    : stepCfg.desc;
+  const activeStepLabel = isSelfDelivery && step === 2
+    ? "خرج للتوصيل"
+    : stepCfg.label;
 
   if (loading) {
     return (
@@ -282,7 +293,7 @@ export default function Tracking() {
             جاري تحميل الخريطة…
           </Text>
           <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>
-            سيتم تتبع موقع المندوب تلقائياً
+            {isSelfDelivery ? "موظف المتجر سيوصّل طلبك" : "سيتم تتبع موقع المندوب تلقائياً"}
           </Text>
         </View>
       )}
@@ -399,10 +410,10 @@ export default function Tracking() {
                   الحالة الحالية
                 </Text>
                 <Text style={{ color: "white", fontSize: 17, fontWeight: "900", marginTop: 2 }}>
-                  {stepCfg.label}
+                  {activeStepLabel}
                 </Text>
                 <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 12, marginTop: 2 }}>
-                  {stepCfg.desc}
+                  {activeStepDesc}
                 </Text>
               </View>
 
@@ -473,8 +484,8 @@ export default function Tracking() {
             </View>
           </View>
 
-          {/* DRIVER CARD (step >= 2) */}
-          {step >= 2 && (
+          {/* DRIVER / SELF-DELIVERY CARD (step >= 2) */}
+          {step >= 2 && !isSelfDelivery && (
             <View style={{
               backgroundColor: "white", borderRadius: 20, padding: 16,
               shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
@@ -556,6 +567,34 @@ export default function Tracking() {
                   </Text>
                 </View>
               )}
+            </View>
+          )}
+
+          {/* SELF-DELIVERY INFO (step >= 2, self delivery) */}
+          {step >= 2 && isSelfDelivery && (
+            <View style={{
+              backgroundColor: "white", borderRadius: 20, padding: 16,
+              shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+            }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                <View style={{
+                  width: 56, height: 56, borderRadius: 28,
+                  backgroundColor: "#D1FAE5",
+                  borderWidth: 2.5, borderColor: "#34D399",
+                  justifyContent: "center", alignItems: "center",
+                }}>
+                  <Text style={{ fontSize: 26 }}>🏪</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "900", color: "#111827", fontSize: 16 }}>
+                    توصيل ذاتي
+                  </Text>
+                  <Text style={{ color: "#6B7280", fontSize: 13, marginTop: 3 }}>
+                    موظف المتجر سيوصّل طلبك مباشرة
+                  </Text>
+                </View>
+              </View>
             </View>
           )}
 

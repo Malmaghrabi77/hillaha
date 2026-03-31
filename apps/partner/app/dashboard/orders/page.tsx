@@ -15,6 +15,8 @@ const C = {
 
 type Status = "pending" | "accepted" | "preparing" | "ready" | "picked_up" | "delivered" | "cancelled";
 
+type DeliveryType = "platform" | "self";
+
 interface Order {
   id: string;
   _uuid?: string;
@@ -27,6 +29,7 @@ interface Order {
   time: string;
   note?: string;
   paymentMethod: string;
+  deliveryType?: DeliveryType;
 }
 
 const INITIAL_ORDERS: Order[] = [
@@ -34,13 +37,13 @@ const INITIAL_ORDERS: Order[] = [
     id: "ORD-001", customer: "مصطفى محمد", phone: "01012345678",
     items: [{ name: "برجر كلاسيك", qty: 2, price: 75 }, { name: "كوكاكولا", qty: 2, price: 20 }],
     address: "شارع التحرير, القاهرة", total: 190, status: "pending",
-    time: "11:45 ص", note: "بدون بصل من فضلك", paymentMethod: "كاش",
+    time: "11:45 ص", note: "بدون بصل من فضلك", paymentMethod: "كاش", deliveryType: "platform",
   },
   {
     id: "ORD-002", customer: "أحمد علي", phone: "01098765432",
     items: [{ name: "بيتزا لحمة", qty: 1, price: 120 }],
     address: "المعادي، شارع 9", total: 120, status: "preparing",
-    time: "11:37 ص", paymentMethod: "فودافون كاش",
+    time: "11:37 ص", paymentMethod: "فودافون كاش", deliveryType: "self",
   },
   {
     id: "ORD-003", customer: "فاطمة حسن", phone: "01155566677",
@@ -88,6 +91,8 @@ export default function OrdersPage() {
   const [filter, setFilter]   = useState<Status | "all">("all");
   const [selected, setSelected] = useState<Order | null>(null);
   const [liveCount, setLiveCount] = useState(0);
+  const [acceptDialog, setAcceptDialog] = useState<{ orderId: string; uuid: string } | null>(null);
+  const [acceptLoading, setAcceptLoading] = useState(false);
 
   // ─── دالة تحويل بيانات Supabase → واجهة Order ───────────
   function mapRow(row: any): Order {
@@ -106,6 +111,7 @@ export default function OrdersPage() {
                    : row.payment_method === "instapay" ? "إنستاباي"
                    : row.payment_method === "vodafone" ? "فودافون كاش"
                    : row.payment_method,
+      deliveryType:  row.delivery_type ?? "platform",
     };
   }
 
@@ -166,6 +172,33 @@ export default function OrdersPage() {
     await (supabase as any).from("orders").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", uuid);
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: "cancelled" } : o));
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, status: "cancelled" } : null);
+  }
+
+  function openAcceptDialog(id: string) {
+    const order = orders.find(o => o.id === id);
+    const uuid = (order as any)?._uuid ?? id;
+    setAcceptDialog({ orderId: id, uuid });
+  }
+
+  async function acceptWithDeliveryType(dt: DeliveryType) {
+    if (!acceptDialog) return;
+    setAcceptLoading(true);
+    const { data, error } = await (supabase as any).rpc("accept_order_with_delivery_type", {
+      p_order_id: acceptDialog.uuid,
+      p_delivery_type: dt,
+    });
+    setAcceptLoading(false);
+    if (error || !data?.success) {
+      alert(data?.error || error?.message || "حدث خطأ");
+      return;
+    }
+    setOrders(prev => prev.map(o =>
+      o.id === acceptDialog.orderId ? { ...o, status: "accepted" as Status, deliveryType: dt } : o
+    ));
+    if (selected?.id === acceptDialog.orderId) {
+      setSelected(prev => prev ? { ...prev, status: "accepted" as Status, deliveryType: dt } : null);
+    }
+    setAcceptDialog(null);
   }
 
   const counts: Record<string, number> = { all: orders.length };
@@ -278,9 +311,30 @@ export default function OrdersPage() {
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 15, fontWeight: 900, color: C.text }}>{o.total} ج</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 15, fontWeight: 900, color: C.text }}>{o.total} ج</span>
+                    {o.deliveryType && o.status !== "pending" && o.status !== "cancelled" && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10,
+                        background: o.deliveryType === "self" ? "#D1FAE5" : C.primarySoft,
+                        color: o.deliveryType === "self" ? "#059669" : C.primary,
+                      }}>
+                        {o.deliveryType === "self" ? "توصيل ذاتي" : "توصيل منصة"}
+                      </span>
+                    )}
+                  </div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    {st.next && (
+                    {o.status === "pending" ? (
+                      <button
+                        onClick={e => { e.stopPropagation(); openAcceptDialog(o.id); }}
+                        style={{
+                          padding: "6px 14px", borderRadius: 10, border: "none", cursor: "pointer",
+                          background: C.primary, color: "white", fontSize: 12, fontWeight: 700,
+                        }}
+                      >
+                        قبول الطلب
+                      </button>
+                    ) : st.next ? (
                       <button
                         onClick={e => { e.stopPropagation(); advance(o.id, st.next!); }}
                         style={{
@@ -289,9 +343,9 @@ export default function OrdersPage() {
                           fontSize: 12, fontWeight: 700,
                         }}
                       >
-                        {st.nextLabel}
+                        {o.status === "ready" && o.deliveryType === "self" ? "تم استلام الموظف" : st.nextLabel}
                       </button>
-                    )}
+                    ) : null}
                     {o.status === "pending" && (
                       <button
                         onClick={e => { e.stopPropagation(); cancel(o.id); }}
@@ -342,6 +396,22 @@ export default function OrdersPage() {
               }}>
                 <span style={{ fontWeight: 700, color: st.color, fontSize: 13 }}>{st.label}</span>
               </div>
+
+              {/* Delivery Type Badge */}
+              {selected.deliveryType && selected.status !== "pending" && selected.status !== "cancelled" && (
+                <div style={{
+                  padding: "10px 16px", borderRadius: 12, marginBottom: 16, textAlign: "center",
+                  background: selected.deliveryType === "self" ? "#D1FAE5" : C.primarySoft,
+                  border: `1px solid ${selected.deliveryType === "self" ? "#34D399" : "#C4B5FD"}`,
+                }}>
+                  <span style={{
+                    fontWeight: 700, fontSize: 13,
+                    color: selected.deliveryType === "self" ? "#059669" : C.primary,
+                  }}>
+                    {selected.deliveryType === "self" ? "🏪 توصيل ذاتي — موظفك" : "🛵 توصيل عبر المنصة — كابتن من التطبيق"}
+                  </span>
+                </div>
+              )}
 
               {/* Customer Info */}
               <div style={{ marginBottom: 16 }}>
@@ -394,7 +464,18 @@ export default function OrdersPage() {
 
               {/* Actions */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {st.next && (
+                {selected.status === "pending" ? (
+                  <button
+                    onClick={() => openAcceptDialog(selected.id)}
+                    style={{
+                      width: "100%", padding: 12, borderRadius: 12, border: "none",
+                      background: C.primary, color: "white",
+                      fontSize: 14, fontWeight: 900, cursor: "pointer",
+                    }}
+                  >
+                    قبول الطلب
+                  </button>
+                ) : st.next ? (
                   <button
                     onClick={() => advance(selected.id, st.next!)}
                     style={{
@@ -403,9 +484,9 @@ export default function OrdersPage() {
                       fontSize: 14, fontWeight: 900, cursor: "pointer",
                     }}
                   >
-                    {st.nextLabel}
+                    {selected.status === "ready" && selected.deliveryType === "self" ? "تم استلام الموظف" : st.nextLabel}
                   </button>
-                )}
+                ) : null}
                 {selected.status === "pending" && (
                   <button
                     onClick={() => cancel(selected.id)}
@@ -423,6 +504,84 @@ export default function OrdersPage() {
           );
         })()}
       </div>
+
+      {/* ═══════ DELIVERY TYPE MODAL ═══════ */}
+      {acceptDialog && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999,
+        }}>
+          <div dir="rtl" style={{
+            background: C.surface, borderRadius: 24, padding: 32, width: 420, maxWidth: "90vw",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+          }}>
+            <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 900, color: C.text, textAlign: "center" }}>
+              اختر نوع التوصيل
+            </h2>
+            <p style={{ margin: "0 0 24px", fontSize: 13, color: C.textMuted, textAlign: "center" }}>
+              كيف سيتم توصيل هذا الطلب للعميل؟
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+              {/* Platform Delivery */}
+              <button
+                disabled={acceptLoading}
+                onClick={() => acceptWithDeliveryType("platform")}
+                style={{
+                  display: "flex", alignItems: "center", gap: 14, padding: 18, borderRadius: 16,
+                  border: `2px solid ${C.primary}`, background: C.primarySoft,
+                  cursor: acceptLoading ? "wait" : "pointer", textAlign: "right",
+                }}
+              >
+                <span style={{ fontSize: 32 }}>🛵</span>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: 15, color: C.primary }}>توصيل عبر المنصة</div>
+                  <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                    كابتن من التطبيق يستلم ويوصّل الطلب
+                  </div>
+                  <div style={{ fontSize: 11, color: C.primary, marginTop: 4, fontWeight: 700 }}>
+                    عمولة 15% على المجموع + رسوم التوصيل
+                  </div>
+                </div>
+              </button>
+
+              {/* Self Delivery */}
+              <button
+                disabled={acceptLoading}
+                onClick={() => acceptWithDeliveryType("self")}
+                style={{
+                  display: "flex", alignItems: "center", gap: 14, padding: 18, borderRadius: 16,
+                  border: "2px solid #34D399", background: "#D1FAE5",
+                  cursor: acceptLoading ? "wait" : "pointer", textAlign: "right",
+                }}
+              >
+                <span style={{ fontSize: 32 }}>🏪</span>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: 15, color: "#059669" }}>توصيل ذاتي</div>
+                  <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                    موظف لديك يستلم ويوصّل الطلب
+                  </div>
+                  <div style={{ fontSize: 11, color: "#059669", marginTop: 4, fontWeight: 700 }}>
+                    عمولة 10% على المجموع الفرعي فقط — بدون رسوم توصيل
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setAcceptDialog(null)}
+              disabled={acceptLoading}
+              style={{
+                width: "100%", padding: 12, borderRadius: 12,
+                border: `1.5px solid ${C.border}`, background: "transparent",
+                color: C.textMuted, fontSize: 14, fontWeight: 700, cursor: "pointer",
+              }}
+            >
+              إلغاء
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

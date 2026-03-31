@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   View, Text, Pressable, TextInput,
-  ActivityIndicator, Image, Alert, Modal,
+  ActivityIndicator, Image, Alert, Modal, Linking,
 } from "react-native";
 import { router } from "expo-router";
 import { WebView } from "react-native-webview";
@@ -199,6 +199,14 @@ export default function Checkout() {
   async function handleConfirm() {
     if (!address.trim()) return setError("يرجى إدخال عنوان التوصيل");
     if (needsProof && !proofUri) return setError("يجب رفع صورة إثبات التحويل قبل تأكيد الطلب");
+
+    // High-value order restriction: > 1000 EGP must pay via wallet
+    if (cart.total > 1000 && method !== "wallet") {
+      setError("الطلبات أكثر من 1000 جنيه تتطلب الدفع من محفظة التطبيق. اشحن محفظتك أولاً.");
+      setLoading(false);
+      return;
+    }
+
     setError("");
     setLoading(true);
 
@@ -585,6 +593,66 @@ export default function Checkout() {
           </Pressable>
         );
         })}
+
+        {/* HIGH-VALUE ORDER WARNING + WALLET TOP-UP CTA */}
+        {cart.total > 1000 && method !== "wallet" && (
+          <View style={{
+            padding: 16, borderRadius: 16, marginBottom: 12,
+            backgroundColor: "#FEF3C7", borderWidth: 1.5, borderColor: "#F59E0B",
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <Text style={{ fontSize: 20 }}>⚠️</Text>
+              <Text style={{ fontWeight: "900", color: "#92400E", fontSize: 13, flex: 1 }}>
+                الطلبات أكثر من 1,000 جنيه تتطلب الدفع من المحفظة
+              </Text>
+            </View>
+            <Text style={{ color: "#78350F", fontSize: 12, lineHeight: 20, marginBottom: 12 }}>
+              لحماية حسابك، يجب الدفع من محفظة التطبيق للطلبات الكبيرة. اشحن محفظتك الآن عبر واتساب.
+            </Text>
+            <Pressable
+              onPress={() => {
+                Linking.openURL("https://wa.me/201153624184?text=" + encodeURIComponent("مرحباً، أريد شحن محفظتي في تطبيق حلّها"));
+              }}
+              style={{
+                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+                paddingVertical: 12, borderRadius: 12,
+                backgroundColor: "#25D366",
+              }}
+            >
+              <Text style={{ fontSize: 18 }}>💬</Text>
+              <Text style={{ color: "white", fontWeight: "900", fontSize: 14 }}>
+                اطلب كود شحن عبر واتساب
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* WALLET TOP-UP LINK (always visible when wallet selected but insufficient) */}
+        {method === "wallet" && walletBalance !== null && walletBalance < cart.total && (
+          <View style={{
+            padding: 16, borderRadius: 16, marginBottom: 12,
+            backgroundColor: "#FEF2F2", borderWidth: 1.5, borderColor: "#EF4444",
+          }}>
+            <Text style={{ fontWeight: "900", color: "#991B1B", fontSize: 13, marginBottom: 8 }}>
+              رصيد المحفظة غير كافٍ ({walletBalance.toFixed(2)} ج من {cart.total} ج)
+            </Text>
+            <Pressable
+              onPress={() => {
+                Linking.openURL("https://wa.me/201153624184?text=" + encodeURIComponent(`مرحباً، أريد شحن محفظتي بمبلغ ${Math.ceil(cart.total - walletBalance)} جنيه في تطبيق حلّها`));
+              }}
+              style={{
+                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+                paddingVertical: 12, borderRadius: 12,
+                backgroundColor: "#25D366",
+              }}
+            >
+              <Text style={{ fontSize: 18 }}>💬</Text>
+              <Text style={{ color: "white", fontWeight: "900", fontSize: 14 }}>
+                اشحن محفظتك عبر واتساب
+              </Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* TRANSFER INSTRUCTIONS */}
         {(method === "instapay" || method === "etisalat") && (() => {

@@ -13,7 +13,7 @@ const C = {
   warning: "#F59E0B", danger: "#EF4444",
 };
 
-type Status = "pending" | "accepted" | "preparing" | "ready" | "picked_up" | "delivered" | "cancelled";
+type Status = "pending" | "accepted" | "preparing" | "ready" | "picked_up" | "delivered" | "cancelled" | "awaiting_payment_approval";
 
 type DeliveryType = "platform" | "self";
 
@@ -73,6 +73,7 @@ const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string; 
   picked_up: { label: "تم الاستلام",    color: "#059669",  bg: "#D1FAE5", next: "delivered", nextLabel: "تم التسليم", nextColor: "#059669" },
   delivered: { label: "مُسلَّم",         color: "#059669",  bg: "#D1FAE5" },
   cancelled: { label: "ملغي",           color: C.danger,   bg: "#FEF2F2" },
+  awaiting_payment_approval: { label: "بانتظار اعتماد الدفع", color: C.warning, bg: "#FEF3C7" },
 };
 
 const FILTERS: { key: Status | "all"; label: string }[] = [
@@ -84,6 +85,7 @@ const FILTERS: { key: Status | "all"; label: string }[] = [
   { key: "picked_up", label: "تم الاستلام" },
   { key: "delivered", label: "مُسلَّم" },
   { key: "cancelled", label: "ملغي" },
+  { key: "awaiting_payment_approval", label: "بانتظار اعتماد الدفع" },
 ];
 
 export default function OrdersPage() {
@@ -107,10 +109,7 @@ export default function OrdersPage() {
       status:        row.status as Status,
       time:          new Date(row.created_at).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }),
       note:          row.customer_note ?? undefined,
-      paymentMethod: row.payment_method === "cash" ? "كاش"
-                   : row.payment_method === "instapay" ? "إنستاباي"
-                   : row.payment_method === "vodafone" ? "فودافون كاش"
-                   : row.payment_method,
+      paymentMethod: ({ cash: "كاش", instapay: "إنستاباي", vodafone: "فودافون كاش", etisalat: "اتصالات كاش", wallet: "المحفظة", wallet_transfer: "تحويل محفظة", card: "بطاقة", we_pay: "وي باي", orange_money: "اورانج موني", meeza: "ميزة", fawry: "فوري", aman: "أمان", bee: "بي", khazna: "خزنة" } as Record<string, string>)[row.payment_method] ?? row.payment_method,
       deliveryType:  row.delivery_type ?? "platform",
     };
   }

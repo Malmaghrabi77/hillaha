@@ -35,10 +35,7 @@ function mapOrder(row: any): AvailableOrder {
     partnerLng:        row.partners?.lng ?? null,
     deliveryLat:       row.delivery_lat ?? null,
     deliveryLng:       row.delivery_lng ?? null,
-    paymentMethod:     row.payment_method === "cash"      ? "كاش"
-                     : row.payment_method === "instapay"  ? "إنستاباي"
-                     : row.payment_method === "vodafone"  ? "فودافون كاش"
-                     : row.payment_method,
+    paymentMethod:     ({ cash: "كاش", instapay: "إنستاباي", vodafone: "فودافون كاش", etisalat: "اتصالات كاش", wallet: "المحفظة", wallet_transfer: "تحويل محفظة", card: "بطاقة", we_pay: "وي باي", orange_money: "اورانج موني", meeza: "ميزة", fawry: "فوري", aman: "أمان", bee: "بي", khazna: "خزنة" } as Record<string, string>)[row.payment_method] ?? row.payment_method,
   };
 }
 

@@ -1,6 +1,8 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { getSupabase } from "@hillaha/core";
+import { useAdminAuth } from "../hooks/useAdminAuth";
+import { useAdminPermissions } from "../hooks/useAdminPermissions";
 
 const supabase = getSupabase()!;
 
@@ -29,6 +31,8 @@ interface PendingOrder {
 }
 
 export default function ApprovePaymentsPage() {
+  const auth = useAdminAuth();
+  const permissions = useAdminPermissions(auth.role);
   const [tab, setTab] = useState<Tab>("pending");
   const [orders, setOrders] = useState<PendingOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +41,10 @@ export default function ApprovePaymentsPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [previewImg, setPreviewImg] = useState<string | null>(null);
 
-  useEffect(() => { loadOrders(); }, [tab]);
+  useEffect(() => { if (!auth.loading && permissions.approvePayments) loadOrders(); }, [tab, auth.loading, permissions.approvePayments]);
+
+  if (auth.loading) return <div style={{ padding: 40, textAlign: "center", color: C.textMuted }}>جاري التحميل...</div>;
+  if (!permissions.approvePayments) return <div style={{ padding: 40, textAlign: "center", color: C.danger, fontWeight: 700 }}>ليس لديك صلاحية الوصول لهذه الصفحة</div>;
 
   async function loadOrders() {
     setLoading(true);
@@ -109,8 +116,10 @@ export default function ApprovePaymentsPage() {
 
   function fmtMethod(m: string) {
     const map: Record<string, string> = {
-      wallet_transfer: "تحويل محفظة", cash: "كاش", card: "بطاقة",
+      wallet_transfer: "تحويل محفظة", cash: "كاش", card: "بطاقة", wallet: "المحفظة",
       instapay: "إنستاباي", vodafone: "فودافون كاش", etisalat: "اتصالات كاش",
+      we_pay: "وي باي", orange_money: "اورانج موني", meeza: "ميزة",
+      fawry: "فوري", aman: "أمان", bee: "بي", khazna: "خزنة",
     };
     return map[m] || m;
   }

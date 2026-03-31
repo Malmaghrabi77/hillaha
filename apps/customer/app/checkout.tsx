@@ -73,7 +73,7 @@ export default function Checkout() {
   const [dbPayMethods, setDbPayMethods]   = useState<any[]>([]);
 
   const isHighValue = cart.total > 1000;
-  const needsProof = method === "instapay" || method === "etisalat" || (isHighValue && method !== "wallet" && method !== "cash");
+  const needsProof = method !== "cash" && method !== "wallet" && method !== "card";
 
   // Map DB payment_methods codes to checkout PayMethod IDs
   const CODE_TO_METHOD: Record<string, PayMethod> = {
@@ -322,7 +322,7 @@ export default function Checkout() {
       delivery_fee:      cart.deliveryFee,
       discount:          0,
       total:             cart.total,
-      payment_method:    (method === "cash" || method === "card") ? method : "wallet_transfer",
+      payment_method:    method,
       payment_proof_url: proofStorageUrl,
       status:            "pending",
     };

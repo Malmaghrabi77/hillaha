@@ -33,6 +33,8 @@ const STEP_CONFIG = [
 // Supabase status → step index
 function statusToStep(status: string): number {
   switch (status) {
+    case "awaiting_payment_approval":
+    case "pending":
     case "accepted":  return 0;
     case "preparing": return 1;
     case "ready":
@@ -261,6 +263,42 @@ export default function Tracking() {
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <Text style={{ fontSize: 36, marginBottom: 12 }}>🛵</Text>
           <Text style={{ fontSize: 14, color: colors.textMuted, fontWeight: "700" }}>جاري تحميل بيانات الطلب…</Text>
+        </View>
+      </SafeAreaDisplay>
+    );
+  }
+
+  if (orderInfo?.status === "awaiting_payment_approval") {
+    return (
+      <SafeAreaDisplay variant="page">
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>🧾</Text>
+          <Text style={{ fontSize: 20, fontWeight: "900", color: C.warning, marginBottom: 8, textAlign: "center" }}>بانتظار اعتماد الدفع</Text>
+          <Text style={{ fontSize: 14, color: C.textMuted, textAlign: "center", lineHeight: 22 }}>
+            إيصال الدفع الخاص بك قيد المراجعة من الإدارة. سيتم إشعارك عند الاعتماد وسيأخذ الطلب مساره الطبيعي.
+          </Text>
+          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/home")}
+            style={{ marginTop: 24, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 14, backgroundColor: C.primary }}>
+            <Text style={{ color: "white", fontWeight: "900", fontSize: 14 }}>العودة للرئيسية</Text>
+          </Pressable>
+        </View>
+      </SafeAreaDisplay>
+    );
+  }
+
+  if (orderInfo?.status === "cancelled") {
+    return (
+      <SafeAreaDisplay variant="page">
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>❌</Text>
+          <Text style={{ fontSize: 20, fontWeight: "900", color: C.danger, marginBottom: 8, textAlign: "center" }}>تم إلغاء الطلب</Text>
+          <Text style={{ fontSize: 14, color: C.textMuted, textAlign: "center", lineHeight: 22 }}>
+            هذا الطلب تم إلغاؤه. إذا كان لديك استفسار تواصل مع الدعم.
+          </Text>
+          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/home")}
+            style={{ marginTop: 24, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 14, backgroundColor: C.primary }}>
+            <Text style={{ color: "white", fontWeight: "900", fontSize: 14 }}>العودة للرئيسية</Text>
+          </Pressable>
         </View>
       </SafeAreaDisplay>
     );

@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, Pressable,
   StatusBar, RefreshControl, Alert, Linking,
 } from "react-native";
+import * as Location from "expo-location";
 import { C, getSB, haversineDistance, MAX_BICYCLE_DISTANCE_KM } from "../../lib/constants";
 
 interface AvailableOrder {
@@ -50,6 +51,21 @@ export default function HomeTab() {
   const [todayDeliveries, setTodayDeliveries] = useState(0);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const walletActive = walletBalance !== null && walletBalance > 0;
+
+  // Driver location for proximity sorting
+  const [driverLat, setDriverLat] = useState<number | null>(null);
+  const [driverLng, setDriverLng] = useState<number | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setDriverLat(loc.coords.latitude);
+        setDriverLng(loc.coords.longitude);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     const supabase = getSB();
@@ -183,12 +199,26 @@ export default function HomeTab() {
     setRefreshing(false);
   }
 
-  const available = (vehicleType === "bicycle")
+  // Compute distance from driver to partner
+  const getOrderDistance = (o: AvailableOrder): number | null => {
+    if (driverLat == null || driverLng == null || o.partnerLat == null || o.partnerLng == null) return null;
+    return haversineDistance(driverLat, driverLng, o.partnerLat, o.partnerLng);
+  };
+
+  const available = ((vehicleType === "bicycle")
     ? orders.filter(o => {
         if (!o.partnerLat || !o.partnerLng || !o.deliveryLat || !o.deliveryLng) return true;
         return haversineDistance(o.partnerLat, o.partnerLng, o.deliveryLat, o.deliveryLng) <= (maxDistance || MAX_BICYCLE_DISTANCE_KM);
       })
-    : orders;
+    : orders
+  ).sort((a, b) => {
+    const dA = getOrderDistance(a);
+    const dB = getOrderDistance(b);
+    if (dA != null && dB != null) return dA - dB;
+    if (dA != null) return -1;
+    if (dB != null) return 1;
+    return 0;
+  });
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -418,6 +448,20 @@ export default function HomeTab() {
                 <Text style={{ fontSize: 13, color: "#059669", fontWeight: "700" }}>💰 عمولتك على هذا الطلب</Text>
                 <Text style={{ fontSize: 17, fontWeight: "900", color: "#059669" }}>{order.deliveryFee} ج</Text>
               </View>
+
+              {/* Distance badge */}
+              {(() => { const d = getOrderDistance(order); return d != null ? (
+                <View style={{
+                  backgroundColor: C.primarySoft, borderRadius: 10, padding: 10,
+                  flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+                  marginBottom: 14,
+                }}>
+                  <Text style={{ fontSize: 13, color: C.primary, fontWeight: "700" }}>📍 المسافة من موقعك</Text>
+                  <Text style={{ fontSize: 17, fontWeight: "900", color: C.primary }}>
+                    {d < 1 ? `${Math.round(d * 1000)} م` : `${d.toFixed(1)} كم`}
+                  </Text>
+                </View>
+              ) : null; })()}
 
               {/* ACTION BUTTONS */}
               <View style={{ flexDirection: "row", gap: 10 }}>

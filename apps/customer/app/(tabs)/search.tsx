@@ -4,6 +4,7 @@ import {
   ActivityIndicator, Image, Modal,
 } from "react-native";
 import { router } from "expo-router";
+import * as Location from "expo-location";
 import { useDarkMode } from "../../src/hooks/useDarkMode";
 import { useSupabase } from "../../src/hooks/useSupabase";
 import { analyticsTracker } from "../../src/utils/analyticsTracker";
@@ -20,11 +21,26 @@ interface Partner {
   review_count: number;
   delivery_time: string;
   delivery_fee: number;
+  lat?: number | null;
+  lng?: number | null;
+}
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 const POPULAR_TAGS = ["مطاعم", "شاورما", "برجر", "صيدلية", "قهوة وحلويات", "طبيب"];
 
 const SORT_OPTIONS = [
+  { id: "nearest", label: "الأقرب", icon: "📍" },
   { id: "rating", label: "الأفضل تقييماً", icon: "⭐" },
   { id: "fastest", label: "الأسرع توصيلاً", icon: "🚀" },
   { id: "cheapest", label: "الأرخص توصيل", icon: "💰" },
@@ -39,14 +55,26 @@ export default function Search() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Filter states
-  const [sortBy, setSortBy] = useState("rating");
+  const [sortBy, setSortBy] = useState("nearest");
   const [minRating, setMinRating] = useState(0);
   const [maxDeliveryFee, setMaxDeliveryFee] = useState(50);
+
+  // User location
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.SEARCH);
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setUserLat(loc.coords.latitude);
+        setUserLng(loc.coords.longitude);
+      }
+    })();
   }, []);
 
   async function searchPartners() {
@@ -56,7 +84,7 @@ export default function Search() {
     try {
       let queryBuilder = supabase
         .from("partners")
-        .select("id, name, type, cover_image, rating, review_count, delivery_time, delivery_fee")
+        .select("id, name, type, cover_image, rating, review_count, delivery_time, delivery_fee, lat, lng")
         .eq("is_approved", true);
 
       // Search filter
@@ -72,8 +100,8 @@ export default function Search() {
       // Delivery fee filter
       queryBuilder = queryBuilder.lte("delivery_fee", maxDeliveryFee);
 
-      // Sort
-      if (sortBy === "rating") {
+      // Sort (DB-side for non-proximity sorts)
+      if (sortBy === "rating" || sortBy === "nearest") {
         queryBuilder = queryBuilder.order("rating", { ascending: false });
       } else if (sortBy === "fastest") {
         queryBuilder = queryBuilder.order("delivery_time", { ascending: true });
@@ -82,7 +110,18 @@ export default function Search() {
       }
 
       const { data } = await queryBuilder.limit(30);
-      setResults((data as Partner[]) ?? []);
+      let items = (data as Partner[]) ?? [];
+
+      // Client-side proximity sort
+      if (sortBy === "nearest" && userLat != null && userLng != null) {
+        items = items.sort((a, b) => {
+          const dA = a.lat != null && a.lng != null ? haversineKm(userLat, userLng, Number(a.lat), Number(a.lng)) : Infinity;
+          const dB = b.lat != null && b.lng != null ? haversineKm(userLat, userLng, Number(b.lat), Number(b.lng)) : Infinity;
+          return dA - dB;
+        });
+      }
+
+      setResults(items);
     } catch {
       setResults([]);
     } finally {
@@ -277,6 +316,14 @@ export default function Search() {
                 {p.delivery_fee} ج
               </Text>
               <Text style={{ fontSize: 9, color: colors.textMuted, marginTop: 2 }}>توصيل</Text>
+              {userLat != null && userLng != null && p.lat != null && p.lng != null && (() => {
+                const d = haversineKm(userLat, userLng, Number(p.lat), Number(p.lng));
+                return (
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "#7C3AED", marginTop: 4 }}>
+                    📍 {d < 1 ? `${Math.round(d * 1000)} م` : `${d.toFixed(1)} كم`}
+                  </Text>
+                );
+              })()}
             </View>
           </Pressable>
         ))}

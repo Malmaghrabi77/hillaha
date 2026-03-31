@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from "expo-location";
 import { useDarkMode } from '../../src/hooks/useDarkMode';
 import { useSupabase } from '../../src/hooks/useSupabase';
 import { analyticsTracker } from '../../src/utils/analyticsTracker';
@@ -13,6 +14,18 @@ import { ANALYTICS_EVENTS } from '../../src/constants/analyticsEvents';
 import { SafeAreaDisplay } from '../../src/components';
 
 const SCREEN = Dimensions.get("window");
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 // ─── Defaults ──────────────────────────────────────────────────────────────
 
@@ -127,6 +140,8 @@ interface Partner {
   delivery_fee: number;
   rating: number | null;
   review_count: number;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 interface Banner {
@@ -164,9 +179,10 @@ interface Service {
 interface PartnerCardProps {
   partner: Partner;
   onPress: () => void;
+  distance?: number | null;
 }
 
-function PartnerCard({ partner, onPress }: PartnerCardProps) {
+function PartnerCard({ partner, onPress, distance }: PartnerCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const { isDarkMode, colors } = useDarkMode();
 
@@ -274,6 +290,22 @@ function PartnerCard({ partner, onPress }: PartnerCardProps) {
               {partner.delivery_fee} جنيه
             </Text>
           </View>
+          {distance != null && (
+            <View style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 4,
+              backgroundColor: "#EDE9FE",
+              paddingVertical: 5,
+              paddingHorizontal: 10,
+              borderRadius: 10,
+            }}>
+              <Text style={{ fontSize: 12 }}>📍</Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: "#7C3AED" }}>
+                {distance < 1 ? `${Math.round(distance * 1000)} م` : `${distance.toFixed(1)} كم`}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </Pressable>
@@ -297,6 +329,21 @@ export default function Home() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMorePartners, setHasMorePartners] = useState(true);
   const pageSize = 20;
+
+  // ✅ User location for proximity sorting
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setUserLat(loc.coords.latitude);
+        setUserLng(loc.coords.longitude);
+      }
+    })();
+  }, []);
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -322,7 +369,7 @@ export default function Home() {
 
       const { data: partnersData } = await supabase
         .from("partners")
-        .select("id, name, type, cover_image, delivery_time, delivery_fee, rating, review_count")
+        .select("id, name, type, cover_image, delivery_time, delivery_fee, rating, review_count, lat, lng")
         .eq("is_approved", true)
         .range(start, end - 1)
         .order("rating", { ascending: false });
@@ -382,7 +429,7 @@ export default function Home() {
           // ✅ Load first page with pagination
           const { data: partnersData } = await supabase
             .from("partners")
-            .select("id, name, type, cover_image, delivery_time, delivery_fee, rating, review_count")
+            .select("id, name, type, cover_image, delivery_time, delivery_fee, rating, review_count, lat, lng")
             .eq("is_approved", true)
             .range(0, pageSize - 1)
             .order("rating", { ascending: false });
@@ -502,9 +549,22 @@ export default function Home() {
     return () => loop.stop();
   }, []);
 
-  const filtered = allPartners.filter(p =>
-    activeCategory === "all" || p.type === activeCategory
-  );
+  // Compute distance for each partner and sort by proximity
+  const getDistance = (p: Partner): number | null => {
+    if (userLat == null || userLng == null || p.lat == null || p.lng == null) return null;
+    return haversineKm(userLat, userLng, Number(p.lat), Number(p.lng));
+  };
+
+  const filtered = allPartners
+    .filter(p => activeCategory === "all" || p.type === activeCategory)
+    .sort((a, b) => {
+      const dA = getDistance(a);
+      const dB = getDistance(b);
+      if (dA != null && dB != null) return dA - dB;
+      if (dA != null) return -1;
+      if (dB != null) return 1;
+      return (b.rating ?? 0) - (a.rating ?? 0);
+    });
 
   return (
     <SafeAreaDisplay variant="page" safeBottom={false} backgroundColor={colors.bg}>
@@ -1136,6 +1196,18 @@ export default function Home() {
                           🛵 {p.delivery_fee}
                         </Text>
                       </View>
+                      {(() => { const d = getDistance(p); return d != null ? (
+                        <View style={{
+                          backgroundColor: "#EDE9FE",
+                          paddingVertical: 3,
+                          paddingHorizontal: 7,
+                          borderRadius: 8,
+                        }}>
+                          <Text style={{ fontSize: 10, color: "#7C3AED", fontWeight: "600" }}>
+                            📍 {d < 1 ? `${Math.round(d * 1000)} م` : `${d.toFixed(1)} كم`}
+                          </Text>
+                        </View>
+                      ) : null; })()}
                     </View>
                   </View>
                 </Pressable>
@@ -1186,6 +1258,7 @@ export default function Home() {
             <PartnerCard
               key={p.id}
               partner={p}
+              distance={getDistance(p)}
               onPress={() => router.push(`/restaurant/${p.id}`)}
             />
           ))}

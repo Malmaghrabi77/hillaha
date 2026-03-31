@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   View, Text, Pressable, TextInput,
   ActivityIndicator, Image, Alert, Modal,
@@ -28,7 +28,7 @@ interface SavedAddress {
   is_default: boolean;
 }
 
-type PayMethod = "cash" | "wallet" | "instapay" | "etisalat" | "vodafone" | "card";
+type PayMethod = "cash" | "wallet" | "instapay" | "etisalat" | "vodafone" | "card" | "we_pay" | "orange_money" | "meeza" | "fawry" | "aman" | "bee" | "khazna";
 
 const FALLBACK_ACCOUNTS = {
   instapay:  { account: "@malmaghrabi77",  instructions: "افتح تطبيق InstaPay وحوّل المبلغ إلى الحساب التالي" },
@@ -36,7 +36,7 @@ const FALLBACK_ACCOUNTS = {
   vodafone:  { phone:   null as string | null, instructions: "سيتم الإعلان عن رقم محفظة Vodafone Cash قريباً" },
 } as const;
 
-const METHODS: { id: PayMethod; label: string; desc: string; icon: string; soon?: boolean }[] = [
+const FALLBACK_METHODS: { id: PayMethod; label: string; desc: string; icon: string; soon?: boolean }[] = [
   { id: "cash",      label: "كاش عند الاستلام", desc: "ادفع نقداً للمندوب",                           icon: "💵" },
   { id: "wallet",    label: "المحفظة",            desc: "ادفع من رصيد محفظتك",                         icon: "👛" },
   { id: "instapay",  label: "InstaPay",           desc: `تحويل لحظي — حساب: ${FALLBACK_ACCOUNTS.instapay.account}`, icon: "📲" },
@@ -70,8 +70,30 @@ export default function Checkout() {
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [paymobUrl, setPaymobUrl]         = useState<string | null>(null);
   const [paymobOrderId, setPaymobOrderId] = useState<string | null>(null);
+  const [dbPayMethods, setDbPayMethods]   = useState<any[]>([]);
 
   const needsProof = method === "instapay" || method === "etisalat";
+
+  // Map DB payment_methods codes to checkout PayMethod IDs
+  const CODE_TO_METHOD: Record<string, PayMethod> = {
+    cash: "cash", wallet: "wallet", instapay: "instapay",
+    etisalat_cash: "etisalat", vodafone_cash: "vodafone",
+    credit_card: "card", debit_card: "card",
+    we_pay: "we_pay", orange_money: "orange_money", meeza: "meeza",
+    fawry: "fawry", aman: "aman", bee: "bee", khazna: "khazna",
+  };
+
+  const METHODS = useMemo(() => {
+    if (!dbPayMethods.length) return FALLBACK_METHODS;
+    return dbPayMethods
+      .map(m => ({
+        id: CODE_TO_METHOD[m.code] || m.code as PayMethod,
+        label: m.name_ar || m.name,
+        desc: m.description_ar || m.description || "",
+        icon: m.icon || "💳",
+      }))
+      .filter(m => m.id);
+  }, [dbPayMethods]);
 
   useEffect(() => {
     analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.CHECKOUT);
@@ -131,6 +153,19 @@ export default function Checkout() {
         });
       }).catch(() => {});
   }, []);
+
+  // Fetch enabled payment methods from DB
+  useEffect(() => {
+    if (!supabase) return;
+    (supabase as any)
+      .from("payment_methods")
+      .select("code, name, name_ar, description_ar, icon, is_enabled, category")
+      .eq("is_enabled", true)
+      .then(({ data }: any) => {
+        if (data?.length) setDbPayMethods(data);
+      })
+      .catch(() => {});
+  }, [supabase]);
 
   function handleSetMethod(m: PayMethod) {
     analyticsTracker.trackEvent(ANALYTICS_EVENTS.CHECKOUT.PAYMENT_METHOD_SELECTED, { method: m });

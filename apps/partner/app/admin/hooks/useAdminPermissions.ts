@@ -46,6 +46,13 @@ export interface AdminPermissions {
 
   // Security
   viewSecurityAlerts: boolean;
+
+  // Pricing Management
+  managePricing: boolean;
+  approvePricing: boolean;
+
+  // Payment Methods
+  managePaymentMethods: boolean;
 }
 
 export function useAdminPermissions(
@@ -74,6 +81,9 @@ export function useAdminPermissions(
     approveWalletCodes: false,
     viewCardAnalytics: false,
     viewSecurityAlerts: false,
+    managePricing: false,
+    approvePricing: false,
+    managePaymentMethods: false,
   });
 
   useEffect(() => {
@@ -103,6 +113,9 @@ export function useAdminPermissions(
       approveWalletCodes: false,
       viewCardAnalytics: false,
       viewSecurityAlerts: false,
+      managePricing: true,
+      approvePricing: false,
+      managePaymentMethods: false,
     };
 
     if (role === "super_admin") {
@@ -119,6 +132,9 @@ export function useAdminPermissions(
         approveWalletCodes: true,
         viewCardAnalytics: true,
         viewSecurityAlerts: true,
+        managePricing: true,
+        approvePricing: true,
+        managePaymentMethods: true,
       });
     } else if (role === "accountant") {
       setPermissions({
@@ -139,12 +155,17 @@ export function useAdminPermissions(
         approveWalletCodes: false,
         viewCardAnalytics: true,
         viewSecurityAlerts: true,
+        managePricing: true,
+        approvePricing: false,
+        managePaymentMethods: false,
       });
     } else {
       // Regular Admin / Regional Manager
       setPermissions({
         ...basePermissions,
         generateWalletCodes: true,
+        managePricing: true,
+        managePaymentMethods: true,
       });
     }
   }, [role]);

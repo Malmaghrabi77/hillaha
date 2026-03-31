@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View, Text, Pressable, TextInput, ScrollView,
   StyleSheet, Platform, Modal, Alert,
@@ -11,8 +11,9 @@ import { A11yPresets } from '../../src/hooks/useAccessibility';
 import { ANALYTICS_EVENTS } from '../../src/constants/analyticsEvents';
 import { SafeAreaScrollView } from '../../src/components';
 import { LocationPickerMap } from '../../src/components/LocationPickerMap';
+import { useServicePrices } from '../../src/hooks/useServicePrices';
 
-const SERVICES = [
+const FALLBACK_SERVICES = [
   { id: "ac_service",   label: "صيانة مكيف",       desc: "فحص وتنظيف وإصلاح",  price: 150, icon: "❄️" },
   { id: "ac_install",   label: "تركيب مكيف",       desc: "تركيب احترافي مضمون",  price: 250, icon: "🔧" },
   { id: "ac_gas",       label: "شحن فريون",        desc: "شحن كامل للمكيف",     price: 200, icon: "💨" },
@@ -26,6 +27,19 @@ const TIMES = ["8:00 ص","10:00 ص","12:00 م","2:00 م","4:00 م","6:00 م"];
 export default function ElectricalScreen() {
   const { isDarkMode, colors } = useDarkMode();
   const supabase = useSupabase();
+  const { prices: dbPrices } = useServicePrices('electrical');
+
+  const SERVICES = useMemo(() => {
+    if (!dbPrices.length) return FALLBACK_SERVICES;
+    return dbPrices.map(p => ({
+      id: p.service_key,
+      label: p.label_ar,
+      desc: p.description_ar || '',
+      price: p.price,
+      icon: p.icon || '⚡',
+    }));
+  }, [dbPrices]);
+
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedTime, setSelectedTime]       = useState<string | null>(null);
   const [address, setAddress]                 = useState("");

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View, Text, Pressable, TextInput, ScrollView,
   StyleSheet, Platform, Modal, Alert,
@@ -11,6 +11,7 @@ import { A11yPresets } from '../../src/hooks/useAccessibility';
 import { ANALYTICS_EVENTS } from '../../src/constants/analyticsEvents';
 import { SafeAreaScrollView } from '../../src/components';
 import { LocationPickerMap } from '../../src/components/LocationPickerMap';
+import { useServicePrices } from '../../src/hooks/useServicePrices';
 
 const SIZES = [
   { id: "small",  label: "صغير",   desc: "يحمله بيد واحدة", icon: "📦", note: "مستندات، ملابس" },
@@ -18,11 +19,19 @@ const SIZES = [
   { id: "large",  label: "كبير",   desc: "كرتونة كبيرة",    icon: "🗃️", note: "أجهزة كبيرة، أثاث خفيف" },
 ];
 
-const DELIVERY_FEES: Record<string, number> = { small: 25, medium: 40, large: 60 };
+const FALLBACK_FEES: Record<string, number> = { small: 25, medium: 40, large: 60 };
 
 export default function P2PDeliveryScreen() {
   const { isDarkMode, colors } = useDarkMode();
   const supabase = useSupabase();
+  const { prices: dbPrices } = useServicePrices('delivery_p2p');
+
+  const DELIVERY_FEES = useMemo(() => {
+    const fees = { ...FALLBACK_FEES };
+    dbPrices.forEach(p => { fees[p.service_key] = p.price; });
+    return fees;
+  }, [dbPrices]);
+
   const [size, setSize]               = useState<string | null>(null);
   const [fromAddress, setFromAddress] = useState("");
   const [fromLat, setFromLat]         = useState<number | null>(null);

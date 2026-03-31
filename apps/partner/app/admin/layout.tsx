@@ -41,6 +41,7 @@ const navItems: NavItem[] = [
   { href: "/admin/users", label: "المستخدمون", icon: "👥" },
   { href: "/admin/analytics", label: "التحليلات", icon: "📈" },
   { href: "/admin/wallet-codes", label: "أكواد المحفظة", icon: "🎫" },
+  { href: "/admin/pricing", label: "إدارة الأسعار", icon: "💰" },
   { href: "/admin/support-tickets", label: "تذاكر الدعم", icon: "🎧" },
   { href: "/admin/invite-admin", label: "دعوة مدير", icon: "📨" },
   { href: "/admin/admin-management", label: "إدارة النظام", icon: "⚙️", superAdminOnly: true },
@@ -94,7 +95,7 @@ export default function AdminLayout({
     }
     // Accountants only see: dashboard, wallet-codes, analytics, payments
     if (auth.isAccountant) {
-      const accountantPages = ["/admin", "/admin/wallet-codes", "/admin/analytics", "/admin/payments", "/admin/card-analytics", "/admin/security-alerts", "/admin/support-tickets"];
+      const accountantPages = ["/admin", "/admin/wallet-codes", "/admin/analytics", "/admin/payments", "/admin/card-analytics", "/admin/security-alerts", "/admin/support-tickets", "/admin/pricing"];
       return accountantPages.includes(item.href);
     }
     return true;
@@ -112,7 +113,8 @@ export default function AdminLayout({
       { href: "/admin/security-alerts", label: "مركز الأمان", icon: "🛡️" },
       { href: "/admin/invite-partners", label: "دعوة شريك جديد", icon: "🤝" },
       { href: "/admin/invite-customer-service", label: "دعوة خدمة عملاء", icon: "🎧" },
-      { href: "/admin/invite-accountant", label: "دعوة محاسب", icon: "💰" }
+      { href: "/admin/invite-accountant", label: "دعوة محاسب", icon: "💰" },
+      { href: "/admin/approve-pricing", label: "اعتماد تعديلات الأسعار", icon: "✅" }
     );
   }
 

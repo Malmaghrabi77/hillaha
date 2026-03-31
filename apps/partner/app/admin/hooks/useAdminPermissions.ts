@@ -53,6 +53,9 @@ export interface AdminPermissions {
 
   // Payment Methods
   managePaymentMethods: boolean;
+
+  // Payment Approval (high-value orders)
+  approvePayments: boolean;
 }
 
 export function useAdminPermissions(
@@ -84,6 +87,7 @@ export function useAdminPermissions(
     managePricing: false,
     approvePricing: false,
     managePaymentMethods: false,
+    approvePayments: false,
   });
 
   useEffect(() => {
@@ -116,6 +120,7 @@ export function useAdminPermissions(
       managePricing: true,
       approvePricing: false,
       managePaymentMethods: false,
+      approvePayments: false,
     };
 
     if (role === "super_admin") {
@@ -135,6 +140,7 @@ export function useAdminPermissions(
         managePricing: true,
         approvePricing: true,
         managePaymentMethods: true,
+        approvePayments: true,
       });
     } else if (role === "accountant") {
       setPermissions({
@@ -158,6 +164,7 @@ export function useAdminPermissions(
         managePricing: true,
         approvePricing: false,
         managePaymentMethods: false,
+        approvePayments: true,
       });
     } else {
       // Regular Admin / Regional Manager
@@ -166,6 +173,7 @@ export function useAdminPermissions(
         generateWalletCodes: true,
         managePricing: true,
         managePaymentMethods: true,
+        approvePayments: true,
       });
     }
   }, [role]);

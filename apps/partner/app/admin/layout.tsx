@@ -42,6 +42,7 @@ const navItems: NavItem[] = [
   { href: "/admin/analytics", label: "التحليلات", icon: "📈" },
   { href: "/admin/wallet-codes", label: "أكواد المحفظة", icon: "🎫" },
   { href: "/admin/pricing", label: "إدارة الأسعار", icon: "💰" },
+  { href: "/admin/approve-payments", label: "اعتماد المدفوعات", icon: "🧾" },
   { href: "/admin/support-tickets", label: "تذاكر الدعم", icon: "🎧" },
   { href: "/admin/invite-admin", label: "دعوة مدير", icon: "📨" },
   { href: "/admin/admin-management", label: "إدارة النظام", icon: "⚙️", superAdminOnly: true },
@@ -95,7 +96,7 @@ export default function AdminLayout({
     }
     // Accountants only see: dashboard, wallet-codes, analytics, payments
     if (auth.isAccountant) {
-      const accountantPages = ["/admin", "/admin/wallet-codes", "/admin/analytics", "/admin/payments", "/admin/card-analytics", "/admin/security-alerts", "/admin/support-tickets", "/admin/pricing"];
+      const accountantPages = ["/admin", "/admin/wallet-codes", "/admin/analytics", "/admin/payments", "/admin/card-analytics", "/admin/security-alerts", "/admin/support-tickets", "/admin/pricing", "/admin/approve-payments"];
       return accountantPages.includes(item.href);
     }
     return true;

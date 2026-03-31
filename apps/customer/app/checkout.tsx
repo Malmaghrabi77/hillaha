@@ -72,7 +72,8 @@ export default function Checkout() {
   const [paymobOrderId, setPaymobOrderId] = useState<string | null>(null);
   const [dbPayMethods, setDbPayMethods]   = useState<any[]>([]);
 
-  const needsProof = method === "instapay" || method === "etisalat";
+  const isHighValue = cart.total > 1000;
+  const needsProof = method === "instapay" || method === "etisalat" || (isHighValue && method !== "wallet" && method !== "cash");
 
   // Map DB payment_methods codes to checkout PayMethod IDs
   const CODE_TO_METHOD: Record<string, PayMethod> = {
@@ -200,10 +201,9 @@ export default function Checkout() {
     if (!address.trim()) return setError("يرجى إدخال عنوان التوصيل");
     if (needsProof && !proofUri) return setError("يجب رفع صورة إثبات التحويل قبل تأكيد الطلب");
 
-    // High-value order restriction: > 1000 EGP must pay via wallet
-    if (cart.total > 1000 && method !== "wallet") {
-      setError("الطلبات أكثر من 1000 جنيه تتطلب الدفع من محفظة التطبيق. اشحن محفظتك أولاً.");
-      setLoading(false);
+    // High-value + cash: not allowed
+    if (isHighValue && method === "cash") {
+      setError("الطلبات أكثر من 1000 جنيه لا تقبل الدفع كاش. استخدم المحفظة أو حوّل عبر أي محفظة إلكترونية.");
       return;
     }
 
@@ -327,6 +327,13 @@ export default function Checkout() {
       status:            "pending",
     };
 
+    // High-value non-wallet orders: hold for payment approval
+    const needsPaymentApproval = isHighValue && method !== "wallet" && method !== "card";
+    if (needsPaymentApproval) {
+      orderInsert.payment_approval_status = "pending";
+      orderInsert.status = "awaiting_payment_approval";
+    }
+
     if (method === "card") {
       orderInsert.payment_status = "paid";
       if (paymobTransactionId) orderInsert.paymob_transaction_id = paymobTransactionId;
@@ -349,7 +356,16 @@ export default function Checkout() {
 
     analyticsTracker.trackOrderCompleted(order.id, cart.total, cart.partnerId!, method);
     cart.clearCart();
-    router.replace(`/tracking/${order.id}`);
+
+    if (needsPaymentApproval) {
+      Alert.alert(
+        "تم إرسال الطلب",
+        "طلبك بانتظار اعتماد إيصال الدفع من الإدارة. سيتم إشعارك عند الاعتماد.",
+        [{ text: "حسناً", onPress: () => router.replace("/(tabs)/home") }]
+      );
+    } else {
+      router.replace(`/tracking/${order.id}`);
+    }
   }
 
   function handlePaymobResult(url: string) {
@@ -594,36 +610,35 @@ export default function Checkout() {
         );
         })}
 
-        {/* HIGH-VALUE ORDER WARNING + WALLET TOP-UP CTA */}
-        {cart.total > 1000 && method !== "wallet" && (
+        {/* HIGH-VALUE ORDER INFO */}
+        {isHighValue && method !== "wallet" && method !== "card" && (
           <View style={{
             padding: 16, borderRadius: 16, marginBottom: 12,
             backgroundColor: "#FEF3C7", borderWidth: 1.5, borderColor: "#F59E0B",
           }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <Text style={{ fontSize: 20 }}>⚠️</Text>
+              <Text style={{ fontSize: 20 }}>📋</Text>
               <Text style={{ fontWeight: "900", color: "#92400E", fontSize: 13, flex: 1 }}>
-                الطلبات أكثر من 1,000 جنيه تتطلب الدفع من المحفظة
+                طلب أكثر من 1,000 جنيه — يتطلب اعتماد الإيصال
               </Text>
             </View>
-            <Text style={{ color: "#78350F", fontSize: 12, lineHeight: 20, marginBottom: 12 }}>
-              لحماية حسابك، يجب الدفع من محفظة التطبيق للطلبات الكبيرة. اشحن محفظتك الآن عبر واتساب.
+            <Text style={{ color: "#78350F", fontSize: 12, lineHeight: 20 }}>
+              {method === "cash"
+                ? "الدفع كاش غير متاح للطلبات أكثر من 1,000 جنيه. استخدم المحفظة أو حوّل عبر أي محفظة إلكترونية."
+                : "بعد رفع إيصال التحويل، سيتم مراجعته واعتماده من الإدارة ثم يأخذ الطلب مساره الطبيعي."}
             </Text>
-            <Pressable
-              onPress={() => {
-                Linking.openURL("https://wa.me/201153624184?text=" + encodeURIComponent("مرحباً، أريد شحن محفظتي في تطبيق حلّها"));
-              }}
-              style={{
-                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-                paddingVertical: 12, borderRadius: 12,
-                backgroundColor: "#25D366",
-              }}
-            >
-              <Text style={{ fontSize: 18 }}>💬</Text>
-              <Text style={{ color: "white", fontWeight: "900", fontSize: 14 }}>
-                اطلب كود شحن عبر واتساب
-              </Text>
-            </Pressable>
+            {method === "cash" && (
+              <Pressable
+                onPress={() => Linking.openURL("https://wa.me/201153624184?text=" + encodeURIComponent("مرحباً، أريد شحن محفظتي في تطبيق حلّها"))}
+                style={{
+                  flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+                  paddingVertical: 12, borderRadius: 12, backgroundColor: "#25D366", marginTop: 12,
+                }}
+              >
+                <Text style={{ fontSize: 18 }}>💬</Text>
+                <Text style={{ color: "white", fontWeight: "900", fontSize: 14 }}>اشحن محفظتك عبر واتساب</Text>
+              </Pressable>
+            )}
           </View>
         )}
 

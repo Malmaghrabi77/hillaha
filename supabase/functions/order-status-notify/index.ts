@@ -3,6 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Arabic notification templates per order status
 const STATUS_TEMPLATES: Record<string, { title: string; body: (orderId: string) => string; forCustomer: boolean; forDriver: boolean; forPartner: boolean }> = {
+  new_order: {
+    title: "🔔 طلب جديد!",
+    body: (id) => `لديك طلب جديد #${id.slice(0, 8)} — اضغط للقبول`,
+    forCustomer: false, forDriver: false, forPartner: true,
+  },
   accepted: {
     title: "تم قبول طلبك! ✅",
     body: (id) => `الطلب #${id.slice(0, 8)} تم قبوله وجاري تحضيره الآن`,
@@ -54,6 +59,10 @@ const DRIVER_TEMPLATES: Record<string, { title: string; body: (orderId: string) 
 
 // Partner-specific templates
 const PARTNER_TEMPLATES: Record<string, { title: string; body: (orderId: string) => string }> = {
+  new_order: {
+    title: "🔔 طلب جديد!",
+    body: (id) => `طلب جديد #${id.slice(0, 8)} بانتظار القبول`,
+  },
   picked_up: {
     title: "المندوب استلم الطلب 🛵",
     body: (id) => `الطلب #${id.slice(0, 8)} تم استلامه من المندوب`,
@@ -86,7 +95,32 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { order_id, new_status } = await req.json();
+    const body = await req.json();
+
+    // Support both direct calls and Supabase Database Webhook format
+    let order_id: string;
+    let new_status: string;
+
+    if (body.type === "INSERT" && body.record) {
+      // Database Webhook: new order inserted
+      order_id = body.record.id;
+      new_status = "new_order";
+    } else if (body.type === "UPDATE" && body.record) {
+      // Database Webhook: order updated
+      order_id = body.record.id;
+      new_status = body.record.status;
+      // Skip if status didn't actually change
+      if (body.old_record && body.old_record.status === new_status) {
+        return new Response(
+          JSON.stringify({ success: true, message: "Status unchanged, skipping" }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
+        );
+      }
+    } else {
+      // Direct call format: { order_id, new_status }
+      order_id = body.order_id;
+      new_status = body.new_status;
+    }
 
     if (!order_id || !new_status) {
       return new Response(
@@ -143,6 +177,7 @@ serve(async (req: Request) => {
           title: custTemplate.title,
           body: custTemplate.body(order.id),
           notification_type: "order",
+          sound: "default",
           data: { order_id: order.id, status: new_status, screen: "tracking" },
         }),
       });
@@ -165,6 +200,7 @@ serve(async (req: Request) => {
           title: driverTpl.title,
           body: driverTpl.body(order.id),
           notification_type: "order",
+          sound: "default",
           data: { order_id: order.id, status: new_status, screen: "delivery" },
         }),
       });
@@ -183,10 +219,12 @@ serve(async (req: Request) => {
         },
         body: JSON.stringify({
           user_id: order.partner_id,
+          app_type: "partner",
           title: partnerTpl.title,
           body: partnerTpl.body(order.id),
           notification_type: "order",
-          data: { order_id: order.id, status: new_status },
+          sound: "default",
+          data: { order_id: order.id, status: new_status, screen: "orders" },
         }),
       });
       results.push("partner");

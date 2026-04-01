@@ -11,10 +11,25 @@ import {
   FlatList,
 } from "react-native";
 import { getSupabase } from "@hillaha/core";
+import { Audio } from "expo-av";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "@/lib/theme";
 import { notificationTemplates, NOTIFICATION_TYPES } from "@/lib/notifications";
 import { logNotification } from "@/lib/notificationService";
 import * as Notifications from "expo-notifications";
+
+const playNewOrderSound = async () => {
+  try {
+    const { sound } = await Audio.Sound.createAsync(
+      require("../../assets/sounds/new-order.wav")
+    );
+    await sound.playAsync();
+    sound.setOnPlaybackStatusUpdate((status: any) => {
+      if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
+    });
+  } catch (e) {
+    console.log("Sound play error:", e);
+  }
+};
 
 interface OrderItem {
   id: string;
@@ -49,7 +64,6 @@ export default function OrdersScreen() {
 
   useEffect(() => {
     loadOrders();
-    setupRealtimeUpdates();
   }, []);
 
   const loadOrders = async () => {
@@ -119,6 +133,9 @@ export default function OrdersScreen() {
 
   const notifyNewOrder = async (order: OrderItem, partnerId: string) => {
     try {
+      // Play alert sound
+      playNewOrderSound();
+
       await logNotification(
         partnerId,
         NOTIFICATION_TYPES.NEW_ORDER,
@@ -149,23 +166,31 @@ export default function OrdersScreen() {
     }
   };
 
-  const setupRealtimeUpdates = () => {
+  // Realtime subscription — only activates once partnerId is loaded
+  useEffect(() => {
+    if (!partnerId) return;
     const supabase = getSupabase();
-    if (!supabase || !partnerId) return;
+    if (!supabase) return;
 
     const channel = supabase
-      .channel("partner-orders")
+      .channel(`partner-orders-${partnerId}`)
       .on(
         "postgres_changes" as any,
         { event: "*", schema: "public", table: "orders", filter: `partner_id=eq.${partnerId}` },
-        () => { loadOrders(); }
+        (payload: any) => {
+          // Play sound for new pending orders
+          if (payload.eventType === "INSERT" && payload.new?.status === "pending") {
+            playNewOrderSound();
+          }
+          loadOrders();
+        }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  };
+  }, [partnerId]);
 
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {

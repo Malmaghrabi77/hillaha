@@ -104,6 +104,11 @@ export default function OrdersPage() {
         if (payload.eventType === "INSERT") {
           setOrders(prev => [mapRow(payload.new), ...prev]);
           setLiveCount(n => n + 1);
+          // Play notification sound for new orders
+          try {
+            const audio = new Audio("/sounds/new-order.wav");
+            audio.play();
+          } catch (e) {}
         } else if (payload.eventType === "UPDATE") {
           setOrders(prev => prev.map(o =>
             (o as any)._uuid === payload.new.id ? mapRow(payload.new) : o

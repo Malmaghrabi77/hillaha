@@ -10,7 +10,22 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { getSupabase } from "@hillaha/core";
+import { Audio } from "expo-av";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "@/lib/theme";
+
+const playNewOrderSound = async () => {
+  try {
+    const { sound } = await Audio.Sound.createAsync(
+      require("../../assets/sounds/new-order.wav")
+    );
+    await sound.playAsync();
+    sound.setOnPlaybackStatusUpdate((status: any) => {
+      if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
+    });
+  } catch (e) {
+    console.log("Sound play error:", e);
+  }
+};
 
 interface Order {
   id: string;
@@ -38,10 +53,34 @@ export default function DashboardScreen() {
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Realtime: play sound + refresh on new orders
+  useEffect(() => {
+    if (!partnerId) return;
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel(`dashboard-new-orders-${partnerId}`)
+      .on(
+        "postgres_changes" as any,
+        { event: "INSERT", schema: "public", table: "orders", filter: `partner_id=eq.${partnerId}` },
+        () => {
+          playNewOrderSound();
+          loadDashboardData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [partnerId]);
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -65,6 +104,7 @@ export default function DashboardScreen() {
         .single();
 
       if (partnerData) {
+        setPartnerId(partnerData.id);
         // Get today's orders
         const today = new Date();
         today.setHours(0, 0, 0, 0);

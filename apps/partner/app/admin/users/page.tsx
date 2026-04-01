@@ -93,6 +93,12 @@ export default function UsersPage() {
       const supabase = getSupabase();
       if (!supabase) return;
 
+      // Only super_admin can view all users
+      if (!auth.isSuperAdmin) {
+        setLoading(false);
+        return;
+      }
+
       const { data } = await (supabase.from("profiles") as any)
         .select("*")
         .order("created_at", { ascending: false });

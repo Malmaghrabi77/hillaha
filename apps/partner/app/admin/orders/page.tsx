@@ -113,9 +113,24 @@ export default function OrdersPage() {
       const supabase = getSupabase();
       if (!supabase) return;
 
-      const { data } = await (supabase.from("orders") as any)
+      // Regional managers: only see orders from their assigned partners
+      let partnerScope: string[] | null = null;
+      if (auth.isRegionalManager && auth.user) {
+        const { data: assignments } = await (supabase.from("admin_assignments") as any)
+          .select("partner_id")
+          .eq("admin_id", auth.user.id);
+        partnerScope = (assignments || []).map((a: any) => a.partner_id);
+      }
+
+      let query = (supabase.from("orders") as any)
         .select("*")
         .order("created_at", { ascending: false });
+
+      if (partnerScope) {
+        query = query.in("partner_id", partnerScope);
+      }
+
+      const { data } = await query;
 
       const ordersData = (data || []) as Order[];
 

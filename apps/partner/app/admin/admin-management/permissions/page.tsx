@@ -52,23 +52,18 @@ export default function AdminPermissionsPage() {
       const supabase = getSupabase();
       if (!supabase) return;
 
-      // Load admins
+      // Load admins with their profiles (email from profiles table, not auth.admin)
       const { data: adminUsers } = await (supabase
         .from("profiles") as any)
-        .select("id, role")
+        .select("id, role, full_name, email")
         .in("role", ["admin", "super_admin"]);
 
       if (adminUsers) {
-        const adminIds = adminUsers.map(a => a.id);
-
-        // Get user emails
-        const { data: usersData } = await (supabase
-          .auth.admin.listUsers() as any)
-          .catch(() => ({ data: [] }));
+        const adminIds = adminUsers.map((a: any) => a.id);
 
         const adminList = adminUsers.map((admin: any) => ({
           id: admin.id,
-          email: usersData?.users?.find((u: any) => u.id === admin.id)?.email || "Unknown",
+          email: admin.email || admin.full_name || admin.id.substring(0, 8),
           role: admin.role,
         }));
 

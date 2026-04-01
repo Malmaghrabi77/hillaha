@@ -42,7 +42,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (auth.loading) return;
-    if (!auth.user || !auth.isSuperAdmin) return;
+    if (!auth.user || (!auth.isSuperAdmin && !auth.isAccountant)) return;
     loadAnalytics();
   }, [auth.user, auth.loading]);
 

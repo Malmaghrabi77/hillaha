@@ -67,19 +67,18 @@ export default function AdminRestrictionsPage() {
       const supabase = getSupabase();
       if (!supabase) return;
 
-      // Load admins
+      // Load admins with email from profiles
       const { data: adminUsers } = await (supabase
         .from("profiles") as any)
-        .select("id, role")
+        .select("id, role, full_name, email")
         .in("role", ["admin", "super_admin"]);
 
       if (adminUsers) {
-        const adminIds = adminUsers.map(a => a.id);
+        const adminIds = adminUsers.map((a: any) => a.id);
 
-        // Get user emails (simplified)
         const adminList = adminUsers.map((admin: any) => ({
           id: admin.id,
-          email: admin.id,
+          email: admin.email || admin.full_name || admin.id.substring(0, 8),
           role: admin.role,
         }));
 

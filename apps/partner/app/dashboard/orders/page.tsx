@@ -2,8 +2,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getSupabase } from "@hillaha/core";
 
-const supabase = getSupabase()!;
-
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",
   pink: "#EC4899", pinkSoft: "#FCE7F3",
@@ -32,38 +30,7 @@ interface Order {
   deliveryType?: DeliveryType;
 }
 
-const INITIAL_ORDERS: Order[] = [
-  {
-    id: "ORD-001", customer: "مصطفى محمد", phone: "01012345678",
-    items: [{ name: "برجر كلاسيك", qty: 2, price: 75 }, { name: "كوكاكولا", qty: 2, price: 20 }],
-    address: "شارع التحرير, القاهرة", total: 190, status: "pending",
-    time: "11:45 ص", note: "بدون بصل من فضلك", paymentMethod: "كاش", deliveryType: "platform",
-  },
-  {
-    id: "ORD-002", customer: "أحمد علي", phone: "01098765432",
-    items: [{ name: "بيتزا لحمة", qty: 1, price: 120 }],
-    address: "المعادي، شارع 9", total: 120, status: "preparing",
-    time: "11:37 ص", paymentMethod: "فودافون كاش", deliveryType: "self",
-  },
-  {
-    id: "ORD-003", customer: "فاطمة حسن", phone: "01155566677",
-    items: [{ name: "تشيكن برجر", qty: 1, price: 65 }, { name: "عصير ليمون", qty: 1, price: 35 }],
-    address: "مدينة نصر، شارع عباس العقاد", total: 100, status: "delivered",
-    time: "11:20 ص", paymentMethod: "إنستاباي",
-  },
-  {
-    id: "ORD-004", customer: "محمد إبراهيم", phone: "01222334455",
-    items: [{ name: "برجر كلاسيك", qty: 1, price: 85 }],
-    address: "الزمالك، شارع حسن صبري", total: 85, status: "cancelled",
-    time: "10:58 ص", note: "العميل رفض الاستلام", paymentMethod: "كاش",
-  },
-  {
-    id: "ORD-005", customer: "سارة خالد", phone: "01033344455",
-    items: [{ name: "باستا بولونيز", qty: 2, price: 90 }, { name: "حلا اليوم", qty: 2, price: 40 }],
-    address: "6 أكتوبر، الحي الثامن", total: 260, status: "ready",
-    time: "10:45 ص", paymentMethod: "كاش",
-  },
-];
+const INITIAL_ORDERS: Order[] = [];
 
 const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string; next?: Status; nextLabel?: string; nextColor?: string }> = {
   pending:   { label: "بانتظار القبول", color: C.warning,  bg: "#FEF3C7", next: "accepted", nextLabel: "قبول الطلب", nextColor: C.primary },
@@ -95,6 +62,8 @@ export default function OrdersPage() {
   const [liveCount, setLiveCount] = useState(0);
   const [acceptDialog, setAcceptDialog] = useState<{ orderId: string; uuid: string } | null>(null);
   const [acceptLoading, setAcceptLoading] = useState(false);
+
+  const supabase = getSupabase()!;
 
   // ─── دالة تحويل بيانات Supabase → واجهة Order ───────────
   function mapRow(row: any): Order {

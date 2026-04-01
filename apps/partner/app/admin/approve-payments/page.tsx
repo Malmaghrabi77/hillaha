@@ -4,8 +4,6 @@ import { getSupabase } from "@hillaha/core";
 import { useAdminAuth } from "../hooks/useAdminAuth";
 import { useAdminPermissions } from "../hooks/useAdminPermissions";
 
-const supabase = getSupabase()!;
-
 const C = {
   primary: "#8B5CF6", primarySoft: "#EDE9FE",
   bg: "#FAFAFF", surface: "#FFFFFF",
@@ -40,6 +38,8 @@ export default function ApprovePaymentsPage() {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [previewImg, setPreviewImg] = useState<string | null>(null);
+
+  const supabase = getSupabase()!;
 
   useEffect(() => { if (!auth.loading && permissions.approvePayments) loadOrders(); }, [tab, auth.loading, permissions.approvePayments]);
 

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, Pressable, ScrollView, Animated, FlatList,
   Image, Dimensions, ActivityIndicator, RefreshControl, ImageBackground,
+  Linking,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -112,6 +113,8 @@ interface Banner {
   bg: string;
   accent: string;
   image: string | null;
+  link_type: string;
+  link_value: string | null;
 }
 
 interface Category {
@@ -400,7 +403,7 @@ export default function Home() {
           // Fetch banners
           const { data: bannersData } = await supabase
             .from("banners")
-            .select("id, title, sub, cta, bg, accent, image")
+            .select("id, title, sub, cta, bg, accent, image, link_type, link_value")
             .eq("is_active", true)
             .order("position", { ascending: true })
             .limit(10);
@@ -769,7 +772,11 @@ export default function Home() {
                   <Pressable
                     onPress={() => {
                       analyticsTracker.trackEvent(ANALYTICS_EVENTS.HOME.BANNER_CLICKED, { bannerId: b.id });
-                      router.push(`/restaurant/${b.id}`);
+                      if (b.link_type === "partner" && b.link_value) {
+                        router.push(`/restaurant/${b.link_value}`);
+                      } else if (b.link_type === "url" && b.link_value) {
+                        Linking.openURL(b.link_value);
+                      }
                     }}
                     style={{
                       marginTop: 10,

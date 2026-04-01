@@ -1,10 +1,12 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View, Text, Pressable, Animated, Alert, Image, ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCart } from "../../lib/cartStore";
 import { useDarkMode } from "../../src/hooks/useDarkMode";
+import { useSupabase } from "../../src/hooks/useSupabase";
 import { analyticsTracker } from "../../src/utils/analyticsTracker";
 import { A11yPresets } from "../../src/hooks/useAccessibility";
 import { SafeAreaScrollView, SafeAreaDisplay } from "../../src/components";
@@ -19,179 +21,125 @@ const C = {
   deepPurple: "#6D28D9",
 } as const;
 
-// ─── Data — IDs match seed.sql UUIDs ─────────────────────────────────────────
+interface PartnerData {
+  id: string;
+  name: string;
+  name_ar: string;
+  type: string;
+  cover_image: string | null;
+  rating: number | null;
+  review_count: number;
+  delivery_time: string;
+  delivery_fee: number;
+  is_open: boolean;
+}
 
-const RESTAURANTS: Record<string, {
-  name: string; nameAr: string; type: string; rating: string; reviewCount: string;
-  time: string; fee: string; coverImage: string; promo?: string;
-  menu: {
-    category: string;
-    items: { id: string; name: string; nameAr: string; price: number; desc: string; image: string; popular?: boolean }[];
-  }[];
-}> = {
-  "10000000-0000-0000-0000-000000000001": {
-    name: "Al Sharkawy", nameAr: "الشرقاوي", type: "كشري ومصري",
-    rating: "4.8", reviewCount: "1850+", time: "20-30 دقيقة", fee: "10 جنيه",
-    coverImage: "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=900&q=90",
-    promo: "أفضل كشري في قنا — منذ 1980",
-    menu: [
-      {
-        category: "الأكثر طلباً 🔥",
-        items: [
-          { id: "sh1_kbr",  name: "Koshary Large",  nameAr: "كشري كبير",  price: 20, desc: "كشري بالأرز والعدس والمكرونة — حجم كبير",  image: "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=200&q=80", popular: true },
-          { id: "sh1_wst",  name: "Koshary Medium", nameAr: "كشري وسط",   price: 15, desc: "كشري بالأرز والعدس والمكرونة — حجم وسط",   image: "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=200&q=80", popular: true },
-        ],
-      },
-      {
-        category: "الإضافات",
-        items: [
-          { id: "sh1_fl",   name: "Ful Medames",    nameAr: "فول مدمس",   price: 12, desc: "فول إسكندراني بالزيت والليمون والثوم",   image: "https://images.unsplash.com/photo-1625944525533-473f1a3d54e7?w=200&q=80" },
-          { id: "sh1_ta",   name: "Falafel",        nameAr: "طعمية",      price: 10, desc: "6 قطع طعمية مقرمشة",                       image: "https://images.unsplash.com/photo-1614273888655-602f7b97ed4e?w=200&q=80" },
-        ],
-      },
-      {
-        category: "مشروبات",
-        items: [
-          { id: "sh1_pp",   name: "Pepsi",          nameAr: "بيبسي",      price: 10, desc: "علبة 330 مل",                             image: "https://images.unsplash.com/photo-1553456558-aff63285bdd1?w=200&q=80" },
-        ],
-      },
-    ],
-  },
+interface MenuItem {
+  id: string;
+  name: string;
+  name_ar: string;
+  description: string;
+  price: number;
+  image: string | null;
+  category: string;
+  is_popular: boolean;
+}
 
-  "10000000-0000-0000-0000-000000000002": {
-    name: "Shawarma El Reem", nameAr: "شاورما الريم", type: "شاورما",
-    rating: "4.6", reviewCount: "1200+", time: "25-35 دقيقة", fee: "12 جنيه",
-    coverImage: "https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=900&q=90",
-    menu: [
-      {
-        category: "الشاورما 🌯",
-        items: [
-          { id: "sh2_chw",  name: "Chicken Shawarma", nameAr: "شاورما دجاج",     price: 45, desc: "شاورما دجاج بالخبز العربي والثوم والخيار", image: "https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=200&q=80", popular: true },
-          { id: "sh2_mpl",  name: "Meat Plate",       nameAr: "طبق شاورما لحم",  price: 75, desc: "طبق أرز وشاورما لحم مع سلطة",             image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&q=80", popular: true },
-        ],
-      },
-      {
-        category: "المشويات",
-        items: [
-          { id: "sh2_mix",  name: "Mixed Grills",     nameAr: "مشكل مشويات",    price: 110, desc: "تشكيلة لحوم ودجاج مشوية",               image: "https://images.unsplash.com/photo-1544025162-d76694265947?w=200&q=80" },
-          { id: "sh2_hms",  name: "Hummus",           nameAr: "حمص بالطحينة",   price: 25,  desc: "حمص ناعم بزيت الزيتون والبابريكا",      image: "https://images.unsplash.com/photo-1577805947697-89e18249d767?w=200&q=80" },
-        ],
-      },
-    ],
-  },
-
-  "10000000-0000-0000-0000-000000000003": {
-    name: "Burger House", nameAr: "برجر هاوس", type: "برجر",
-    rating: "4.5", reviewCount: "780+", time: "30-40 دقيقة", fee: "15 جنيه",
-    coverImage: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=900&q=90",
-    promo: "اطلب أكتر من 100 جنيه واحصل على مشروب مجاني",
-    menu: [
-      {
-        category: "البرجر 🍔",
-        items: [
-          { id: "sh3_cls",  name: "Classic Burger", nameAr: "برجر كلاسيك",  price: 85,  desc: "لحمة بقري مشوية مع جبن وخس وطماطم",       image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&q=80", popular: true },
-          { id: "sh3_dbl",  name: "Double Smash",   nameAr: "دبل سماش",     price: 130, desc: "بطتين لحمة مع جبن مزدوج وصوص سري",         image: "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=200&q=80", popular: true },
-        ],
-      },
-      {
-        category: "الإضافات",
-        items: [
-          { id: "sh3_frs",  name: "Loaded Fries",   nameAr: "بطاطس محملة", price: 55,  desc: "بطاطس مقرمشة مع جبن وبيكون وجالابينو",    image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=200&q=80" },
-        ],
-      },
-      {
-        category: "مشروبات",
-        items: [
-          { id: "sh3_mlk",  name: "Oreo Milkshake", nameAr: "ميلك شيك أوريو", price: 60, desc: "مشروب كريمي بالأوريو والشوكولاتة",       image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&q=80" },
-        ],
-      },
-    ],
-  },
-
-  "10000000-0000-0000-0000-000000000004": {
-    name: "Pizza Planet", nameAr: "بيتزا بلانيت", type: "بيتزا",
-    rating: "4.4", reviewCount: "560+", time: "30-45 دقيقة", fee: "15 جنيه",
-    coverImage: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=900&q=90",
-    menu: [
-      {
-        category: "البيتزا 🍕",
-        items: [
-          { id: "sh4_mrg",  name: "Margherita",   nameAr: "مارجريتا",    price: 90,  desc: "طماطم وجبن موزاريلا وريحان طازج",         image: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=200&q=80", popular: true },
-          { id: "sh4_pep",  name: "Pepperoni",    nameAr: "بيبروني",     price: 110, desc: "بيبروني وموزاريلا وصوص طماطم",             image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=200&q=80", popular: true },
-        ],
-      },
-      {
-        category: "الإضافات",
-        items: [
-          { id: "sh4_grl",  name: "Garlic Bread", nameAr: "خبز بالثوم", price: 35,  desc: "خبز فرنسي بالثوم والزبدة والجبن",          image: "https://images.unsplash.com/photo-1619531040576-f9416740661e?w=200&q=80" },
-        ],
-      },
-    ],
-  },
-
-  "10000000-0000-0000-0000-000000000005": {
-    name: "Chicken Master", nameAr: "تشيكن ماستر", type: "فراخ",
-    rating: "4.7", reviewCount: "920+", time: "25-35 دقيقة", fee: "12 جنيه",
-    coverImage: "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=900&q=90",
-    menu: [
-      {
-        category: "الوجبات 🍗",
-        items: [
-          { id: "sh5_crs",  name: "Crispy Meal",     nameAr: "وجبة كريسبي",  price: 80, desc: "فراخ كريسبي مع بطاطس وعصير",              image: "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=200&q=80", popular: true },
-          { id: "sh5_grll", name: "Grilled Chicken", nameAr: "دجاج مشوي",    price: 95, desc: "نصف دجاجة مشوية مع أرز وسلطة",            image: "https://images.unsplash.com/photo-1598103442097-8b74394b95c8?w=200&q=80" },
-          { id: "sh5_wng",  name: "Chicken Wings",   nameAr: "أجنحة دجاج",   price: 70, desc: "8 أجنحة بالصوص الحار أو البارد",           image: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=200&q=80", popular: true },
-        ],
-      },
-    ],
-  },
-
-  "10000000-0000-0000-0000-000000000006": {
-    name: "Cafe Nile", nameAr: "كافيه النيل", type: "قهوة وحلويات",
-    rating: "4.9", reviewCount: "1100+", time: "15-25 دقيقة", fee: "12 جنيه",
-    coverImage: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=900&q=90",
-    menu: [
-      {
-        category: "المشروبات ☕",
-        items: [
-          { id: "sh6_spl",  name: "Spanish Latte",  nameAr: "سبانش لاتيه", price: 55, desc: "إسبريسو مع حليب مكثف بالسكر",              image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=200&q=80", popular: true },
-          { id: "sh6_trk",  name: "Turkish Coffee", nameAr: "قهوة تركي",   price: 25, desc: "قهوة تركية على الرمال الساخنة",             image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=200&q=80" },
-        ],
-      },
-      {
-        category: "الحلويات",
-        items: [
-          { id: "sh6_knf",  name: "Kunafa",   nameAr: "كنافة",   price: 60, desc: "كنافة بالجبن والقطر الساخن",                    image: "https://images.unsplash.com/photo-1567380177-1d2bf7a3bd6b?w=200&q=80", popular: true },
-          { id: "sh6_bsb",  name: "Basbousa", nameAr: "بسبوسة",  price: 30, desc: "بسبوسة بالقشطة والقطر",                         image: "https://images.unsplash.com/photo-1575853121743-60c24f0a7502?w=200&q=80" },
-        ],
-      },
-    ],
-  },
-};
-
-// Fallback for unknown IDs — default to الشرقاوي
-const FALLBACK_ID = "10000000-0000-0000-0000-000000000001";
-
-// ─── Component ───────────────────────────────────────────────────────────────
+interface MenuSection {
+  category: string;
+  items: MenuItem[];
+}
 
 export default function Restaurant() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const partnerId = id ?? FALLBACK_ID;
-  const data = RESTAURANTS[partnerId] ?? RESTAURANTS[FALLBACK_ID];
+  const partnerId = id ?? "";
   const { isDarkMode, colors } = useDarkMode();
+  const supabase = useSupabase();
 
-  const [activeTab, setActiveTab] = React.useState(0);
+  const [partner, setPartner] = useState<PartnerData | null>(null);
+  const [menu, setMenu] = useState<MenuSection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const [activeTab, setActiveTab] = useState(0);
   const cartBarAnim = useRef(new Animated.Value(0)).current;
   const cartStore = useCart();
 
-  React.useEffect(() => {
+  useEffect(() => {
     analyticsTracker.trackScreenView("restaurant_screen", { partnerId });
+    loadData();
   }, [partnerId]);
+
+  const loadData = async () => {
+    if (!supabase || !partnerId) {
+      setError(true);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Fetch partner info
+      const { data: p, error: pErr } = await (supabase as any)
+        .from("partners")
+        .select("id, name, name_ar, type, cover_image, rating, review_count, delivery_time, delivery_fee, is_open")
+        .eq("id", partnerId)
+        .single();
+
+      if (pErr || !p) {
+        setError(true);
+        setLoading(false);
+        return;
+      }
+
+      setPartner(p);
+
+      // Fetch menu items
+      const { data: items } = await (supabase as any)
+        .from("menu_items")
+        .select("id, name, name_ar, description, price, image, category, is_popular")
+        .eq("partner_id", partnerId)
+        .eq("is_available", true)
+        .order("is_popular", { ascending: false })
+        .order("created_at", { ascending: true });
+
+      // Group by category
+      const categoryMap = new Map<string, MenuItem[]>();
+      if (items && items.length > 0) {
+        for (const item of items) {
+          const cat = item.category || "أخرى";
+          if (!categoryMap.has(cat)) categoryMap.set(cat, []);
+          categoryMap.get(cat)!.push(item);
+        }
+      }
+
+      const sections: MenuSection[] = [];
+      for (const [category, catItems] of categoryMap) {
+        sections.push({ category, items: catItems });
+      }
+
+      setMenu(sections);
+    } catch (err) {
+      console.error("Error loading restaurant:", err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initialize cart bar if items already in cart
+  useEffect(() => {
+    if (cartStore.totalItems > 0) {
+      cartBarAnim.setValue(1);
+    }
+  }, []);
 
   const totalItems = cartStore.totalItems;
   const totalPrice = cartStore.subtotal;
 
-  function addItem(item: { id: string; nameAr: string; price: number; image: string }) {
-    analyticsTracker.trackEvent("add_item_to_cart", { itemId: item.id, itemName: item.nameAr, price: item.price, partnerId });
+  const partnerName = partner?.name_ar || partner?.name || "";
+
+  function addItem(item: MenuItem) {
+    analyticsTracker.trackEvent("add_item_to_cart", { itemId: item.id, itemName: item.name_ar || item.name, price: item.price, partnerId });
     if (cartStore.hasConflict(partnerId)) {
       Alert.alert(
         "سلة من متجر آخر",
@@ -204,9 +152,9 @@ export default function Restaurant() {
             onPress: () => {
               cartStore.clearCart();
               cartStore.addItem({
-                id: item.id, name: item.nameAr, nameAr: item.nameAr,
-                price: item.price, image: item.image,
-                partnerId, partnerName: data.nameAr,
+                id: item.id, name: item.name_ar || item.name, nameAr: item.name_ar || item.name,
+                price: item.price, image: item.image || "",
+                partnerId, partnerName,
               });
             },
           },
@@ -217,9 +165,9 @@ export default function Restaurant() {
 
     const wasEmpty = totalItems === 0;
     cartStore.addItem({
-      id: item.id, name: item.nameAr, nameAr: item.nameAr,
-      price: item.price, image: item.image,
-      partnerId, partnerName: data.nameAr,
+      id: item.id, name: item.name_ar || item.name, nameAr: item.name_ar || item.name,
+      price: item.price, image: item.image || "",
+      partnerId, partnerName,
     });
 
     if (wasEmpty) {
@@ -240,14 +188,53 @@ export default function Restaurant() {
     inputRange: [0, 1], outputRange: [100, 0],
   });
 
+  // Loading state
+  if (loading) {
+    return (
+      <SafeAreaDisplay variant="fullscreen" safeTop={false} safeBottom={false}>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.bg }}>
+          <ActivityIndicator size="large" color={C.primary} />
+          <Text style={{ color: colors.textMuted, marginTop: 12, fontSize: 14 }}>جاري التحميل...</Text>
+        </View>
+      </SafeAreaDisplay>
+    );
+  }
+
+  // Error state
+  if (error || !partner) {
+    return (
+      <SafeAreaDisplay variant="fullscreen" safeTop={false} safeBottom={false}>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.bg, padding: 24 }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>🏪</Text>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: "900", marginBottom: 8 }}>المتجر غير متوفر</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 14, textAlign: "center", marginBottom: 24 }}>
+            لم نتمكن من تحميل بيانات المتجر. تأكد من اتصالك بالإنترنت.
+          </Text>
+          <Pressable
+            onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/home")}
+            style={{ backgroundColor: C.primary, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 14 }}
+          >
+            <Text style={{ color: "white", fontWeight: "900", fontSize: 15 }}>العودة</Text>
+          </Pressable>
+        </View>
+      </SafeAreaDisplay>
+    );
+  }
+
   return (
     <SafeAreaDisplay variant="fullscreen" safeTop={false} safeBottom={false}>
       {/* ── IMMERSIVE COVER ──────────────────────────────────── */}
       <View style={{ height: 240, overflow: "hidden" }}>
-        <Image
-          source={{ uri: data.coverImage }}
-          style={{ width: "100%", height: "100%", resizeMode: "cover" }}
-        />
+        {partner.cover_image ? (
+          <Image
+            source={{ uri: partner.cover_image }}
+            style={{ width: "100%", height: "100%", resizeMode: "cover" }}
+          />
+        ) : (
+          <View style={{ width: "100%", height: "100%", backgroundColor: C.primarySoft, justifyContent: "center", alignItems: "center" }}>
+            <Text style={{ fontSize: 64 }}>🏪</Text>
+          </View>
+        )}
         <View style={{
           position: "absolute", top: 0, left: 0, right: 0, height: 90,
           backgroundColor: "rgba(0,0,0,0.38)",
@@ -298,10 +285,10 @@ export default function Restaurant() {
             fontSize: 24, fontWeight: "900", color: "white",
             textShadowColor: "rgba(0,0,0,0.4)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
           }}>
-            {data.nameAr}
+            {partnerName}
           </Text>
           <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", marginTop: 2 }}>
-            {data.type}
+            {partner.type}
           </Text>
         </View>
       </View>
@@ -315,9 +302,9 @@ export default function Restaurant() {
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <View style={{ flexDirection: "row", gap: 10 }}>
             {[
-              { icon: "🕐", label: data.time },
-              { icon: "🛵", label: `توصيل ${data.fee}` },
-              { icon: "🟢", label: "متاح الآن" },
+              { icon: "🕐", label: partner.delivery_time },
+              { icon: "🛵", label: `توصيل ${partner.delivery_fee} جنيه` },
+              { icon: partner.is_open ? "🟢" : "🔴", label: partner.is_open ? "متاح الآن" : "مغلق" },
             ].map((m, i) => (
               <View key={i} style={{
                 flexDirection: "row", alignItems: "center", gap: 4,
@@ -334,140 +321,148 @@ export default function Restaurant() {
             flexDirection: "row", alignItems: "center", gap: 4,
           }}>
             <Text style={{ fontSize: 13, color: colors.ratingText, fontWeight: "900" }}>★</Text>
-            <Text style={{ fontSize: 14, fontWeight: "900", color: colors.ratingDark }}>{data.rating}</Text>
-            <Text style={{ fontSize: 11, color: colors.textMuted }}>({data.reviewCount})</Text>
+            <Text style={{ fontSize: 14, fontWeight: "900", color: colors.ratingDark }}>
+              {partner.rating ? Number(partner.rating).toFixed(1) : "—"}
+            </Text>
+            <Text style={{ fontSize: 11, color: colors.textMuted }}>({partner.review_count})</Text>
           </View>
         </View>
 
-        {data.promo && (
-          <View style={{
-            marginBottom: 12, padding: 10, borderRadius: 12,
-            backgroundColor: isDarkMode ? "#064E3B" : colors.lightBg1, borderWidth: 1, borderColor: isDarkMode ? colors.success : colors.ratingText,
-            flexDirection: "row", alignItems: "center", gap: 8,
-          }}>
-            <Text style={{ fontSize: 16 }}>🎁</Text>
-            <Text style={{ flex: 1, fontSize: 12, color: isDarkMode ? colors.success : colors.ratingDark, fontWeight: "700" }}>{data.promo}</Text>
-          </View>
+        {menu.length > 0 && (
+          <ScrollView
+            horizontal showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 4, paddingBottom: 0 }}
+            style={{ marginHorizontal: -18, paddingHorizontal: 18 }}
+          >
+            {menu.map((section, i) => (
+              <Pressable
+                key={i}
+                onPress={() => {
+                  analyticsTracker.trackEvent("change_menu_tab", { category: section.category });
+                  setActiveTab(i);
+                }}
+                {...A11yPresets.pressable}
+                style={{
+                  paddingVertical: 10, paddingHorizontal: 16,
+                  borderBottomWidth: 2.5,
+                  borderBottomColor: activeTab === i ? C.primary : "transparent",
+                }}
+              >
+                <Text style={{
+                  fontSize: 13, fontWeight: activeTab === i ? "900" : "600",
+                  color: activeTab === i ? C.primary : colors.textMuted,
+                }}>
+                  {section.category}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         )}
-
-        <ScrollView
-          horizontal showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 4, paddingBottom: 0 }}
-          style={{ marginHorizontal: -18, paddingHorizontal: 18 }}
-        >
-          {data.menu.map((section, i) => (
-            <Pressable
-              key={i}
-              onPress={() => {
-                analyticsTracker.trackEvent("change_menu_tab", { category: section.category });
-                setActiveTab(i);
-              }}
-              {...A11yPresets.pressable}
-              style={{
-                paddingVertical: 10, paddingHorizontal: 16,
-                borderBottomWidth: 2.5,
-                borderBottomColor: activeTab === i ? C.primary : "transparent",
-              }}
-            >
-              <Text style={{
-                fontSize: 13, fontWeight: activeTab === i ? "900" : "600",
-                color: activeTab === i ? C.primary : colors.textMuted,
-              }}>
-                {section.category}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
       </View>
 
       {/* ── MENU ITEMS ──────────────────────────────────────── */}
       <SafeAreaScrollView variant="page" contentContainerStyle={{ paddingBottom: 120 }}>
-        {data.menu[activeTab].items.map((item) => (
-          <View key={item.id} style={{
-            flexDirection: "row", alignItems: "center",
-            padding: 14, borderRadius: 18, marginBottom: 12,
-            backgroundColor: colors.surface,
-            shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
-            borderWidth: 1, borderColor: colors.lightBg2,
-          }}>
-            <View style={{
-              width: 78, height: 78, borderRadius: 18, overflow: "hidden",
-              marginLeft: 14, position: "relative",
+        {menu.length === 0 ? (
+          <View style={{ alignItems: "center", marginTop: 60 }}>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>📋</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 15, fontWeight: "700" }}>
+              لا توجد منتجات حالياً
+            </Text>
+          </View>
+        ) : (
+          menu[activeTab]?.items.map((item) => (
+            <View key={item.id} style={{
+              flexDirection: "row", alignItems: "center",
+              padding: 14, borderRadius: 18, marginBottom: 12,
+              backgroundColor: colors.surface,
               shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.12, shadowRadius: 4, elevation: 2,
+              shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+              borderWidth: 1, borderColor: colors.lightBg2,
             }}>
-              <Image
-                source={{ uri: item.image }}
-                style={{ width: "100%", height: "100%", resizeMode: "cover" }}
-              />
-              {item.popular && (
-                <View style={{
-                  position: "absolute", top: 0, right: 0,
-                  backgroundColor: colors.danger, paddingVertical: 3, paddingHorizontal: 6,
-                  borderBottomLeftRadius: 10,
-                }}>
-                  <Text style={{ color: "white", fontSize: 8, fontWeight: "900" }}>شائع</Text>
-                </View>
-              )}
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "900", color: colors.text, fontSize: 15 }}>{item.nameAr}</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 3, lineHeight: 17 }} numberOfLines={2}>
-                {item.desc}
-              </Text>
-              <Text style={{ color: C.primary, fontWeight: "900", fontSize: 16, marginTop: 6 }}>
-                {item.price} جنيه
-              </Text>
-            </View>
-
-            {cartStore.items[item.id]?.qty ? (
               <View style={{
-                flexDirection: "row", alignItems: "center", gap: 8,
-                backgroundColor: colors.primarySoft, borderRadius: 14, padding: 4,
+                width: 78, height: 78, borderRadius: 18, overflow: "hidden",
+                marginLeft: 14, position: "relative",
+                shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.12, shadowRadius: 4, elevation: 2,
               }}>
-                <Pressable
-                  onPress={() => removeItem(item.id)}
-                  {...A11yPresets.pressable}
-                  style={{
-                    width: 32, height: 32, borderRadius: 10, backgroundColor: colors.surface,
-                    justifyContent: "center", alignItems: "center",
-                    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 1,
-                  }}
-                >
-                  <Text style={{ fontSize: 18, fontWeight: "900", color: C.primary }}>−</Text>
-                </Pressable>
-                <Text style={{ fontWeight: "900", color: C.primary, fontSize: 16, minWidth: 22, textAlign: "center" }}>
-                  {cartStore.items[item.id].qty}
+                {item.image ? (
+                  <Image
+                    source={{ uri: item.image }}
+                    style={{ width: "100%", height: "100%", resizeMode: "cover" }}
+                  />
+                ) : (
+                  <View style={{ width: "100%", height: "100%", backgroundColor: C.primarySoft, justifyContent: "center", alignItems: "center" }}>
+                    <Text style={{ fontSize: 28 }}>🍽️</Text>
+                  </View>
+                )}
+                {item.is_popular && (
+                  <View style={{
+                    position: "absolute", top: 0, right: 0,
+                    backgroundColor: colors.danger, paddingVertical: 3, paddingHorizontal: 6,
+                    borderBottomLeftRadius: 10,
+                  }}>
+                    <Text style={{ color: "white", fontSize: 8, fontWeight: "900" }}>شائع</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: "900", color: colors.text, fontSize: 15 }}>{item.name_ar || item.name}</Text>
+                <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 3, lineHeight: 17 }} numberOfLines={2}>
+                  {item.description}
                 </Text>
+                <Text style={{ color: C.primary, fontWeight: "900", fontSize: 16, marginTop: 6 }}>
+                  {item.price} جنيه
+                </Text>
+              </View>
+
+              {cartStore.items[item.id]?.qty ? (
+                <View style={{
+                  flexDirection: "row", alignItems: "center", gap: 8,
+                  backgroundColor: colors.primarySoft, borderRadius: 14, padding: 4,
+                }}>
+                  <Pressable
+                    onPress={() => removeItem(item.id)}
+                    {...A11yPresets.pressable}
+                    style={{
+                      width: 32, height: 32, borderRadius: 10, backgroundColor: colors.surface,
+                      justifyContent: "center", alignItems: "center",
+                      shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 1,
+                    }}
+                  >
+                    <Text style={{ fontSize: 18, fontWeight: "900", color: C.primary }}>−</Text>
+                  </Pressable>
+                  <Text style={{ fontWeight: "900", color: C.primary, fontSize: 16, minWidth: 22, textAlign: "center" }}>
+                    {cartStore.items[item.id].qty}
+                  </Text>
+                  <Pressable
+                    onPress={() => addItem(item)}
+                    {...A11yPresets.pressable}
+                    style={{
+                      width: 32, height: 32, borderRadius: 10, backgroundColor: C.primary,
+                      justifyContent: "center", alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ fontSize: 18, fontWeight: "900", color: "white" }}>+</Text>
+                  </Pressable>
+                </View>
+              ) : (
                 <Pressable
                   onPress={() => addItem(item)}
                   {...A11yPresets.pressable}
                   style={{
-                    width: 32, height: 32, borderRadius: 10, backgroundColor: C.primary,
+                    width: 38, height: 38, borderRadius: 12, backgroundColor: C.primary,
                     justifyContent: "center", alignItems: "center",
+                    shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.35, shadowRadius: 8, elevation: 4,
                   }}
                 >
-                  <Text style={{ fontSize: 18, fontWeight: "900", color: "white" }}>+</Text>
+                  <Text style={{ fontSize: 22, fontWeight: "900", color: "white" }}>+</Text>
                 </Pressable>
-              </View>
-            ) : (
-              <Pressable
-                onPress={() => addItem(item)}
-                {...A11yPresets.pressable}
-                style={{
-                  width: 38, height: 38, borderRadius: 12, backgroundColor: C.primary,
-                  justifyContent: "center", alignItems: "center",
-                  shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.35, shadowRadius: 8, elevation: 4,
-                }}
-              >
-                <Text style={{ fontSize: 22, fontWeight: "900", color: "white" }}>+</Text>
-              </Pressable>
-            )}
-          </View>
-        ))}
+              )}
+            </View>
+          ))
+        )}
       </SafeAreaScrollView>
 
       {/* ── FLOATING CART BAR ───────────────────────────────── */}

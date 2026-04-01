@@ -29,32 +29,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 
 // ─── Defaults ──────────────────────────────────────────────────────────────
 
-const DEFAULT_BANNERS = [
-  {
-    id: "1",
-    title: "أول طلب مجاني التوصيل!",
-    sub: "استخدم كود: HILLAHA1",
-    cta: "اطلب دلوقتي",
-    bg: "#7C3AED", accent: "#EC4899",
-    image: "https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=300&q=80",
-  },
-  {
-    id: "2",
-    title: "صيدلية النور توصل في 20 دقيقة",
-    sub: "دواءك وصفتك على باب بيتك",
-    cta: "اطلب الآن",
-    bg: "#059669", accent: "#34D399",
-    image: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300&q=80",
-  },
-  {
-    id: "3",
-    title: "احجز دكتور أونلاين",
-    sub: "كشف من بيتك بدون طابور انتظار",
-    cta: "احجز موعد",
-    bg: "#2563EB", accent: "#60A5FA",
-    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&q=80",
-  },
-];
+const DEFAULT_BANNERS: { id: string; title: string; sub: string; cta: string; bg: string; accent: string; image: string | null }[] = [];
 
 const DEFAULT_CATEGORIES = [
   { id: "all", label: "الكل", icon: "🏠", color: "#7C3AED", route: null },
@@ -111,21 +86,6 @@ const DEFAULT_SERVICES = [
     route: "/medical",
     badge: "جديد",
     badgeBg: "#2563EB",
-  },
-];
-
-const FALLBACK_PARTNERS = [
-  {
-    id: "10000000-0000-0000-0000-000000000001",
-    name: "الشرقاوي",
-    type: "restaurant",
-    cover_image: "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=700&q=85",
-    delivery_time: "20-30 دقيقة",
-    delivery_fee: 10,
-    rating: 4.8,
-    review_count: 1850,
-    tag: "الأكثر طلباً",
-    tagColor: "#7C3AED",
   },
 ];
 
@@ -324,7 +284,7 @@ export default function Home() {
   const [services, setServices] = useState<Service[]>(DEFAULT_SERVICES);
 
   // ✅ Pagination states
-  const [allPartners, setAllPartners] = useState<Partner[]>(FALLBACK_PARTNERS);
+  const [allPartners, setAllPartners] = useState<Partner[]>([]);
   const [page, setPage] = useState(0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMorePartners, setHasMorePartners] = useState(true);
@@ -515,7 +475,7 @@ export default function Home() {
         "partners_page_1",
         "partners_page_2",
       ]);
-      setAllPartners(FALLBACK_PARTNERS);
+      setAllPartners([]);
       setPage(0);
       setHasMorePartners(true);
 

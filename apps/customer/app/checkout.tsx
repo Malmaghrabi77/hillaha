@@ -38,6 +38,14 @@ const FALLBACK_ACCOUNTS = {
 } as const;
 
 const FALLBACK_METHODS: { id: PayMethod; label: string; desc: string; icon: string; soon?: boolean }[] = [
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
   { id: "cash",      label: "كاش عند الاستلام", desc: "ادفع نقداً للمندوب",                           icon: "💵" },
   { id: "wallet",    label: "المحفظة",            desc: "ادفع من رصيد محفظتك",                         icon: "👛" },
   { id: "instapay",  label: "InstaPay",           desc: `تحويل لحظي — حساب: ${FALLBACK_ACCOUNTS.instapay.account}`, icon: "📲" },
@@ -73,6 +81,15 @@ export default function Checkout() {
   const [paymobUrl, setPaymobUrl]         = useState<string | null>(null);
   const [paymobOrderId, setPaymobOrderId] = useState<string | null>(null);
   const [dbPayMethods, setDbPayMethods]   = useState<any[]>([]);
+
+  // Delivery pricing
+  const [deliveryRules, setDeliveryRules] = useState<any[]>([]);
+  const [deliveryDistance, setDeliveryDistance] = useState<number | null>(null);
+  const [partnerLat, setPartnerLat] = useState<number | null>(null);
+  const [partnerLng, setPartnerLng] = useState<number | null>(null);
+  const [partnerCity, setPartnerCity] = useState("Qena");
+  const [appliedRuleId, setAppliedRuleId] = useState<string | null>(null);
+  const [tooFar, setTooFar] = useState(false);
 
   const isHighValue = cart.total > 1000;
   const needsProof = method !== "cash" && method !== "wallet" && method !== "card";
@@ -159,6 +176,35 @@ export default function Checkout() {
         });
       }).catch(() => {});
 
+    // Fetch partner location for delivery fee calculation
+    if (cart.partnerId) {
+      (supabase as any)
+        .from("partners")
+        .select("lat, lng, city, delivery_fee")
+        .eq("id", cart.partnerId)
+        .single()
+        .then(({ data: p }: any) => {
+          if (p?.lat) setPartnerLat(Number(p.lat));
+          if (p?.lng) setPartnerLng(Number(p.lng));
+          if (p?.city) setPartnerCity(p.city);
+          // Set static delivery_fee as fallback until dynamic calculation runs
+          if (p?.delivery_fee && Number(p.delivery_fee) > 0) {
+            cart.setDeliveryFee(Number(p.delivery_fee));
+          }
+        })
+        .catch(() => {});
+    }
+
+    // Fetch delivery pricing rules
+    (supabase as any)
+      .from("delivery_pricing_rules")
+      .select("*")
+      .eq("is_active", true)
+      .then(({ data: rules }: any) => {
+        if (rules?.length) setDeliveryRules(rules);
+      })
+      .catch(() => {});
+
     // Auto-request GPS location on checkout open
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -190,6 +236,40 @@ export default function Checkout() {
       setMethod("wallet");
     }
   }, [locationSource]);
+
+  // Dynamic delivery fee calculation based on distance
+  useEffect(() => {
+    if (mapLat == null || mapLng == null || partnerLat == null || partnerLng == null || deliveryRules.length === 0) {
+      setTooFar(false);
+      return;
+    }
+    const distance = haversineKm(mapLat, mapLng, partnerLat, partnerLng);
+    setDeliveryDistance(Math.round(distance * 10) / 10);
+
+    // Find applicable rule: city-specific first, then default
+    const cityRule = deliveryRules.find((r: any) => r.city === partnerCity && !r.is_default);
+    const defaultRule = deliveryRules.find((r: any) => r.is_default);
+    const rule = cityRule || defaultRule;
+    if (!rule) return;
+
+    // Check max distance
+    if (rule.max_distance_km && distance > Number(rule.max_distance_km)) {
+      setTooFar(true);
+      setAppliedRuleId(rule.id);
+      return;
+    }
+    setTooFar(false);
+
+    let fee = Number(rule.base_price);
+    if (distance > Number(rule.base_distance_km)) {
+      fee += (distance - Number(rule.base_distance_km)) * Number(rule.per_km_price);
+    }
+    fee = Math.max(Number(rule.min_fee), Math.min(Number(rule.max_fee), fee));
+    fee = Math.round(fee * 100) / 100;
+
+    cart.setDeliveryFee(fee);
+    setAppliedRuleId(rule.id);
+  }, [mapLat, mapLng, partnerLat, partnerLng, deliveryRules, partnerCity]);
 
   function handleSetMethod(m: PayMethod) {
     analyticsTracker.trackEvent(ANALYTICS_EVENTS.CHECKOUT.PAYMENT_METHOD_SELECTED, { method: m });
@@ -226,6 +306,11 @@ export default function Checkout() {
     // Location is mandatory
     if (mapLat == null || mapLng == null) {
       return setError("يجب تحديد موقعك على الخريطة أو السماح بمشاركة الموقع قبل إرسال الطلب");
+    }
+
+    // Too far for delivery
+    if (tooFar) {
+      return setError("التوصيل غير متاح لهذا الموقع — المسافة تتجاوز الحد المسموح");
     }
 
     // Manual location (no GPS) → cash not allowed
@@ -355,6 +440,8 @@ export default function Checkout() {
       items:             cart.itemList.map(i => ({ name: i.nameAr, qty: i.qty, price: i.price })),
       subtotal:          cart.subtotal,
       delivery_fee:      cart.deliveryFee,
+      delivery_distance_km: deliveryDistance,
+      delivery_pricing_rule_id: appliedRuleId,
       discount:          0,
       total:             cart.total,
       payment_method:    method,
@@ -453,7 +540,7 @@ export default function Checkout() {
           <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 8 }} />
           {[
             { label: "المجموع الجزئي", value: `${cart.subtotal} ج` },
-            { label: "رسوم التوصيل",   value: `${cart.deliveryFee} ج` },
+            { label: "رسوم التوصيل",   value: deliveryDistance != null ? `${cart.deliveryFee} ج (${deliveryDistance} كم)` : `${cart.deliveryFee} ج` },
           ].map((row, i) => (
             <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
               <Text style={{ color: colors.textMuted, fontSize: 13 }}>{row.label}</Text>
@@ -493,6 +580,18 @@ export default function Checkout() {
             </Text>
           </View>
         </View>
+
+        {/* TOO FAR WARNING */}
+        {tooFar && (
+          <View style={{
+            padding: 14, borderRadius: 14, marginBottom: 12,
+            backgroundColor: "#FEF2F2", borderWidth: 1.5, borderColor: "#FECACA",
+          }}>
+            <Text style={{ fontWeight: "900", color: "#991B1B", fontSize: 13, textAlign: "center" }}>
+              عذراً، التوصيل غير متاح لهذا الموقع — المسافة تتجاوز الحد المسموح
+            </Text>
+          </View>
+        )}
 
         {/* DELIVERY ADDRESS */}
         <View style={{

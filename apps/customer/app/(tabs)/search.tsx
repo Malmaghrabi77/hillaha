@@ -63,6 +63,9 @@ export default function Search() {
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
 
+  // Delivery pricing base price
+  const [deliveryBasePrice, setDeliveryBasePrice] = useState<number | null>(null);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -75,6 +78,20 @@ export default function Search() {
         setUserLng(loc.coords.longitude);
       }
     })();
+    // Fetch delivery pricing base price
+    if (supabase) {
+      (supabase as any)
+        .from("delivery_pricing_rules")
+        .select("base_price")
+        .eq("is_active", true)
+        .eq("is_default", true)
+        .limit(1)
+        .single()
+        .then(({ data: rule }: any) => {
+          if (rule?.base_price) setDeliveryBasePrice(Number(rule.base_price));
+        })
+        .catch(() => {});
+    }
   }, []);
 
   async function searchPartners() {
@@ -313,7 +330,7 @@ export default function Search() {
             </View>
             <View style={{ alignItems: "center" }}>
               <Text style={{ fontSize: 12, fontWeight: "900", color: colors.primary }}>
-                {p.delivery_fee} ج
+                {deliveryBasePrice ? `من ${deliveryBasePrice}` : `${p.delivery_fee}`} ج
               </Text>
               <Text style={{ fontSize: 9, color: colors.textMuted, marginTop: 2 }}>توصيل</Text>
               {userLat != null && userLng != null && p.lat != null && p.lng != null && (() => {

@@ -287,7 +287,7 @@ function PartnerCard({ partner, onPress, distance }: PartnerCardProps) {
           }}>
             <Text style={{ fontSize: 12 }}>🛵</Text>
             <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textSecondary }}>
-              {partner.delivery_fee} جنيه
+              {deliveryBasePrice ? `من ${deliveryBasePrice}` : `${partner.delivery_fee}`} جنيه
             </Text>
           </View>
           {distance != null && (
@@ -333,6 +333,9 @@ export default function Home() {
   // ✅ User location for proximity sorting
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
+
+  // Delivery pricing base price for card display
+  const [deliveryBasePrice, setDeliveryBasePrice] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -455,6 +458,19 @@ export default function Home() {
             .select("id, title, subtitle, icon, color, bg_color, route, badge, badge_bg")
             .eq("is_active", true)
             .order("position", { ascending: true });
+
+          // Fetch default delivery pricing rule base price
+          (supabase as any)
+            .from("delivery_pricing_rules")
+            .select("base_price")
+            .eq("is_active", true)
+            .eq("is_default", true)
+            .limit(1)
+            .single()
+            .then(({ data: rule }: any) => {
+              if (rule?.base_price) setDeliveryBasePrice(Number(rule.base_price));
+            })
+            .catch(() => {});
 
           if (partnersData && partnersData.length > 0) {
             setAllPartners(partnersData as Partner[]);
@@ -1193,7 +1209,7 @@ export default function Home() {
                           color: colors.textMuted,
                           fontWeight: "600",
                         }}>
-                          🛵 {p.delivery_fee}
+                          🛵 {deliveryBasePrice ? `من ${deliveryBasePrice}` : p.delivery_fee}
                         </Text>
                       </View>
                       {(() => { const d = getDistance(p); return d != null ? (

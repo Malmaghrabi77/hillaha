@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
-import { getSupabase } from "@hillaha/core";
+import { getSupabase, DEFAULT_MONTHLY_COMMISSION_RULE, getMonthlyCommissionRate } from "@hillaha/core";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "@/lib/theme";
 
 interface FinanceStats {
@@ -12,12 +12,12 @@ interface FinanceStats {
 }
 
 export default function FinanceScreen() {
- const [stats, setStats] = useState<FinanceStats>({
+  const [stats, setStats] = useState<FinanceStats>({
     totalSales: 0,
     commission: 0,
     netProfit: 0,
     orders: 0,
-    commissionRate: "10%",
+    commissionRate: `${DEFAULT_MONTHLY_COMMISSION_RULE.baseRate * 100}%`,
   });
   const [loading, setLoading] = useState(true);
 
@@ -30,41 +30,31 @@ export default function FinanceScreen() {
     totalSalesWeek: number,
     ordersFromMonthStart: number
   ): { amount: number; rate: string } => {
-    // نموذج العمولة الجديد:
-    // 10% للـ 1000 طلب الأول من الشهر
-    // 8% لباقي الطلبات حتى نهاية الشهر
+    const rule = DEFAULT_MONTHLY_COMMISSION_RULE;
+    const basePercent = `${rule.baseRate * 100}%`;
+    const discountPercent = `${rule.afterTargetRate * 100}%`;
 
-    if (ordersFromMonthStart <= 1000) {
-      // جميع الطلبات في الـ 1000 الأول - تطبيق 10%
+    if (ordersFromMonthStart <= rule.targetCompletedOrders) {
       return {
-        amount: totalSalesWeek * 0.1,
-        rate: "10%",
+        amount: totalSalesWeek * rule.baseRate,
+        rate: basePercent,
       };
     } else {
-      // حساب كم عدد الطلبات من هذا الأسبوع في الـ 1000 الأولى
-      const ordersInThreshold = 1000 - (ordersFromMonthStart - ordersPastWeek);
+      const ordersInThreshold = rule.targetCompletedOrders - (ordersFromMonthStart - ordersPastWeek);
       let commission = 0;
-      let rate = "8%";
+      let rate = discountPercent;
 
       if (ordersInThreshold > 0) {
-        // جزء من الطلبات بـ 10% وجزء بـ 8%
-        const tenPercentSales = (ordersInThreshold / ordersPastWeek) * totalSalesWeek;
-        commission += tenPercentSales * 0.1;
-
-        // الجزء المتبقي بـ 8%
-        const eightPercentSales = totalSalesWeek - tenPercentSales;
-        commission += eightPercentSales * 0.08;
-
-        rate = "10%/8%"; // mixed rate
+        const baseSales = (ordersInThreshold / ordersPastWeek) * totalSalesWeek;
+        commission += baseSales * rule.baseRate;
+        const discountSales = totalSalesWeek - baseSales;
+        commission += discountSales * rule.afterTargetRate;
+        rate = `${basePercent}/${discountPercent}`;
       } else {
-        // جميع الطلبات بـ 8%
-        commission = totalSalesWeek * 0.08;
+        commission = totalSalesWeek * rule.afterTargetRate;
       }
 
-      return {
-        amount: commission,
-        rate,
-      };
+      return { amount: commission, rate };
     }
   };
 

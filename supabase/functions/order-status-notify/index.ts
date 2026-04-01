@@ -68,15 +68,21 @@ const PARTNER_TEMPLATES: Record<string, { title: string; body: (orderId: string)
   },
 };
 
+const ALLOWED_ORIGINS = ["https://hillaha.com", "https://www.hillaha.com", "https://partner.hillaha.com"];
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey",
+  };
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey",
-      },
-    });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -85,7 +91,7 @@ serve(async (req: Request) => {
     if (!order_id || !new_status) {
       return new Response(
         JSON.stringify({ error: "order_id and new_status are required" }),
-        { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
       );
     }
 
@@ -93,7 +99,7 @@ serve(async (req: Request) => {
     if (!template) {
       return new Response(
         JSON.stringify({ success: true, message: "No notification template for this status" }),
-        { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
       );
     }
 
@@ -112,7 +118,7 @@ serve(async (req: Request) => {
     if (orderErr || !order) {
       return new Response(
         JSON.stringify({ error: "Order not found" }),
-        { status: 404, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+      { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
       );
     }
 
@@ -193,7 +199,7 @@ serve(async (req: Request) => {
   } catch (error) {
     return new Response(
       JSON.stringify({ error: (error as Error).message }),
-      { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
     );
   }
 });

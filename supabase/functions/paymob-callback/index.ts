@@ -11,9 +11,16 @@ serve(async (req: Request) => {
       return new Response("Missing transaction object", { status: 400 });
     }
 
-    // Verify HMAC signature
+    // Verify HMAC signature (mandatory)
     const HMAC_SECRET = Deno.env.get("PAYMOB_HMAC_SECRET");
-    if (HMAC_SECRET && body.hmac) {
+    if (!HMAC_SECRET) {
+      return new Response("HMAC secret not configured", { status: 500 });
+    }
+    if (!body.hmac) {
+      return new Response("Missing HMAC signature", { status: 403 });
+    }
+
+    {
       const dataToHash = [
         obj.amount_cents,
         obj.created_at,

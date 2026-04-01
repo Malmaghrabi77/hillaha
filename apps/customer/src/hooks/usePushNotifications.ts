@@ -85,7 +85,9 @@ export const usePushNotifications = () => {
       }
 
       // Get the push token
-      const token = (await Notifications.getExpoPushTokenAsync()).data;
+      const token = (await Notifications.getExpoPushTokenAsync({
+        projectId: "f5efa312-8b0a-4a79-b35e-0c25776e1873",
+      })).data;
       setExpoPushToken(token);
 
       // Save token to database

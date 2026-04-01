@@ -153,17 +153,17 @@ export default function OrdersScreen() {
     const supabase = getSupabase();
     if (!supabase || !partnerId) return;
 
-    const subscription = supabase
-      .from("orders")
-      .on("*", (payload: any) => {
-        if (payload.new?.partner_id === partnerId) {
-          loadOrders();
-        }
-      })
+    const channel = supabase
+      .channel("partner-orders")
+      .on(
+        "postgres_changes" as any,
+        { event: "*", schema: "public", table: "orders", filter: `partner_id=eq.${partnerId}` },
+        () => { loadOrders(); }
+      )
       .subscribe();
 
     return () => {
-      //subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   };
 

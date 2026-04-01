@@ -3,16 +3,22 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const PAYMOB_API_URL = "https://accept.paymob.com/v1/intention/";
 
+const ALLOWED_ORIGINS = ["https://hillaha.com", "https://www.hillaha.com", "https://partner.hillaha.com"];
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey",
+  };
+}
+
 serve(async (req: Request) => {
   // CORS
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey",
-      },
-    });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   try {
@@ -21,7 +27,7 @@ serve(async (req: Request) => {
     if (!amount_cents || !order_id) {
       return new Response(JSON.stringify({ error: "amount_cents and order_id are required" }), {
         status: 400,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       });
     }
 
@@ -31,7 +37,7 @@ serve(async (req: Request) => {
     if (!PAYMOB_SECRET_KEY || !PAYMOB_INTEGRATION_ID) {
       return new Response(JSON.stringify({ error: "PayMob not configured" }), {
         status: 500,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       });
     }
 
@@ -69,7 +75,7 @@ serve(async (req: Request) => {
     if (!intentionRes.ok) {
       return new Response(JSON.stringify({ error: "Failed to create payment", details: intentionData }), {
         status: 500,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       });
     }
 
@@ -94,7 +100,7 @@ serve(async (req: Request) => {
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       }
     );
   } catch (error) {

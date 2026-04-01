@@ -14,8 +14,10 @@ interface LocationPickerMapProps {
   latitude?: number | null;
   /** Current selected lng */
   longitude?: number | null;
-  /** Called when user taps a location on the map */
+  /** Called when user drags the map manually */
   onLocationSelect: (lat: number, lng: number) => void;
+  /** Called when GPS auto-detection succeeds (separate from manual drag) */
+  onGpsDetected?: (lat: number, lng: number) => void;
   /** Map height */
   height?: number;
   /** Theme colors */
@@ -40,6 +42,7 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
   latitude,
   longitude,
   onLocationSelect,
+  onGpsDetected,
   height = 220,
   colors,
 }) => {
@@ -148,7 +151,12 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
         accuracy: Location.Accuracy.Balanced,
       });
       const { latitude: lat, longitude: lng } = loc.coords;
-      onLocationSelect(lat, lng);
+      // Use dedicated GPS callback if provided, otherwise fall back to onLocationSelect
+      if (onGpsDetected) {
+        onGpsDetected(lat, lng);
+      } else {
+        onLocationSelect(lat, lng);
+      }
       // Move the map to the GPS location
       webViewRef.current?.injectJavaScript(
         `window.moveToLocation(${lat}, ${lng}); true;`
@@ -158,7 +166,7 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
     } finally {
       setGpsLoading(false);
     }
-  }, [onLocationSelect]);
+  }, [onLocationSelect, onGpsDetected]);
 
   return (
     <View style={{ marginTop: 8 }}>

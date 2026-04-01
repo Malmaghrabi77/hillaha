@@ -14,6 +14,7 @@ import { ANALYTICS_EVENTS } from "../src/constants/analyticsEvents";
 import { SafeAreaScrollView } from "../src/components";
 import { LocationPickerMap } from "../src/components/LocationPickerMap";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 
 interface SavedAddress {
   id: string;
@@ -62,6 +63,7 @@ export default function Checkout() {
   const [showMap, setShowMap]           = useState(false);
   const [mapLat, setMapLat]             = useState<number | null>(null);
   const [mapLng, setMapLng]             = useState<number | null>(null);
+  const [locationSource, setLocationSource] = useState<"gps" | "manual" | null>(null);
   const [liveAccounts, setLiveAccounts] = useState<{
     instapay_account: string;
     etisalat_phone:   string;
@@ -130,8 +132,11 @@ export default function Checkout() {
                 setSelectedAddressId(defaultAddr.id);
                 const fullAddr = [defaultAddr.street, defaultAddr.building, defaultAddr.floor ? `دور ${defaultAddr.floor}` : "", defaultAddr.apartment ? `شقة ${defaultAddr.apartment}` : ""].filter(Boolean).join("، ");
                 setAddress(fullAddr);
-                if (defaultAddr.latitude) setMapLat(defaultAddr.latitude);
-                if (defaultAddr.longitude) setMapLng(defaultAddr.longitude);
+                if (defaultAddr.latitude) {
+                  setMapLat(defaultAddr.latitude);
+                  setMapLng(defaultAddr.longitude ?? null);
+                  setLocationSource("manual");
+                }
               }
             }
           })
@@ -153,6 +158,17 @@ export default function Checkout() {
           vodafone_phone:   map["vodafone_phone"]    || "",
         });
       }).catch(() => {});
+
+    // Auto-request GPS location on checkout open
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setMapLat(loc.coords.latitude);
+        setMapLng(loc.coords.longitude);
+        setLocationSource("gps");
+      }
+    })();
   }, []);
 
   // Fetch enabled payment methods from DB
@@ -167,6 +183,13 @@ export default function Checkout() {
       })
       .catch(() => {});
   }, [supabase]);
+
+  // Auto-deselect cash if location is not GPS
+  useEffect(() => {
+    if (locationSource !== "gps" && method === "cash") {
+      setMethod("wallet");
+    }
+  }, [locationSource]);
 
   function handleSetMethod(m: PayMethod) {
     analyticsTracker.trackEvent(ANALYTICS_EVENTS.CHECKOUT.PAYMENT_METHOD_SELECTED, { method: m });
@@ -199,6 +222,17 @@ export default function Checkout() {
 
   async function handleConfirm() {
     if (!address.trim()) return setError("يرجى إدخال عنوان التوصيل");
+
+    // Location is mandatory
+    if (mapLat == null || mapLng == null) {
+      return setError("يجب تحديد موقعك على الخريطة أو السماح بمشاركة الموقع قبل إرسال الطلب");
+    }
+
+    // Manual location (no GPS) → cash not allowed
+    if (locationSource !== "gps" && method === "cash") {
+      return setError("الدفع عند الاستلام متاح فقط عند مشاركة موقعك عبر GPS. اختر طريقة دفع أخرى أو اضغط \"استخدم موقعي الحالي\" في الخريطة.");
+    }
+
     if (needsProof && !proofUri) return setError("يجب رفع صورة إثبات التحويل قبل تأكيد الطلب");
 
     // High-value + cash: not allowed
@@ -315,6 +349,7 @@ export default function Checkout() {
       delivery_address:  address.trim(),
       delivery_lat:      mapLat,
       delivery_lng:      mapLng,
+      location_source:   locationSource,
       customer_phone:    phone.trim() || null,
       customer_note:     note.trim()  || null,
       items:             cart.itemList.map(i => ({ name: i.nameAr, qty: i.qty, price: i.price })),
@@ -432,6 +467,33 @@ export default function Checkout() {
           </View>
         </View>
 
+        {/* LOCATION STATUS */}
+        <View style={{
+          padding: 14, borderRadius: 14, marginBottom: 12,
+          flexDirection: "row", alignItems: "center", gap: 10,
+          backgroundColor: locationSource === "gps" ? "#D1FAE5" : locationSource === "manual" ? "#FEF3C7" : "#FEF2F2",
+          borderWidth: 1.5,
+          borderColor: locationSource === "gps" ? "#34D399" : locationSource === "manual" ? "#F59E0B" : "#FECACA",
+        }}>
+          <Text style={{ fontSize: 20 }}>
+            {locationSource === "gps" ? "✅" : locationSource === "manual" ? "📍" : "⚠️"}
+          </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{
+              fontWeight: "900", fontSize: 13,
+              color: locationSource === "gps" ? "#065F46" : locationSource === "manual" ? "#92400E" : "#991B1B",
+            }}>
+              {locationSource === "gps" ? "تم تحديد موقعك عبر GPS" : locationSource === "manual" ? "تم تحديد الموقع يدوياً على الخريطة" : "يجب تحديد موقعك"}
+            </Text>
+            <Text style={{
+              fontSize: 11, marginTop: 2,
+              color: locationSource === "gps" ? "#047857" : locationSource === "manual" ? "#B45309" : "#DC2626",
+            }}>
+              {locationSource === "gps" ? "جميع طرق الدفع متاحة" : locationSource === "manual" ? "الدفع عند الاستلام غير متاح — استخدم طريقة دفع إلكترونية" : "شارك موقعك أو حدده يدوياً على الخريطة"}
+            </Text>
+          </View>
+        </View>
+
         {/* DELIVERY ADDRESS */}
         <View style={{
           padding: 16, borderRadius: 16, marginBottom: 16,
@@ -458,8 +520,11 @@ export default function Checkout() {
                       const parts = [addr.street, addr.building, addr.floor ? `دور ${addr.floor}` : "", addr.apartment ? `شقة ${addr.apartment}` : ""].filter(Boolean).join("، ");
                       setAddress(parts);
                       setShowMap(false);
-                      if (addr.latitude) setMapLat(addr.latitude);
-                      if (addr.longitude) setMapLng(addr.longitude);
+                      if (addr.latitude) {
+                        setMapLat(addr.latitude);
+                        setMapLng(addr.longitude ?? null);
+                        setLocationSource("manual");
+                      }
                     }}
                     style={{
                       flexDirection: "row", alignItems: "center", gap: 10,
@@ -517,6 +582,12 @@ export default function Checkout() {
                 onLocationSelect={(lat, lng) => {
                   setMapLat(lat);
                   setMapLng(lng);
+                  setLocationSource("manual");
+                }}
+                onGpsDetected={(lat, lng) => {
+                  setMapLat(lat);
+                  setMapLng(lng);
+                  setLocationSource("gps");
                 }}
                 height={200}
                 colors={colors}
@@ -569,13 +640,17 @@ export default function Checkout() {
         {METHODS.map(m => {
           const isWallet = m.id === "wallet";
           const walletInsufficient = isWallet && walletBalance !== null && walletBalance < cart.total;
+          const isCashBlocked = m.id === "cash" && locationSource !== "gps";
+          const isDisabled = m.soon || walletInsufficient || isCashBlocked;
           const desc = isWallet && walletBalance !== null
             ? `رصيدك: ${walletBalance.toFixed(2)} جنيه`
-            : m.desc;
+            : isCashBlocked
+              ? "غير متاح — يتطلب مشاركة الموقع عبر GPS"
+              : m.desc;
           return (
           <Pressable
             key={m.id}
-            onPress={() => !m.soon && !walletInsufficient && handleSetMethod(m.id)}
+            onPress={() => !isDisabled && handleSetMethod(m.id)}
             {...A11yPresets.button(m.label, desc)}
             style={{
               flexDirection: "row", alignItems: "center", gap: 14,
@@ -583,7 +658,7 @@ export default function Checkout() {
               backgroundColor: method === m.id ? colors.primarySoft : colors.surface,
               borderWidth: 2,
               borderColor: method === m.id ? colors.primary : colors.border,
-              opacity: m.soon || walletInsufficient ? 0.5 : 1,
+              opacity: isDisabled ? 0.4 : 1,
             }}
           >
             <View style={{
@@ -599,7 +674,7 @@ export default function Checkout() {
             <Text style={{ fontSize: 22 }}>{m.icon}</Text>
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: "900", color: colors.text, fontSize: 14 }}>{m.label}</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{m.desc}</Text>
+              <Text style={{ color: isCashBlocked ? "#DC2626" : colors.textMuted, fontSize: 12, marginTop: 2 }}>{desc}</Text>
             </View>
             {m.soon && (
               <View style={{ backgroundColor: colors.warning, paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8 }}>

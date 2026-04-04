@@ -117,7 +117,8 @@ export default function AdminLayout({
       { href: "/admin/invite-customer-service", label: "دعوة خدمة عملاء", icon: "🎧" },
       { href: "/admin/invite-accountant", label: "دعوة محاسب", icon: "💰" },
       { href: "/admin/approve-pricing", label: "اعتماد تعديلات الأسعار", icon: "✅" },
-      { href: "/admin/approve-banners", label: "اعتماد البانرات", icon: "📢" }
+      { href: "/admin/approve-banners", label: "اعتماد البانرات", icon: "📢" },
+      { href: "/dashboard/admin", label: "إعدادات بايموب والحسابات", icon: "🏦" }
     );
   }
 

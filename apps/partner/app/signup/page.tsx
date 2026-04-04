@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabase } from "@hillaha/core";
 
@@ -13,7 +13,7 @@ const C = {
   danger: "#EF4444",
 };
 
-export default function SignupPage() {
+function SignupPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const invitationCode = searchParams.get("invitation") || searchParams.get("code") || "";
@@ -555,5 +555,17 @@ export default function SignupPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ fontSize: 14, color: "#6B6480" }}>جاري التحميل...</div>
+      </div>
+    }>
+      <SignupPageInner />
+    </Suspense>
   );
 }

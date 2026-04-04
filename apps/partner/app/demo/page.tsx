@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@hillaha/core";
 
@@ -39,8 +39,13 @@ export default function DemoLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') {
+      router.replace("/login");
+    }
+  }, [router]);
+
   if (process.env.NODE_ENV === 'production') {
-    router.replace("/login");
     return null;
   }
 

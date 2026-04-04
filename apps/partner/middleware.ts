@@ -2,13 +2,18 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PUBLIC_ROUTES = ["/login", "/signup", "/admin-login", "/api/", "/_next/", "/favicon.ico", "/logo.png", "/sounds/"];
+const PUBLIC_ROUTES = ["/login", "/signup", "/admin-login", "/reset-password", "/api/", "/_next/", "/favicon.ico", "/logo.png", "/sounds/"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public routes
   if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+
+  // Allow the landing page (root path exactly)
+  if (pathname === "/") {
     return NextResponse.next();
   }
 

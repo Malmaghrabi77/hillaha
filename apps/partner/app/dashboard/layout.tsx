@@ -64,8 +64,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
 
           const profileRole = (profile as { role: string | null } | null)?.role;
-          const allowedRoles = ["partner", "store_admin", "super_admin", "admin", "accountant", "customer_service"];
+          // Only partners and store_admins can access /dashboard (super_admin allowed for testing)
+          const allowedRoles = ["partner", "store_admin", "super_admin"];
           if (!profileRole || !allowedRoles.includes(profileRole)) {
+            // Redirect admin roles to their own panel
+            if (profileRole === "admin" || profileRole === "accountant") {
+              router.replace("/admin");
+              return;
+            }
+            if (profileRole === "customer_service") {
+              router.replace("/cs");
+              return;
+            }
             await sb.auth.signOut();
             router.replace("/login");
             return;

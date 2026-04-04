@@ -89,7 +89,7 @@ export function useAdminAuth(): AdminAuthContext {
 
       if (!isAdmin) {
         setAuth(prev => ({ ...prev, loading: false }));
-        router.push("/dashboard");
+        router.push("/login");
         return;
       }
 

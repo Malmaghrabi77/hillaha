@@ -79,21 +79,25 @@ VALUES (
 -- ============================================================
 
 -- Driver reads own application
+DROP POLICY IF EXISTS "driver_reads_own_application" ON public.driver_applications;
 CREATE POLICY "driver_reads_own_application"
   ON public.driver_applications FOR SELECT
   USING (auth.uid() = user_id);
 
 -- Driver creates own application
+DROP POLICY IF EXISTS "driver_creates_own_application" ON public.driver_applications;
 CREATE POLICY "driver_creates_own_application"
   ON public.driver_applications FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- Driver updates own pending application
+DROP POLICY IF EXISTS "driver_updates_own_pending_application" ON public.driver_applications;
 CREATE POLICY "driver_updates_own_pending_application"
   ON public.driver_applications FOR UPDATE
   USING (auth.uid() = user_id AND status = 'pending');
 
 -- Admin reads all applications
+DROP POLICY IF EXISTS "admin_reads_all_applications" ON public.driver_applications;
 CREATE POLICY "admin_reads_all_applications"
   ON public.driver_applications FOR SELECT
   USING (
@@ -105,6 +109,7 @@ CREATE POLICY "admin_reads_all_applications"
   );
 
 -- Admin updates any application
+DROP POLICY IF EXISTS "admin_updates_applications" ON public.driver_applications;
 CREATE POLICY "admin_updates_applications"
   ON public.driver_applications FOR UPDATE
   USING (
@@ -120,6 +125,7 @@ CREATE POLICY "admin_updates_applications"
 -- ============================================================
 
 -- Owner can read own documents
+DROP POLICY IF EXISTS "driver_docs_owner_read" ON storage.objects;
 CREATE POLICY "driver_docs_owner_read"
   ON storage.objects FOR SELECT
   USING (
@@ -128,6 +134,7 @@ CREATE POLICY "driver_docs_owner_read"
   );
 
 -- Owner can upload own documents
+DROP POLICY IF EXISTS "driver_docs_owner_insert" ON storage.objects;
 CREATE POLICY "driver_docs_owner_insert"
   ON storage.objects FOR INSERT
   TO authenticated
@@ -137,6 +144,7 @@ CREATE POLICY "driver_docs_owner_insert"
   );
 
 -- Admin can read all documents
+DROP POLICY IF EXISTS "driver_docs_admin_read" ON storage.objects;
 CREATE POLICY "driver_docs_admin_read"
   ON storage.objects FOR SELECT
   USING (
@@ -190,23 +198,28 @@ CREATE TABLE IF NOT EXISTS public.driver_payment_info (
 ALTER TABLE public.driver_payment_info ENABLE ROW LEVEL SECURITY;
 
 -- Driver reads/manages own payment info
+DROP POLICY IF EXISTS "driver_reads_own_payment_info" ON public.driver_payment_info;
 CREATE POLICY "driver_reads_own_payment_info"
   ON public.driver_payment_info FOR SELECT
   USING (auth.uid() = driver_id);
 
+DROP POLICY IF EXISTS "driver_inserts_own_payment_info" ON public.driver_payment_info;
 CREATE POLICY "driver_inserts_own_payment_info"
   ON public.driver_payment_info FOR INSERT
   WITH CHECK (auth.uid() = driver_id);
 
+DROP POLICY IF EXISTS "driver_updates_own_payment_info" ON public.driver_payment_info;
 CREATE POLICY "driver_updates_own_payment_info"
   ON public.driver_payment_info FOR UPDATE
   USING (auth.uid() = driver_id);
 
+DROP POLICY IF EXISTS "driver_deletes_own_payment_info" ON public.driver_payment_info;
 CREATE POLICY "driver_deletes_own_payment_info"
   ON public.driver_payment_info FOR DELETE
   USING (auth.uid() = driver_id);
 
 -- Admin reads all payment info
+DROP POLICY IF EXISTS "admin_reads_all_payment_info" ON public.driver_payment_info;
 CREATE POLICY "admin_reads_all_payment_info"
   ON public.driver_payment_info FOR SELECT
   USING (
@@ -236,16 +249,19 @@ CREATE TABLE IF NOT EXISTS public.driver_withdrawal_requests (
 ALTER TABLE public.driver_withdrawal_requests ENABLE ROW LEVEL SECURITY;
 
 -- Driver reads own withdrawal requests
+DROP POLICY IF EXISTS "driver_reads_own_withdrawals" ON public.driver_withdrawal_requests;
 CREATE POLICY "driver_reads_own_withdrawals"
   ON public.driver_withdrawal_requests FOR SELECT
   USING (auth.uid() = driver_id);
 
 -- Driver inserts own withdrawal requests
+DROP POLICY IF EXISTS "driver_inserts_own_withdrawals" ON public.driver_withdrawal_requests;
 CREATE POLICY "driver_inserts_own_withdrawals"
   ON public.driver_withdrawal_requests FOR INSERT
   WITH CHECK (auth.uid() = driver_id);
 
 -- Admin reads all withdrawal requests
+DROP POLICY IF EXISTS "admin_reads_all_withdrawals" ON public.driver_withdrawal_requests;
 CREATE POLICY "admin_reads_all_withdrawals"
   ON public.driver_withdrawal_requests FOR SELECT
   USING (
@@ -256,6 +272,7 @@ CREATE POLICY "admin_reads_all_withdrawals"
   );
 
 -- Admin updates all withdrawal requests (approve/reject/complete)
+DROP POLICY IF EXISTS "admin_updates_all_withdrawals" ON public.driver_withdrawal_requests;
 CREATE POLICY "admin_updates_all_withdrawals"
   ON public.driver_withdrawal_requests FOR UPDATE
   USING (
@@ -266,10 +283,10 @@ CREATE POLICY "admin_updates_all_withdrawals"
   );
 
 -- Indexes
-CREATE INDEX idx_driver_withdrawals_driver_date
+CREATE INDEX IF NOT EXISTS idx_driver_withdrawals_driver_date
   ON public.driver_withdrawal_requests(driver_id, created_at DESC);
 
-CREATE INDEX idx_driver_withdrawals_status
+CREATE INDEX IF NOT EXISTS idx_driver_withdrawals_status
   ON public.driver_withdrawal_requests(status);
 
 
@@ -731,8 +748,9 @@ CREATE INDEX IF NOT EXISTS idx_messages_partner_id ON public.messages(partner_id
 
 -- Customer reads messages for their orders
 DO $$ BEGIN
-  CREATE POLICY "customer_reads_order_messages"
-    ON public.messages FOR SELECT
+  DROP POLICY IF EXISTS "customer_reads_order_messages" ON public.messages;
+CREATE POLICY "customer_reads_order_messages"
+  ON public.messages FOR SELECT
     USING (
       order_id IN (
         SELECT id FROM public.orders WHERE customer_id = auth.uid()
@@ -746,8 +764,9 @@ END $$;
 
 -- Customer sends messages
 DO $$ BEGIN
-  CREATE POLICY "customer_sends_messages"
-    ON public.messages FOR INSERT
+  DROP POLICY IF EXISTS "customer_sends_messages" ON public.messages;
+CREATE POLICY "customer_sends_messages"
+  ON public.messages FOR INSERT
     WITH CHECK (
       sender_type = 'customer' AND sender_id = auth.uid()
     );
@@ -756,8 +775,9 @@ END $$;
 
 -- Driver reads messages for their orders
 DO $$ BEGIN
-  CREATE POLICY "driver_reads_order_messages"
-    ON public.messages FOR SELECT
+  DROP POLICY IF EXISTS "driver_reads_order_messages" ON public.messages;
+CREATE POLICY "driver_reads_order_messages"
+  ON public.messages FOR SELECT
     USING (
       order_id IN (
         SELECT id FROM public.orders WHERE driver_id = auth.uid()
@@ -768,8 +788,9 @@ END $$;
 
 -- Driver sends messages
 DO $$ BEGIN
-  CREATE POLICY "driver_sends_order_messages"
-    ON public.messages FOR INSERT
+  DROP POLICY IF EXISTS "driver_sends_order_messages" ON public.messages;
+CREATE POLICY "driver_sends_order_messages"
+  ON public.messages FOR INSERT
     WITH CHECK (
       sender_type = 'driver'
       AND sender_id = auth.uid()
@@ -782,8 +803,9 @@ END $$;
 
 -- Partner reads messages for their store
 DO $$ BEGIN
-  CREATE POLICY "partner_reads_messages"
-    ON public.messages FOR SELECT
+  DROP POLICY IF EXISTS "partner_reads_messages" ON public.messages;
+CREATE POLICY "partner_reads_messages"
+  ON public.messages FOR SELECT
     USING (
       partner_id IN (
         SELECT id FROM public.partners WHERE user_id = auth.uid()
@@ -794,8 +816,9 @@ END $$;
 
 -- Partner sends messages
 DO $$ BEGIN
-  CREATE POLICY "partner_sends_messages"
-    ON public.messages FOR INSERT
+  DROP POLICY IF EXISTS "partner_sends_messages" ON public.messages;
+CREATE POLICY "partner_sends_messages"
+  ON public.messages FOR INSERT
     WITH CHECK (
       sender_type = 'partner' AND sender_id = auth.uid()
     );
@@ -804,8 +827,9 @@ END $$;
 
 -- Admin reads all messages
 DO $$ BEGIN
-  CREATE POLICY "admin_reads_all_messages"
-    ON public.messages FOR SELECT
+  DROP POLICY IF EXISTS "admin_reads_all_messages" ON public.messages;
+CREATE POLICY "admin_reads_all_messages"
+  ON public.messages FOR SELECT
     USING (
       EXISTS (
         SELECT 1 FROM public.profiles
@@ -833,24 +857,27 @@ CREATE INDEX IF NOT EXISTS idx_support_tickets_user ON public.support_tickets(us
 
 -- User reads own tickets (covers both customers and drivers)
 DO $$ BEGIN
-  CREATE POLICY "user_reads_own_tickets"
-    ON public.support_tickets FOR SELECT
+  DROP POLICY IF EXISTS "user_reads_own_tickets" ON public.support_tickets;
+CREATE POLICY "user_reads_own_tickets"
+  ON public.support_tickets FOR SELECT
     USING (auth.uid() = user_id);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 -- User creates tickets
 DO $$ BEGIN
-  CREATE POLICY "user_creates_tickets"
-    ON public.support_tickets FOR INSERT
+  DROP POLICY IF EXISTS "user_creates_tickets" ON public.support_tickets;
+CREATE POLICY "user_creates_tickets"
+  ON public.support_tickets FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 -- Admin reads all tickets
 DO $$ BEGIN
-  CREATE POLICY "admin_reads_all_tickets"
-    ON public.support_tickets FOR SELECT
+  DROP POLICY IF EXISTS "admin_reads_all_tickets" ON public.support_tickets;
+CREATE POLICY "admin_reads_all_tickets"
+  ON public.support_tickets FOR SELECT
     USING (
       EXISTS (
         SELECT 1 FROM public.profiles
@@ -862,8 +889,9 @@ END $$;
 
 -- Admin updates tickets (close/resolve)
 DO $$ BEGIN
-  CREATE POLICY "admin_updates_tickets"
-    ON public.support_tickets FOR UPDATE
+  DROP POLICY IF EXISTS "admin_updates_tickets" ON public.support_tickets;
+CREATE POLICY "admin_updates_tickets"
+  ON public.support_tickets FOR UPDATE
     USING (
       EXISTS (
         SELECT 1 FROM public.profiles
@@ -893,8 +921,9 @@ CREATE INDEX IF NOT EXISTS idx_support_messages_ticket ON public.support_message
 
 -- User reads messages of own tickets
 DO $$ BEGIN
-  CREATE POLICY "user_reads_ticket_messages"
-    ON public.support_messages FOR SELECT
+  DROP POLICY IF EXISTS "user_reads_ticket_messages" ON public.support_messages;
+CREATE POLICY "user_reads_ticket_messages"
+  ON public.support_messages FOR SELECT
     USING (
       ticket_id IN (
         SELECT id FROM public.support_tickets WHERE user_id = auth.uid()
@@ -905,8 +934,9 @@ END $$;
 
 -- User sends messages on own tickets
 DO $$ BEGIN
-  CREATE POLICY "user_sends_ticket_messages"
-    ON public.support_messages FOR INSERT
+  DROP POLICY IF EXISTS "user_sends_ticket_messages" ON public.support_messages;
+CREATE POLICY "user_sends_ticket_messages"
+  ON public.support_messages FOR INSERT
     WITH CHECK (
       sender_id = auth.uid()
       AND ticket_id IN (
@@ -918,8 +948,9 @@ END $$;
 
 -- Admin/support reads all messages
 DO $$ BEGIN
-  CREATE POLICY "admin_reads_all_support_messages"
-    ON public.support_messages FOR SELECT
+  DROP POLICY IF EXISTS "admin_reads_all_support_messages" ON public.support_messages;
+CREATE POLICY "admin_reads_all_support_messages"
+  ON public.support_messages FOR SELECT
     USING (
       EXISTS (
         SELECT 1 FROM public.profiles
@@ -931,8 +962,9 @@ END $$;
 
 -- Admin/support sends messages on any ticket
 DO $$ BEGIN
-  CREATE POLICY "admin_sends_support_messages"
-    ON public.support_messages FOR INSERT
+  DROP POLICY IF EXISTS "admin_sends_support_messages" ON public.support_messages;
+CREATE POLICY "admin_sends_support_messages"
+  ON public.support_messages FOR INSERT
     WITH CHECK (
       sender_type = 'support'
       AND EXISTS (
@@ -999,36 +1031,47 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
+ALTER TABLE public.admin_invitations DROP CONSTRAINT IF EXISTS admin_invitations_admin_type_check;
 ALTER TABLE public.admin_invitations ADD CONSTRAINT admin_invitations_admin_type_check
   CHECK (admin_type IN ('regional_manager', 'regular_admin', 'accountant', 'customer_service'));
 
 -- 4. RLS policies using role::text cast to avoid enum commit issue
 DO $$ BEGIN
-  CREATE POLICY "cs_reads_all_tickets" ON public.support_tickets FOR SELECT
+  DROP POLICY IF EXISTS "cs_reads_all_tickets" ON public.support_tickets;
+CREATE POLICY "cs_reads_all_tickets"
+  ON public.support_tickets FOR SELECT
     USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role::text = 'customer_service'));
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE POLICY "cs_updates_tickets" ON public.support_tickets FOR UPDATE
+  DROP POLICY IF EXISTS "cs_updates_tickets" ON public.support_tickets;
+CREATE POLICY "cs_updates_tickets"
+  ON public.support_tickets FOR UPDATE
     USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role::text = 'customer_service'));
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE POLICY "cs_reads_all_support_messages" ON public.support_messages FOR SELECT
+  DROP POLICY IF EXISTS "cs_reads_all_support_messages" ON public.support_messages;
+CREATE POLICY "cs_reads_all_support_messages"
+  ON public.support_messages FOR SELECT
     USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role::text = 'customer_service'));
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE POLICY "cs_sends_support_messages" ON public.support_messages FOR INSERT
+  DROP POLICY IF EXISTS "cs_sends_support_messages" ON public.support_messages;
+CREATE POLICY "cs_sends_support_messages"
+  ON public.support_messages FOR INSERT
     WITH CHECK (sender_type = 'support' AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role::text = 'customer_service'));
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE POLICY "cs_reads_all_messages" ON public.messages FOR SELECT
+  DROP POLICY IF EXISTS "cs_reads_all_messages" ON public.messages;
+CREATE POLICY "cs_reads_all_messages"
+  ON public.messages FOR SELECT
     USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role::text = 'customer_service'));
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -1066,6 +1109,7 @@ CREATE INDEX IF NOT EXISTS idx_push_tokens_active
 ALTER TABLE push_tokens ENABLE ROW LEVEL SECURITY;
 
 -- Users can manage their own tokens
+DROP POLICY IF EXISTS "Users can manage own push tokens" ON push_tokens;
 CREATE POLICY "Users can manage own push tokens"
   ON push_tokens FOR ALL
   USING (auth.uid() = user_id)
@@ -1161,32 +1205,39 @@ ALTER TABLE public.price_change_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.price_change_logs ENABLE ROW LEVEL SECURITY;
 
 -- service_prices: anyone reads, super_admin manages
+DROP POLICY IF EXISTS "anyone reads service prices" ON public.service_prices;
 CREATE POLICY "anyone reads service prices"
   ON public.service_prices FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "super_admin manages service prices" ON public.service_prices;
 CREATE POLICY "super_admin manages service prices"
   ON public.service_prices FOR ALL
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'))
   WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
 
 -- price_change_requests: admin roles can read/insert, super_admin can update
+DROP POLICY IF EXISTS "admins read price requests" ON public.price_change_requests;
 CREATE POLICY "admins read price requests"
   ON public.price_change_requests FOR SELECT
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin', 'accountant')));
 
+DROP POLICY IF EXISTS "admins insert price requests" ON public.price_change_requests;
 CREATE POLICY "admins insert price requests"
   ON public.price_change_requests FOR INSERT
   WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin', 'accountant')));
 
+DROP POLICY IF EXISTS "super_admin updates price requests" ON public.price_change_requests;
 CREATE POLICY "super_admin updates price requests"
   ON public.price_change_requests FOR UPDATE
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
 
 -- price_change_logs: admin roles can read/insert
+DROP POLICY IF EXISTS "admins read price logs" ON public.price_change_logs;
 CREATE POLICY "admins read price logs"
   ON public.price_change_logs FOR SELECT
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin', 'accountant')));
 
+DROP POLICY IF EXISTS "admins insert price logs" ON public.price_change_logs;
 CREATE POLICY "admins insert price logs"
   ON public.price_change_logs FOR INSERT
   WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin', 'accountant')));
@@ -1315,7 +1366,8 @@ UPDATE public.payment_methods SET instructions_ar = 'سيتم خصم المبل�
 
 -- Allow admin role to read all payment methods (not just enabled)
 DROP POLICY IF EXISTS "public can read enabled payment methods" ON public.payment_methods;
-CREATE POLICY "public can read enabled payment methods" ON public.payment_methods
+CREATE POLICY "public can read enabled payment methods"
+  ON public.payment_methods
   FOR SELECT USING (
     is_enabled = true
     OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin'))
@@ -1794,11 +1846,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_dpr_one_default ON delivery_pricing_rules(
 ALTER TABLE delivery_pricing_rules ENABLE ROW LEVEL SECURITY;
 
 -- Anyone can read (customer app needs this)
-CREATE POLICY "anyone_reads_delivery_pricing" ON delivery_pricing_rules
+DROP POLICY IF EXISTS "anyone_reads_delivery_pricing" ON delivery_pricing_rules;
+CREATE POLICY "anyone_reads_delivery_pricing"
+  ON delivery_pricing_rules
   FOR SELECT USING (true);
 
 -- Super admin can manage
-CREATE POLICY "super_admin_manages_delivery_pricing" ON delivery_pricing_rules
+DROP POLICY IF EXISTS "super_admin_manages_delivery_pricing" ON delivery_pricing_rules;
+CREATE POLICY "super_admin_manages_delivery_pricing"
+  ON delivery_pricing_rules
   FOR ALL
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'))
   WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
@@ -1841,17 +1897,23 @@ CREATE TABLE IF NOT EXISTS public.delivery_pricing_change_requests (
 ALTER TABLE delivery_pricing_change_requests ENABLE ROW LEVEL SECURITY;
 
 -- Admin roles can read
-CREATE POLICY "admin_reads_dp_requests" ON delivery_pricing_change_requests
+DROP POLICY IF EXISTS "admin_reads_dp_requests" ON delivery_pricing_change_requests;
+CREATE POLICY "admin_reads_dp_requests"
+  ON delivery_pricing_change_requests
   FOR SELECT
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin', 'accountant')));
 
 -- Admin roles can insert
-CREATE POLICY "admin_inserts_dp_requests" ON delivery_pricing_change_requests
+DROP POLICY IF EXISTS "admin_inserts_dp_requests" ON delivery_pricing_change_requests;
+CREATE POLICY "admin_inserts_dp_requests"
+  ON delivery_pricing_change_requests
   FOR INSERT
   WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin')));
 
 -- Super admin can update (approve/reject)
-CREATE POLICY "super_admin_updates_dp_requests" ON delivery_pricing_change_requests
+DROP POLICY IF EXISTS "super_admin_updates_dp_requests" ON delivery_pricing_change_requests;
+CREATE POLICY "super_admin_updates_dp_requests"
+  ON delivery_pricing_change_requests
   FOR UPDATE
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'))
   WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
@@ -2017,11 +2079,13 @@ ALTER TABLE banner_change_requests ENABLE ROW LEVEL SECURITY;
 
 -- banners: anyone can read (customer app needs this)
 DROP POLICY IF EXISTS "banners_select" ON banners;
-CREATE POLICY "banners_select" ON banners FOR SELECT USING (true);
+CREATE POLICY "banners_select"
+  ON banners FOR SELECT USING (true);
 
 -- banners: only super_admin can manage
 DROP POLICY IF EXISTS "banners_manage" ON banners;
-CREATE POLICY "banners_manage" ON banners FOR ALL USING (
+CREATE POLICY "banners_manage"
+  ON banners FOR ALL USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin')
 ) WITH CHECK (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin')
@@ -2029,19 +2093,22 @@ CREATE POLICY "banners_manage" ON banners FOR ALL USING (
 
 -- banner_change_requests: admins can read
 DROP POLICY IF EXISTS "bcr_select" ON banner_change_requests;
-CREATE POLICY "bcr_select" ON banner_change_requests FOR SELECT USING (
+CREATE POLICY "bcr_select"
+  ON banner_change_requests FOR SELECT USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin','admin','accountant'))
 );
 
 -- banner_change_requests: super_admin + admin can insert
 DROP POLICY IF EXISTS "bcr_insert" ON banner_change_requests;
-CREATE POLICY "bcr_insert" ON banner_change_requests FOR INSERT WITH CHECK (
+CREATE POLICY "bcr_insert"
+  ON banner_change_requests FOR INSERT WITH CHECK (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin','admin'))
 );
 
 -- banner_change_requests: only super_admin can update (approve/reject)
 DROP POLICY IF EXISTS "bcr_update" ON banner_change_requests;
-CREATE POLICY "bcr_update" ON banner_change_requests FOR UPDATE USING (
+CREATE POLICY "bcr_update"
+  ON banner_change_requests FOR UPDATE USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin')
 ) WITH CHECK (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin')
@@ -3229,7 +3296,9 @@ CREATE INDEX IF NOT EXISTS idx_push_tokens_active ON public.push_tokens (is_acti
 ALTER TABLE public.push_tokens ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'push_tokens' AND policyname = 'Users can manage own push tokens') THEN
-    CREATE POLICY "Users can manage own push tokens" ON public.push_tokens FOR ALL
+    DROP POLICY IF EXISTS "Users can manage own push tokens" ON public.push_tokens;
+CREATE POLICY "Users can manage own push tokens"
+  ON public.push_tokens FOR ALL
       USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
   END IF;
 END $$;
@@ -3295,7 +3364,7 @@ BEGIN
   IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'complete_partner_onboarding') THEN
     EXECUTE 'DROP FUNCTION public.complete_partner_onboarding(UUID)';
     EXECUTE $fn$
-    CREATE FUNCTION public.complete_partner_onboarding(p_user_id UUID)
+    CREATE OR REPLACE FUNCTION public.complete_partner_onboarding(p_user_id UUID)
     RETURNS JSONB
     LANGUAGE plpgsql
     SECURITY DEFINER
@@ -3408,6 +3477,7 @@ DROP POLICY IF EXISTS "driver sees ready orders" ON public.orders;
 DROP POLICY IF EXISTS "driver updates own orders" ON public.orders;
 
 -- Recreate with proper restrictions
+DROP POLICY IF EXISTS "driver sees available orders" ON public.orders;
 CREATE POLICY "driver sees available orders"
   ON public.orders FOR SELECT
   USING (
@@ -3422,10 +3492,12 @@ CREATE POLICY "driver sees available orders"
     )
   );
 
+DROP POLICY IF EXISTS "driver sees own claimed orders" ON public.orders;
 CREATE POLICY "driver sees own claimed orders"
   ON public.orders FOR SELECT
   USING (driver_id = auth.uid());
 
+DROP POLICY IF EXISTS "driver updates own claimed orders" ON public.orders;
 CREATE POLICY "driver updates own claimed orders"
   ON public.orders FOR UPDATE
   USING (driver_id = auth.uid())
@@ -3466,6 +3538,7 @@ CREATE TRIGGER trg_prevent_partner_sensitive_update
   FOR EACH ROW EXECUTE FUNCTION public.prevent_partner_sensitive_update();
 
 -- Recreate the partner update policy
+DROP POLICY IF EXISTS "partner can update own store" ON public.partners;
 CREATE POLICY "partner can update own store"
   ON public.partners FOR UPDATE
   USING (user_id = auth.uid())
@@ -3752,6 +3825,7 @@ DROP POLICY IF EXISTS "messages_insert_own" ON public.messages;
 DROP POLICY IF EXISTS "messages_admin_full_access" ON public.messages;
 
 -- SELECT: User is a participant (sender, customer on order, driver on order, or partner's user)
+DROP POLICY IF EXISTS "messages_select_participant" ON public.messages;
 CREATE POLICY "messages_select_participant"
   ON public.messages FOR SELECT
   USING (
@@ -3777,6 +3851,7 @@ CREATE POLICY "messages_select_participant"
   );
 
 -- INSERT: sender_id must be auth.uid() (no impersonation)
+DROP POLICY IF EXISTS "messages_insert_own" ON public.messages;
 CREATE POLICY "messages_insert_own"
   ON public.messages FOR INSERT
   WITH CHECK (sender_id = auth.uid());
@@ -3886,6 +3961,7 @@ CREATE POLICY "notifications_admin_full"
 
 DROP POLICY IF EXISTS "driver updates assigned requests" ON public.delivery_requests;
 
+DROP POLICY IF EXISTS "delivery_requests_update_participant" ON public.delivery_requests;
 CREATE POLICY "delivery_requests_update_participant"
   ON public.delivery_requests FOR UPDATE
   USING (
@@ -4095,9 +4171,9 @@ CREATE TABLE IF NOT EXISTS admin_assignments (
 );
 
 -- Create index for faster queries
-CREATE INDEX idx_admin_assignments_admin_id ON admin_assignments(admin_id);
-CREATE INDEX idx_admin_assignments_partner_id ON admin_assignments(partner_id);
-CREATE INDEX idx_admin_assignments_status ON admin_assignments(status);
+CREATE INDEX IF NOT EXISTS idx_admin_assignments_admin_id ON admin_assignments(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_assignments_partner_id ON admin_assignments(partner_id);
+CREATE INDEX IF NOT EXISTS idx_admin_assignments_status ON admin_assignments(status);
 
 -- Create admin_logs table for audit trail
 CREATE TABLE IF NOT EXISTS admin_logs (
@@ -4111,21 +4187,23 @@ CREATE TABLE IF NOT EXISTS admin_logs (
 );
 
 -- Create indexes for faster queries
-CREATE INDEX idx_admin_logs_admin_id ON admin_logs(admin_id);
-CREATE INDEX idx_admin_logs_action ON admin_logs(action);
-CREATE INDEX idx_admin_logs_entity_type ON admin_logs(entity_type);
-CREATE INDEX idx_admin_logs_created_at ON admin_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_admin_id ON admin_logs(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_action ON admin_logs(action);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_entity_type ON admin_logs(entity_type);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_created_at ON admin_logs(created_at DESC);
 
 -- Enable Row Level Security
 ALTER TABLE admin_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_logs ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Admins can view their own assignments
+DROP POLICY IF EXISTS "admins_view_own_assignments" ON admin_assignments;
 CREATE POLICY "admins_view_own_assignments"
   ON admin_assignments FOR SELECT
   USING (admin_id = auth.uid());
 
 -- RLS Policy: Super admins can view all assignments
+DROP POLICY IF EXISTS "super_admin_view_all_assignments" ON admin_assignments;
 CREATE POLICY "super_admin_view_all_assignments"
   ON admin_assignments FOR SELECT
   USING (
@@ -4137,6 +4215,7 @@ CREATE POLICY "super_admin_view_all_assignments"
   );
 
 -- RLS Policy: Super admins can manage assignments
+DROP POLICY IF EXISTS "super_admin_manage_assignments" ON admin_assignments;
 CREATE POLICY "super_admin_manage_assignments"
   ON admin_assignments FOR ALL
   USING (
@@ -4148,11 +4227,13 @@ CREATE POLICY "super_admin_manage_assignments"
   );
 
 -- RLS Policy: Admins can view their own logs
+DROP POLICY IF EXISTS "admins_view_own_logs" ON admin_logs;
 CREATE POLICY "admins_view_own_logs"
   ON admin_logs FOR SELECT
   USING (admin_id = auth.uid());
 
 -- RLS Policy: Super admins can view all logs
+DROP POLICY IF EXISTS "super_admin_view_all_logs" ON admin_logs;
 CREATE POLICY "super_admin_view_all_logs"
   ON admin_logs FOR SELECT
   USING (
@@ -4164,6 +4245,7 @@ CREATE POLICY "super_admin_view_all_logs"
   );
 
 -- RLS Policy: Super admins can create logs
+DROP POLICY IF EXISTS "super_admin_create_logs" ON admin_logs;
 CREATE POLICY "super_admin_create_logs"
   ON admin_logs FOR INSERT
   WITH CHECK (
@@ -4205,11 +4287,13 @@ VALUES (
 -- ── RLS for avatars ────────────────────────────────────────
 
 -- Anyone can read public avatars
+DROP POLICY IF EXISTS "avatars_public_read" ON storage.objects;
 CREATE POLICY "avatars_public_read"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'avatars');
 
 -- Authenticated users can upload to their own folder
+DROP POLICY IF EXISTS "avatars_authenticated_insert" ON storage.objects;
 CREATE POLICY "avatars_authenticated_insert"
   ON storage.objects FOR INSERT
   TO authenticated
@@ -4219,6 +4303,7 @@ CREATE POLICY "avatars_authenticated_insert"
   );
 
 -- Users can update/replace their own avatar
+DROP POLICY IF EXISTS "avatars_owner_update" ON storage.objects;
 CREATE POLICY "avatars_owner_update"
   ON storage.objects FOR UPDATE
   TO authenticated
@@ -4230,11 +4315,13 @@ CREATE POLICY "avatars_owner_update"
 -- ── RLS for partner-logos ──────────────────────────────────
 
 -- Anyone can read partner logos (they are public)
+DROP POLICY IF EXISTS "partner_logos_public_read" ON storage.objects;
 CREATE POLICY "partner_logos_public_read"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'partner-logos');
 
 -- Authenticated partners can upload to their own folder
+DROP POLICY IF EXISTS "partner_logos_authenticated_insert" ON storage.objects;
 CREATE POLICY "partner_logos_authenticated_insert"
   ON storage.objects FOR INSERT
   TO authenticated
@@ -4244,6 +4331,7 @@ CREATE POLICY "partner_logos_authenticated_insert"
   );
 
 -- Partners can update/replace their own logo
+DROP POLICY IF EXISTS "partner_logos_owner_update" ON storage.objects;
 CREATE POLICY "partner_logos_owner_update"
   ON storage.objects FOR UPDATE
   TO authenticated
@@ -4462,17 +4550,23 @@ ALTER TABLE public.promo_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.promo_code_usage ENABLE ROW LEVEL SECURITY;
 
 -- Everyone can read active promo codes
-CREATE POLICY "promo_codes_read" ON public.promo_codes
+DROP POLICY IF EXISTS "promo_codes_read" ON public.promo_codes;
+CREATE POLICY "promo_codes_read"
+  ON public.promo_codes
   FOR SELECT USING (is_active = true);
 
 -- Only admins can manage promo codes
-CREATE POLICY "promo_codes_admin" ON public.promo_codes
+DROP POLICY IF EXISTS "promo_codes_admin" ON public.promo_codes;
+CREATE POLICY "promo_codes_admin"
+  ON public.promo_codes
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin'))
   );
 
 -- Users can see their own usage
-CREATE POLICY "promo_usage_own" ON public.promo_code_usage
+DROP POLICY IF EXISTS "promo_usage_own" ON public.promo_code_usage;
+CREATE POLICY "promo_usage_own"
+  ON public.promo_code_usage
   FOR SELECT USING (customer_id = auth.uid());
 
 -- ══════════════════════════════════════════════════════════════════════

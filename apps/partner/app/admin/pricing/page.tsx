@@ -84,6 +84,12 @@ export default function PricingPage() {
   });
   const [ruleReason, setRuleReason] = useState("");
 
+  // Create new service state
+  const [showCreateService, setShowCreateService] = useState(false);
+  const [serviceForm, setServiceForm] = useState({
+    label_ar: "", description_ar: "", icon: "", price: "", service_key: "",
+  });
+
   const isAllowed =
     auth.isSuperAdmin || auth.isRegionalManager || auth.isAccountant;
 
@@ -230,6 +236,58 @@ export default function PricingPage() {
   };
 
   const filteredServices = services.filter((s) => s.category === activeTab);
+
+  // ---- Create new service handlers ----
+  const openCreateService = () => {
+    setShowCreateService(true);
+    setServiceForm({ label_ar: "", description_ar: "", icon: "", price: "", service_key: "" });
+    setErrorMsg(null);
+  };
+
+  const closeCreateService = () => {
+    setShowCreateService(false);
+    setErrorMsg(null);
+  };
+
+  const handleCreateService = async () => {
+    if (!auth.user || !auth.isSuperAdmin) return;
+    const f = serviceForm;
+    if (!f.label_ar.trim()) { setErrorMsg("يرجى إدخال اسم الخدمة"); return; }
+    if (!f.service_key.trim()) { setErrorMsg("يرجى إدخال مفتاح الخدمة (بالإنجليزية)"); return; }
+    const price = parseFloat(f.price);
+    if (isNaN(price) || price <= 0) { setErrorMsg("يرجى إدخال سعر صحيح أكبر من صفر"); return; }
+
+    setSaving(true); setErrorMsg(null);
+    try {
+      const supabase = getSupabase();
+      if (!supabase) return;
+
+      const maxSort = filteredServices.reduce((max, s) => Math.max(max, s.sort_order || 0), 0);
+      const { error } = await (supabase as any).from("service_prices").insert({
+        category: activeTab,
+        service_key: f.service_key.trim().toLowerCase().replace(/\s+/g, "_"),
+        label_ar: f.label_ar.trim(),
+        description_ar: f.description_ar.trim(),
+        icon: f.icon.trim() || "📦",
+        price,
+        price_unit: activeTab === "delivery_p2p" ? "per_trip" : "per_visit",
+        sort_order: maxSort + 1,
+      });
+      if (error) throw error;
+
+      setSuccessMsg("تم إضافة الخدمة بنجاح");
+      closeCreateService();
+      await loadData();
+    } catch (err: any) {
+      if (err?.message?.includes("duplicate key") || err?.message?.includes("unique")) {
+        setErrorMsg("هذا المفتاح موجود بالفعل في هذا التصنيف");
+      } else {
+        setErrorMsg("حدث خطأ: " + (err?.message || "غير معروف"));
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // ---- Delivery pricing rule handlers ----
   const openRuleEdit = (rule: DeliveryRule) => {
@@ -603,6 +661,21 @@ export default function PricingPage() {
       ) : (
       /* ======= SERVICE PRICES TABS ======= */
       <>
+      {/* Add service button (super admin only) */}
+      {auth.isSuperAdmin && (
+        <div style={{ marginBottom: 20 }}>
+          <button
+            onClick={openCreateService}
+            style={{
+              padding: "10px 24px", borderRadius: 12, border: "none",
+              background: `linear-gradient(135deg, ${C.primary}, #EC4899)`,
+              color: "white", fontWeight: 800, fontSize: 14, cursor: "pointer",
+            }}
+          >
+            + إضافة خدمة جديدة
+          </button>
+        </div>
+      )}
       {/* Service cards grid */}
       {filteredServices.length === 0 ? (
         <div
@@ -1142,6 +1215,77 @@ export default function PricingPage() {
                 color: "white", fontWeight: 800, fontSize: 14, cursor: saving ? "not-allowed" : "pointer",
               }}>
                 {saving ? "جارٍ الحفظ..." : auth.isSuperAdmin ? (showCreateRule ? "إنشاء" : "حفظ") : "إرسال الطلب"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============ Create Service Modal ============ */}
+      {showCreateService && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeCreateService(); }}
+        >
+          <div dir="rtl" style={{ background: C.surface, borderRadius: 16, padding: 24, maxWidth: 480, width: "90%", maxHeight: "85vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 900, color: C.text, margin: 0 }}>
+                إضافة خدمة جديدة — {TABS.find(t => t.key === activeTab)?.label}
+              </h2>
+              <button onClick={closeCreateService} style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: C.bg, fontSize: 18, cursor: "pointer", color: C.textMuted }}>x</button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 16 }}>
+              {/* Service name */}
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: C.textMuted, marginBottom: 6 }}>اسم الخدمة (عربي)</label>
+                <input value={serviceForm.label_ar} onChange={(e) => setServiceForm({ ...serviceForm, label_ar: e.target.value })}
+                  placeholder="مثال: توصيل خاص" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+              </div>
+              {/* Service key */}
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: C.textMuted, marginBottom: 6 }}>مفتاح الخدمة (إنجليزي فريد)</label>
+                <input value={serviceForm.service_key} onChange={(e) => setServiceForm({ ...serviceForm, service_key: e.target.value })}
+                  placeholder="مثال: express_delivery" dir="ltr" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 13, outline: "none", boxSizing: "border-box", textAlign: "left" }} />
+              </div>
+              {/* Description */}
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: C.textMuted, marginBottom: 6 }}>الوصف</label>
+                <input value={serviceForm.description_ar} onChange={(e) => setServiceForm({ ...serviceForm, description_ar: e.target.value })}
+                  placeholder="وصف مختصر للخدمة" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                {/* Icon */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: C.textMuted, marginBottom: 6 }}>الأيقونة (إيموجي)</label>
+                  <input value={serviceForm.icon} onChange={(e) => setServiceForm({ ...serviceForm, icon: e.target.value })}
+                    placeholder="📦" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 18, outline: "none", boxSizing: "border-box", textAlign: "center" }} />
+                </div>
+                {/* Price */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: C.textMuted, marginBottom: 6 }}>السعر (جنيه)</label>
+                  <input type="number" min={0} step="0.5" value={serviceForm.price} onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
+                    placeholder="0" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 16, fontWeight: 800, outline: "none", boxSizing: "border-box", textAlign: "center" }} />
+                </div>
+              </div>
+            </div>
+
+            {errorMsg && (
+              <div style={{ background: C.dangerSoft, border: `1px solid ${C.danger}`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, fontWeight: 700, color: C.danger }}>
+                {errorMsg}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button onClick={closeCreateService} style={{ flex: 1, padding: "12px", borderRadius: 10, border: `1px solid ${C.border}`, background: "transparent", color: C.text, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                إلغاء
+              </button>
+              <button onClick={handleCreateService} disabled={saving} style={{
+                flex: 1, padding: "12px", borderRadius: 10, border: "none",
+                background: saving ? C.textMuted : `linear-gradient(135deg, ${C.primary}, #EC4899)`,
+                color: "white", fontWeight: 800, fontSize: 14, cursor: saving ? "not-allowed" : "pointer",
+              }}>
+                {saving ? "جارٍ الإضافة..." : "إضافة الخدمة"}
               </button>
             </div>
           </div>

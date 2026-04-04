@@ -58,10 +58,12 @@ ALTER TABLE orders
 ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- Add foreign key constraint if it doesn't exist
-ALTER TABLE orders
-ADD CONSTRAINT fk_orders_partner_id
-FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE
-ON CONFLICT DO NOTHING;
+DO $$ BEGIN
+  ALTER TABLE orders
+  ADD CONSTRAINT fk_orders_partner_id
+  FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Create indexes for orders
 CREATE INDEX IF NOT EXISTS idx_orders_partner_id ON orders(partner_id);

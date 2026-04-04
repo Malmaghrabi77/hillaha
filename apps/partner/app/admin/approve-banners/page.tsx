@@ -88,7 +88,7 @@ export default function ApproveBannersPage() {
     setRequests(reqs);
 
     // Fetch requester profiles
-    const uniqueIds = [...new Set(reqs.map((r) => r.requested_by).filter(Boolean))];
+    const uniqueIds = Array.from(new Set(reqs.map((r) => r.requested_by).filter(Boolean)));
     if (uniqueIds.length > 0) {
       const { data: profilesData } = await (supabase as any)
         .from("profiles")

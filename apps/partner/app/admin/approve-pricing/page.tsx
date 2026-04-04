@@ -135,12 +135,10 @@ export default function ApprovePricingPage() {
       setDpRequests((dpRes.data || []) as DpChangeRequest[]);
 
       // Load requester profiles
-      const uniqueRequesterIds = [
-        ...new Set([
+      const uniqueRequesterIds = Array.from(new Set([
           ...allRequests.map((r) => r.requested_by),
           ...(dpRes.data || []).map((r: any) => r.requested_by),
-        ].filter(Boolean)),
-      ];
+        ].filter(Boolean)));
 
       if (uniqueRequesterIds.length > 0) {
         const { data: profilesData } = await (supabase as any)

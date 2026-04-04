@@ -1083,7 +1083,7 @@ CREATE INDEX IF NOT EXISTS idx_push_tokens_active
 ALTER TABLE push_tokens ENABLE ROW LEVEL SECURITY;
 
 -- Users can manage their own tokens
-DROP POLICY IF EXISTS "Users" ON push_tokens;
+DROP POLICY IF EXISTS "Users can manage own push tokens" ON push_tokens;
 CREATE POLICY "Users can manage own push tokens"
   ON push_tokens FOR ALL
   USING (auth.uid() = user_id)
@@ -1179,39 +1179,39 @@ ALTER TABLE public.price_change_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.price_change_logs ENABLE ROW LEVEL SECURITY;
 
 -- service_prices: anyone reads, super_admin manages
-DROP POLICY IF EXISTS "anyone" ON public.service_prices;
+DROP POLICY IF EXISTS "anyone reads service prices" ON public.service_prices;
 CREATE POLICY "anyone reads service prices"
   ON public.service_prices FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "super_admin" ON public.service_prices;
+DROP POLICY IF EXISTS "super_admin manages service prices" ON public.service_prices;
 CREATE POLICY "super_admin manages service prices"
   ON public.service_prices FOR ALL
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'))
   WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
 
 -- price_change_requests: admin roles can read/insert, super_admin can update
-DROP POLICY IF EXISTS "admins" ON public.price_change_requests;
+DROP POLICY IF EXISTS "admins read price requests" ON public.price_change_requests;
 CREATE POLICY "admins read price requests"
   ON public.price_change_requests FOR SELECT
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin', 'accountant')));
 
-DROP POLICY IF EXISTS "admins" ON public.price_change_requests;
+DROP POLICY IF EXISTS "admins insert price requests" ON public.price_change_requests;
 CREATE POLICY "admins insert price requests"
   ON public.price_change_requests FOR INSERT
   WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin', 'accountant')));
 
-DROP POLICY IF EXISTS "super_admin" ON public.price_change_requests;
+DROP POLICY IF EXISTS "super_admin updates price requests" ON public.price_change_requests;
 CREATE POLICY "super_admin updates price requests"
   ON public.price_change_requests FOR UPDATE
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
 
 -- price_change_logs: admin roles can read/insert
-DROP POLICY IF EXISTS "admins" ON public.price_change_logs;
+DROP POLICY IF EXISTS "admins read price logs" ON public.price_change_logs;
 CREATE POLICY "admins read price logs"
   ON public.price_change_logs FOR SELECT
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin', 'accountant')));
 
-DROP POLICY IF EXISTS "admins" ON public.price_change_logs;
+DROP POLICY IF EXISTS "admins insert price logs" ON public.price_change_logs;
 CREATE POLICY "admins insert price logs"
   ON public.price_change_logs FOR INSERT
   WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin', 'admin', 'accountant')));
@@ -3379,7 +3379,7 @@ DROP POLICY IF EXISTS "driver sees ready orders" ON public.orders;
 DROP POLICY IF EXISTS "driver updates own orders" ON public.orders;
 
 -- Recreate with proper restrictions
-DROP POLICY IF EXISTS "driver" ON public.orders;
+DROP POLICY IF EXISTS "driver sees available orders" ON public.orders;
 CREATE POLICY "driver sees available orders"
   ON public.orders FOR SELECT
   USING (
@@ -3394,12 +3394,12 @@ CREATE POLICY "driver sees available orders"
     )
   );
 
-DROP POLICY IF EXISTS "driver" ON public.orders;
+DROP POLICY IF EXISTS "driver sees own claimed orders" ON public.orders;
 CREATE POLICY "driver sees own claimed orders"
   ON public.orders FOR SELECT
   USING (driver_id = auth.uid());
 
-DROP POLICY IF EXISTS "driver" ON public.orders;
+DROP POLICY IF EXISTS "driver updates own claimed orders" ON public.orders;
 CREATE POLICY "driver updates own claimed orders"
   ON public.orders FOR UPDATE
   USING (driver_id = auth.uid())
@@ -3441,7 +3441,7 @@ CREATE TRIGGER trg_prevent_partner_sensitive_update
   FOR EACH ROW EXECUTE FUNCTION public.prevent_partner_sensitive_update();
 
 -- Recreate the partner update policy
-DROP POLICY IF EXISTS "partner" ON public.partners;
+DROP POLICY IF EXISTS "partner can update own store" ON public.partners;
 CREATE POLICY "partner can update own store"
   ON public.partners FOR UPDATE
   USING (user_id = auth.uid())

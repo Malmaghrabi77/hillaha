@@ -2428,6 +2428,7 @@ GRANT EXECUTE ON FUNCTION public.generate_invitation_token(UUID) TO authenticate
 -- Fallback: manually creates partner for existing users who signed up
 -- but don't have a partners row (for existing accounts)
 
+DROP FUNCTION IF EXISTS public.complete_partner_onboarding(UUID);
 CREATE OR REPLACE FUNCTION public.complete_partner_onboarding(p_user_id UUID)
 RETURNS UUID
 LANGUAGE plpgsql

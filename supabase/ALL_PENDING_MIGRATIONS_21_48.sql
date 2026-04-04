@@ -1132,7 +1132,10 @@ CREATE TABLE IF NOT EXISTS public.service_prices (
 );
 
 CREATE INDEX IF NOT EXISTS idx_service_prices_category ON service_prices(category);
+DO $$ BEGIN
 CREATE INDEX IF NOT EXISTS idx_service_prices_active ON service_prices(is_active) WHERE is_active = true;
+EXCEPTION WHEN undefined_column OR undefined_table THEN NULL;
+END $$;
 
 -- ============================================================
 -- 2. Price Change Requests (Approval Workflow)
@@ -1749,9 +1752,15 @@ CREATE TABLE IF NOT EXISTS public.delivery_pricing_rules (
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+DO $$ BEGIN
 CREATE INDEX IF NOT EXISTS idx_dpr_active ON delivery_pricing_rules(is_active) WHERE is_active = true;
+EXCEPTION WHEN undefined_column OR undefined_table THEN NULL;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_dpr_city ON delivery_pricing_rules(city);
+DO $$ BEGIN
 CREATE UNIQUE INDEX IF NOT EXISTS idx_dpr_one_default ON delivery_pricing_rules(is_default) WHERE is_default = true AND is_active = true;
+EXCEPTION WHEN undefined_column OR undefined_table THEN NULL;
+END $$;
 
 ALTER TABLE delivery_pricing_rules ENABLE ROW LEVEL SECURITY;
 
@@ -2111,7 +2120,10 @@ $$;
 
 -- ─── Indexes ────────────────────────────────────────────────────────────────
 
+DO $$ BEGIN
 CREATE INDEX IF NOT EXISTS idx_banners_active_position ON banners (position) WHERE is_active = true;
+EXCEPTION WHEN undefined_column OR undefined_table THEN NULL;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_bcr_status ON banner_change_requests (approval_status);
 
 
@@ -3197,7 +3209,10 @@ CREATE TABLE IF NOT EXISTS public.push_tokens (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_push_tokens_user_app ON public.push_tokens (user_id, app_type);
+DO $$ BEGIN
 CREATE INDEX IF NOT EXISTS idx_push_tokens_active ON public.push_tokens (is_active, app_type) WHERE is_active = true;
+EXCEPTION WHEN undefined_column OR undefined_table THEN NULL;
+END $$;
 ALTER TABLE public.push_tokens ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'push_tokens' AND policyname = 'Users can manage own push tokens') THEN

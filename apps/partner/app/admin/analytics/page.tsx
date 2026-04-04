@@ -24,7 +24,6 @@ const C = {
 interface AnalyticsData {
   monthlyRevenueData: { month: string; revenue: number }[];
   orderDistributionData: { name: string; value: number }[];
-  managerPerformanceData: { name: string; revenue: number; orders: number }[];
   userGrowthData: { month: string; customers: number; partners: number; drivers: number }[];
   topPartnersData: { name: string; revenue: number; orders: number }[];
 }
@@ -34,7 +33,6 @@ export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     monthlyRevenueData: [],
     orderDistributionData: [],
-    managerPerformanceData: [],
     userGrowthData: [],
     topPartnersData: [],
   });
@@ -170,7 +168,6 @@ export default function AnalyticsPage() {
       setAnalytics({
         monthlyRevenueData: monthlyData,
         orderDistributionData: orderDistribution,
-        managerPerformanceData: [],
         userGrowthData: userGrowthData,
         topPartnersData: topPartnersData,
       });
@@ -207,6 +204,10 @@ export default function AnalyticsPage() {
     );
   };
 
+  if (auth.loading) {
+    return <div style={{ padding: 40, textAlign: "center", color: "#6B6480" }}>جاري التحميل...</div>;
+  }
+
   if (loading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
@@ -227,10 +228,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
     );
-  }
-
-  if (auth.loading) {
-    return <div style={{ padding: 40, textAlign: "center", color: "#6B6480" }}>جاري التحميل...</div>;
   }
 
   if (!auth.isSuperAdmin && !auth.isAccountant) {

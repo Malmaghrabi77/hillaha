@@ -82,6 +82,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     }
 
     case "UPDATE_QTY": {
+      if (!state.items[action.id]) return state;
       if (action.qty <= 0) {
         const next = { ...state.items };
         delete next[action.id];

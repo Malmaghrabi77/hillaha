@@ -55,19 +55,19 @@ export default function ConsentScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={["top", "left", "right"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top", "left", "right"]}>
       {/* HEADER */}
       <View style={{
-        backgroundColor: C.surface, paddingBottom: 20,
-        paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: C.border,
+        backgroundColor: colors.surface, paddingBottom: 20,
+        paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: colors.border,
         alignItems: "center",
       }}>
         <Image
           source={require("../../assets/hillaha-logo.png")}
           style={{ width: 60, height: 60, resizeMode: "contain", marginBottom: 10 }}
         />
-        <Text style={{ fontSize: 20, fontWeight: "900", color: C.text }}>الشروط والأحكام</Text>
-        <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 4, textAlign: "center" }}>
+        <Text style={{ fontSize: 20, fontWeight: "900", color: colors.text }}>الشروط والأحكام</Text>
+        <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4, textAlign: "center" }}>
           يُرجى قراءة الاتفاقية كاملةً قبل المتابعة
         </Text>
       </View>
@@ -76,12 +76,12 @@ export default function ConsentScreen() {
         {TERMS_SECTIONS.map((section, i) => (
           <View key={i} style={{
             marginBottom: 16, padding: 16, borderRadius: 16,
-            backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+            backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
           }}>
-            <Text style={{ fontSize: 15, fontWeight: "900", color: C.primary, marginBottom: 8 }}>
+            <Text style={{ fontSize: 15, fontWeight: "900", color: colors.primary, marginBottom: 8 }}>
               {section.title}
             </Text>
-            <Text style={{ fontSize: 13, color: C.text, lineHeight: 22, textAlign: "right" }}>
+            <Text style={{ fontSize: 13, color: colors.text, lineHeight: 22, textAlign: "right" }}>
               {section.body}
             </Text>
           </View>
@@ -96,21 +96,21 @@ export default function ConsentScreen() {
           style={{
             flexDirection: "row", alignItems: "center", gap: 12,
             padding: 16, borderRadius: 16, marginTop: 8,
-            backgroundColor: accepted ? C.primarySoft : C.surface,
+            backgroundColor: accepted ? colors.primarySoft : colors.surface,
             borderWidth: 2,
-            borderColor: accepted ? C.primary : C.border,
+            borderColor: accepted ? colors.primary : colors.border,
           }}
         >
           <View style={{
             width: 24, height: 24, borderRadius: 8,
             borderWidth: 2,
-            borderColor: accepted ? C.primary : C.border,
-            backgroundColor: accepted ? C.primary : "transparent",
+            borderColor: accepted ? colors.primary : colors.border,
+            backgroundColor: accepted ? colors.primary : "transparent",
             justifyContent: "center", alignItems: "center",
           }}>
             {accepted && <Text style={{ color: "white", fontSize: 14, fontWeight: "900" }}>✓</Text>}
           </View>
-          <Text style={{ flex: 1, fontWeight: "700", color: C.text, fontSize: 14, lineHeight: 22 }}>
+          <Text style={{ flex: 1, fontWeight: "700", color: colors.text, fontSize: 14, lineHeight: 22 }}>
             أقر بأنني قرأت الشروط والأحكام وأوافق على الالتزام بها
           </Text>
         </Pressable>
@@ -126,14 +126,14 @@ export default function ConsentScreen() {
           }}
           style={{
             paddingVertical: 16, borderRadius: 16,
-            backgroundColor: accepted ? C.primary : C.border,
-            shadowColor: accepted ? C.primary : "transparent",
+            backgroundColor: accepted ? colors.primary : colors.border,
+            shadowColor: accepted ? colors.primary : "transparent",
             shadowOffset: { width: 0, height: 6 },
             shadowOpacity: 0.3, shadowRadius: 12, elevation: accepted ? 6 : 0,
           }}
         >
           <Text style={{
-            color: accepted ? "white" : C.textMuted,
+            color: accepted ? "white" : colors.textMuted,
             fontWeight: "900", textAlign: "center", fontSize: 16,
           }}>
             متابعة إلى التطبيق
@@ -147,7 +147,7 @@ export default function ConsentScreen() {
           }}
           style={{ marginTop: 14, alignItems: "center" }}
         >
-          <Text style={{ color: C.textMuted, fontSize: 13 }}>رجوع للصفحة السابقة</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 13 }}>رجوع للصفحة السابقة</Text>
         </Pressable>
 
         <View style={{ height: 30 }} />

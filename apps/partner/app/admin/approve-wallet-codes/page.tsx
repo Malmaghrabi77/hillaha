@@ -42,7 +42,7 @@ export default function ApproveWalletCodesPage() {
   useEffect(() => {
     if (auth.loading) return;
     if (auth.user && auth.isSuperAdmin) fetchPendingCodes();
-  }, [auth.user, auth.isSuperAdmin, auth.loading]);
+  }, [auth.user, auth.isSuperAdmin, auth.loading, filter]);
 
   const fetchPendingCodes = async () => {
     setLoading(true);
@@ -63,10 +63,6 @@ export default function ApproveWalletCodesPage() {
     if (!error && data) setCodes(data as PendingCode[]);
     setLoading(false);
   };
-
-  useEffect(() => {
-    if (auth.user && auth.isSuperAdmin) fetchPendingCodes();
-  }, [filter]);
 
   const handleAction = async (codeId: string, action: "approved" | "rejected") => {
     setActing(codeId);

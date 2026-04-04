@@ -140,16 +140,16 @@ export default function SubscriptionsScreen() {
         </Pressable>
       </View>
 
-      <View contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <View style={{ padding: 16, paddingBottom: 40 }}>
         {loading ? (
           <View style={{ alignItems: "center", paddingVertical: 40 }}>
             <Text style={{ fontSize: 48 }}>⏳</Text>
-            <Text style={{ color: C.textMuted, marginTop: 12 }}>جاري التحميل...</Text>
+            <Text style={{ color: colors.textMuted, marginTop: 12 }}>جاري التحميل...</Text>
           </View>
         ) : plans.length === 0 ? (
           <View style={{ alignItems: "center", paddingVertical: 40 }}>
             <Text style={{ fontSize: 48 }}>📦</Text>
-            <Text style={{ color: C.textMuted, marginTop: 12 }}>لا توجد خطط متاحة</Text>
+            <Text style={{ color: colors.textMuted, marginTop: 12 }}>لا توجد خطط متاحة</Text>
           </View>
         ) : (
           plans.map((plan) => (
@@ -157,18 +157,18 @@ export default function SubscriptionsScreen() {
               key={plan.id}
               style={{
                 borderWidth: 2,
-                borderColor: currentSubscription?.subscription_id === plan.id ? C.primary : "#E0E7FF",
+                borderColor: currentSubscription?.subscription_id === plan.id ? colors.primary : colors.border,
                 borderRadius: 16,
                 padding: 18,
                 marginBottom: 16,
-                backgroundColor: currentSubscription?.subscription_id === plan.id ? C.primarySoft : C.surface,
+                backgroundColor: currentSubscription?.subscription_id === plan.id ? colors.primarySoft : colors.surface,
               }}
             >
               {/* Badge */}
               {currentSubscription?.subscription_id === plan.id && (
                 <View style={{
                   alignSelf: "flex-start",
-                  backgroundColor: C.primary,
+                  backgroundColor: colors.primary,
                   paddingVertical: 4,
                   paddingHorizontal: 12,
                   borderRadius: 12,
@@ -178,33 +178,33 @@ export default function SubscriptionsScreen() {
                 </View>
               )}
 
-              <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, marginBottom: 4 }}>
+              <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text, marginBottom: 4 }}>
                 {plan.name}
               </Text>
 
-              <Text style={{ color: C.textMuted, marginBottom: 12, fontSize: 13 }}>
+              <Text style={{ color: colors.textMuted, marginBottom: 12, fontSize: 13 }}>
                 {plan.description}
               </Text>
 
               {/* Price */}
               <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4, marginBottom: 12 }}>
-                <Text style={{ fontSize: 28, fontWeight: "900", color: C.primary }}>
+                <Text style={{ fontSize: 28, fontWeight: "900", color: colors.primary }}>
                   {plan.price.toFixed(2)}
                 </Text>
-                <Text style={{ color: C.textMuted, fontSize: 14 }}>
+                <Text style={{ color: colors.textMuted, fontSize: 14 }}>
                   ج.م /{plan.plan_type === "monthly" ? "شهر" : plan.plan_type === "yearly" ? "سنة" : "مدى الحياة"}
                 </Text>
               </View>
 
               {/* Discount Badge */}
               <View style={{
-                backgroundColor: "#ECFDF5",
+                backgroundColor: isDarkMode ? "rgba(52,211,153,0.15)" : "#ECFDF5",
                 paddingVertical: 8,
                 paddingHorizontal: 12,
                 borderRadius: 8,
                 marginBottom: 12,
               }}>
-                <Text style={{ color: C.success, fontWeight: "900", fontSize: 13 }}>
+                <Text style={{ color: colors.success, fontWeight: "900", fontSize: 13 }}>
                   💰 خصم {plan.discount_percent}% على جميع الطلبات
                 </Text>
               </View>
@@ -213,7 +213,7 @@ export default function SubscriptionsScreen() {
               {plan.max_orders_per_month && (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
                   <Text style={{ fontSize: 16 }}>📦</Text>
-                  <Text style={{ color: C.text, fontWeight: "600" }}>
+                  <Text style={{ color: colors.text, fontWeight: "600" }}>
                     حد أقصى {plan.max_orders_per_month} طلب شهرياً
                   </Text>
                 </View>
@@ -224,7 +224,7 @@ export default function SubscriptionsScreen() {
                 onPress={() => subscribePlan(plan.id)}
                 disabled={currentSubscription?.subscription_id === plan.id || subscribing === plan.id}
                 style={{
-                  backgroundColor: currentSubscription?.subscription_id === plan.id ? "#D1D5DB" : C.primary,
+                  backgroundColor: currentSubscription?.subscription_id === plan.id ? (isDarkMode ? colors.border : "#D1D5DB") : colors.primary,
                   paddingVertical: 12,
                   borderRadius: 12,
                   alignItems: "center",

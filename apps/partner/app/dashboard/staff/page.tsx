@@ -68,8 +68,8 @@ export default function StaffPage() {
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
         setError("يجب تسجيل الدخول أولاً");
         return;
       }
@@ -77,7 +77,7 @@ export default function StaffPage() {
       const { data: profile } = await supabase
         .from("profiles")
         .select("partner_id")
-        .eq("id", session.user.id)
+        .eq("id", user.id)
         .single();
 
       const partnerId = (profile as any)?.partner_id;
@@ -111,11 +111,11 @@ export default function StaffPage() {
 
     try {
       const supabase = getSupabase();
-      const { data: { session } } = await supabase!.auth.getSession();
+      const { data: { user } } = await supabase!.auth.getUser();
       const { data: profile } = await supabase!
         .from("profiles")
         .select("partner_id")
-        .eq("id", session!.user!.id)
+        .eq("id", user!.id)
         .single();
 
       const { error: insertError } = await (supabase!

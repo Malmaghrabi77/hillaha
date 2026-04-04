@@ -20,16 +20,16 @@ export default function RootLayout() {
         if (!sb) { setBooted(true); return; }
 
         const result = await Promise.race([
-          sb.auth.getSession(),
+          sb.auth.getUser(),
           new Promise<{ data: null }>(r => setTimeout(() => r({ data: null }), 4_000)),
         ]);
 
-        if (result?.data?.session) {
+        if (result?.data?.user) {
           // Verify role is service_worker
           const { data: profile } = await sb
             .from("profiles")
             .select("role")
-            .eq("id", result.data.session.user.id)
+            .eq("id", result.data.user.id)
             .single();
           if (profile?.role === "service_worker") {
             router.replace("/(tabs)/bookings");

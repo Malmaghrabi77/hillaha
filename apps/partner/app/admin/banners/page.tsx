@@ -69,6 +69,9 @@ export default function BannersPage() {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (auth.loading) return;
@@ -97,12 +100,52 @@ export default function BannersPage() {
     setLoading(false);
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setErrorMsg("يرجى اختيار ملف صورة فقط");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMsg("حجم الصورة يجب أن لا يتجاوز 5 ميغابايت");
+      return;
+    }
+    setImageFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    // Revoke previous preview URL to avoid memory leak
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImagePreview(objectUrl);
+    setErrorMsg(null);
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("لا يوجد اتصال");
+    const ext = file.name.split(".").pop() || "jpg";
+    const fileName = `banner_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error } = await supabase.storage.from("banners").upload(fileName, file, {
+      cacheControl: "3600",
+      upsert: false,
+    });
+    if (error) throw new Error("فشل رفع الصورة: " + error.message);
+    const { data: urlData } = supabase.storage.from("banners").getPublicUrl(fileName);
+    return urlData.publicUrl;
+  };
+
   const openCreate = () => {
     setForm({ ...DEFAULT_FORM });
     setReason("");
     setErrorMsg(null);
     setSuccessMsg(null);
     setEditingBanner(null);
+    setImageFile(null);
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImagePreview(null);
     setShowCreate(true);
   };
 
@@ -122,6 +165,11 @@ export default function BannersPage() {
     setReason("");
     setErrorMsg(null);
     setSuccessMsg(null);
+    setImageFile(null);
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImagePreview(b.image || null);
     setEditingBanner(b);
     setShowCreate(false);
   };
@@ -131,6 +179,11 @@ export default function BannersPage() {
     setShowCreate(false);
     setErrorMsg(null);
     setSuccessMsg(null);
+    setImageFile(null);
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImagePreview(null);
   };
 
   const handleSave = async () => {
@@ -139,6 +192,12 @@ export default function BannersPage() {
 
     if (!form.title.trim()) {
       setErrorMsg("العنوان مطلوب");
+      return;
+    }
+
+    // Mandatory image: must have existing image OR new file
+    if (!imageFile && !form.image) {
+      setErrorMsg("الصورة مطلوبة — يرجى رفع صورة");
       return;
     }
 
@@ -151,6 +210,14 @@ export default function BannersPage() {
     setErrorMsg(null);
 
     try {
+      // Upload new image if selected
+      let imageUrl = form.image.trim() || null;
+      if (imageFile) {
+        setUploading(true);
+        imageUrl = await uploadImage(imageFile);
+        setUploading(false);
+      }
+
       if (auth.isSuperAdmin) {
         // Direct save
         const payload = {
@@ -159,7 +226,7 @@ export default function BannersPage() {
           cta: form.cta.trim(),
           bg: form.bg.trim(),
           accent: form.accent.trim(),
-          image: form.image.trim() || null,
+          image: imageUrl,
           link_type: form.link_type,
           link_value: form.link_value.trim() || null,
           position: parseInt(form.position) || 0,
@@ -193,7 +260,7 @@ export default function BannersPage() {
           proposed_cta: form.cta.trim(),
           proposed_bg: form.bg.trim(),
           proposed_accent: form.accent.trim(),
-          proposed_image: form.image.trim() || null,
+          proposed_image: imageUrl,
           proposed_link_type: form.link_type,
           proposed_link_value: form.link_value.trim() || null,
           proposed_position: parseInt(form.position) || 0,
@@ -215,6 +282,7 @@ export default function BannersPage() {
       setErrorMsg(err.message || "حدث خطأ");
     } finally {
       setSaving(false);
+      setUploading(false);
     }
   };
 
@@ -547,21 +615,63 @@ export default function BannersPage() {
                 </div>
               </div>
 
-              {/* Image URL */}
+              {/* Image Upload */}
               <div>
                 <label style={{ fontSize: 13, fontWeight: 700, color: C.text, display: "block", marginBottom: 6 }}>
-                  رابط الصورة (اختياري)
+                  صورة البانر *
                 </label>
-                <input
-                  value={form.image}
-                  onChange={(e) => setForm({ ...form, image: e.target.value })}
-                  placeholder="https://..."
+                {imagePreview && (
+                  <div style={{ marginBottom: 10, position: "relative", display: "inline-block" }}>
+                    <img
+                      src={imagePreview}
+                      alt="معاينة"
+                      style={{
+                        width: 120, height: 80, objectFit: "cover", borderRadius: 12,
+                        border: `2px solid ${C.border}`,
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (imagePreview && imagePreview.startsWith("blob:")) {
+                          URL.revokeObjectURL(imagePreview);
+                        }
+                        setImageFile(null);
+                        setImagePreview(null);
+                        setForm({ ...form, image: "" });
+                      }}
+                      style={{
+                        position: "absolute", top: -8, right: -8,
+                        width: 24, height: 24, borderRadius: 12,
+                        background: C.danger, color: "white", border: "none",
+                        fontSize: 14, fontWeight: 700, cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+                <label
                   style={{
-                    width: "100%", padding: "10px 14px", borderRadius: 12,
-                    border: `1.5px solid ${C.border}`, fontSize: 14, direction: "ltr",
-                    boxSizing: "border-box",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    width: "100%", padding: "12px 14px", borderRadius: 12,
+                    border: `2px dashed ${(!imagePreview && !form.image) ? C.danger : C.border}`,
+                    background: C.bg, fontSize: 14, fontWeight: 700, color: C.primary,
+                    cursor: "pointer", boxSizing: "border-box",
                   }}
-                />
+                >
+                  📷 {imagePreview ? "تغيير الصورة" : "رفع صورة"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    style={{ display: "none" }}
+                  />
+                </label>
+                <p style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>
+                  PNG, JPG, WebP — أقصى حجم 5 ميغابايت
+                </p>
               </div>
 
               {/* Link Type + Value */}
@@ -692,9 +802,9 @@ export default function BannersPage() {
                 }}>
                   {form.cta || "اطلب الآن"}
                 </div>
-                {form.image && (
+                {(imagePreview || form.image) && (
                   <img
-                    src={form.image}
+                    src={imagePreview || form.image}
                     alt=""
                     style={{
                       position: "absolute", left: 12, bottom: 10,
@@ -738,7 +848,7 @@ export default function BannersPage() {
                   fontWeight: 700, fontSize: 14, color: "white", cursor: saving ? "not-allowed" : "pointer",
                 }}
               >
-                {saving ? "جاري الحفظ..." : auth.isSuperAdmin ? "حفظ" : "إرسال الطلب"}
+                {saving ? (uploading ? "جاري رفع الصورة..." : "جاري الحفظ...") : auth.isSuperAdmin ? "حفظ" : "إرسال الطلب"}
               </button>
             </div>
           </div>

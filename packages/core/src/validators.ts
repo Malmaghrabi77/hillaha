@@ -66,7 +66,11 @@ export const DriverScheduleSchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}$/, 'صيغة الوقت غير صحيحة'),
   endTime: z.string().regex(/^\d{2}:\d{2}$/, 'صيغة الوقت غير صحيحة'),
 }).refine(
-  (data) => data.startTime < data.endTime,
+  (data) => {
+    const [sh, sm] = data.startTime.split(':').map(Number);
+    const [eh, em] = data.endTime.split(':').map(Number);
+    return (sh * 60 + sm) < (eh * 60 + em);
+  },
   { message: 'وقت الانتهاء يجب أن يكون بعد وقت البدء', path: ['endTime'] }
 );
 

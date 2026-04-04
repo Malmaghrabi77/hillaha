@@ -5,9 +5,9 @@ const nextConfig = {
   // Allow Next.js to compile workspace packages written in TypeScript directly
   transpilePackages: ["@hillaha/core", "@hillaha/ui"],
 
-  // Disable ESLint during build to avoid configuration issues
+  // ESLint runs during builds to catch issues early
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
 };
 

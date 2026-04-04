@@ -249,13 +249,13 @@ const generateOrderReceiptHTML = (receipt: OrderReceipt): string => {
     <div class="section">
       <div class="row">
         <span class="row-label">الإجمالي:</span>
-        <span class="row-value class="price">${receipt.subtotal.toFixed(2)} ج.م</span>
+        <span class="row-value price">${receipt.subtotal.toFixed(2)} ج.م</span>
       </div>
       ${
         receipt.discount > 0
           ? `<div class="row">
         <span class="row-label">الخصم:</span>
-        <span class="row-value class="price" style="color: #34D399;">-${receipt.discount.toFixed(2)} ج.م</span>
+        <span class="row-value price" style="color: #34D399;">-${receipt.discount.toFixed(2)} ج.م</span>
       </div>`
           : ''
       }
@@ -333,7 +333,7 @@ const generateUserReportHTML = (report: UserReport): string => {
       </div>
       <div class="row">
         <span class="row-label">إجمالي الإنفاق:</span>
-        <span class="row-value class="price" style="color: #8B5CF6;">${report.totalSpent.toFixed(2)} ج.م</span>
+        <span class="row-value price" style="color: #8B5CF6;">${report.totalSpent.toFixed(2)} ج.م</span>
       </div>
       <div class="row">
         <span class="row-label">متوسط قيمة الطلب:</span>
@@ -345,7 +345,7 @@ const generateUserReportHTML = (report: UserReport): string => {
       <div class="section-title">نقاط الولاء</div>
       <div class="row">
         <span class="row-label">نقاط متاحة:</span>
-        <span class="row-value class="price" style="color: #34D399;">${report.loyaltyPoints} نقطة</span>
+        <span class="row-value price" style="color: #34D399;">${report.loyaltyPoints} نقطة</span>
       </div>
       <div class="row">
         <span class="row-label">نقاط مستخدمة:</span>

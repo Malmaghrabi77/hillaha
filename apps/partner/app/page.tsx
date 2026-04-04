@@ -1,11 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
 
-// ─── TODO: استبدل هذه الروابط برابط التطبيق الحقيقي بعد النشر على المتاجر ───
+// ─── روابط المتاجر — التطبيق لم يُنشر بعد ───
 const STORE_URLS = {
-  playStore:   "https://play.google.com/store/apps/details?id=com.hillaha.customer",
-  appStore:    "https://apps.apple.com/app/hillaha/id000000000",
-  huaweiStore: "https://appgallery.huawei.com/app/C000000000",
+  playStore:   "#",
+  appStore:    "#",
+  huaweiStore: "#",
 };
 // ─────────────────────────────────────────────────────────────────────────────
 

@@ -27,8 +27,8 @@ export default function RegionalManagerApprovePartnersPage() {
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<Record<string, boolean>>({});
   const [rejecting, setRejecting] = useState<Record<string, boolean>>({});
-  const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
-  const [showRejectModal, setShowRejectModal] = useState<Record<string, boolean>>({});
+  const [rejectReason, setRejectReason] = useState("");
+  const [activeRejectId, setActiveRejectId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
   useEffect(() => {
@@ -90,7 +90,7 @@ export default function RegionalManagerApprovePartnersPage() {
   };
 
   const handleReject = async (invId: string) => {
-    const reason = rejectReason[invId] || "";
+    const reason = rejectReason;
 
     if (!reason.trim()) {
       alert("الرجاء إدخال سبب الرفض");
@@ -116,8 +116,8 @@ export default function RegionalManagerApprovePartnersPage() {
 
       if (err) throw err;
 
-      setShowRejectModal((prev) => ({ ...prev, [invId]: false }));
-      setRejectReason((prev) => ({ ...prev, [invId]: "" }));
+      setActiveRejectId(null);
+      setRejectReason("");
       await loadInvitations();
     } catch (err: any) {
       console.error("Error rejecting:", err);
@@ -250,7 +250,10 @@ export default function RegionalManagerApprovePartnersPage() {
                 </button>
 
                 <button
-                  onClick={() => setShowRejectModal((prev) => ({ ...prev, [inv.id]: true }))}
+                  onClick={() => {
+                    setActiveRejectId(inv.id);
+                    setRejectReason("");
+                  }}
                   style={{
                     background: C.danger,
                     color: "white",
@@ -265,88 +268,94 @@ export default function RegionalManagerApprovePartnersPage() {
                   ❌ رفض
                 </button>
               </div>
-
-              {/* Reject Modal */}
-              {showRejectModal[inv.id] && (
-                <div
-                  style={{
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: "rgba(0,0,0,0.5)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    zIndex: 1000,
-                  }}
-                >
-                  <div
-                    style={{
-                      background: C.surface,
-                      borderRadius: "12px",
-                      padding: "2rem",
-                      maxWidth: "400px",
-                      width: "90%",
-                    }}
-                  >
-                    <h3 style={{ color: C.text, marginBottom: "1rem" }}>سبب الرفض</h3>
-                    <textarea
-                      value={rejectReason[inv.id] || ""}
-                      onChange={(e) =>
-                        setRejectReason((prev) => ({ ...prev, [inv.id]: e.target.value }))
-                      }
-                      placeholder="أدخل السبب..."
-                      style={{
-                        width: "100%",
-                        border: `1px solid ${C.border}`,
-                        borderRadius: "8px",
-                        padding: "0.75rem",
-                        marginBottom: "1rem",
-                        fontFamily: "inherit",
-                        minHeight: "100px",
-                      }}
-                    />
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                      <button
-                        onClick={() => handleReject(inv.id)}
-                        disabled={rejecting[inv.id]}
-                        style={{
-                          background: C.danger,
-                          color: "white",
-                          border: "none",
-                          borderRadius: "6px",
-                          padding: "0.75rem 1.5rem",
-                          cursor: rejecting[inv.id] ? "not-allowed" : "pointer",
-                          opacity: rejecting[inv.id] ? 0.6 : 1,
-                          flex: 1,
-                          fontFamily: "inherit",
-                        }}
-                      >
-                        {rejecting[inv.id] ? "جاري..." : "رفض"}
-                      </button>
-                      <button
-                        onClick={() => setShowRejectModal((prev) => ({ ...prev, [inv.id]: false }))}
-                        style={{
-                          background: C.bg,
-                          color: C.text,
-                          border: `1px solid ${C.border}`,
-                          borderRadius: "6px",
-                          padding: "0.75rem 1.5rem",
-                          cursor: "pointer",
-                          flex: 1,
-                          fontFamily: "inherit",
-                        }}
-                      >
-                        إلغاء
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Reject Modal - rendered once outside the loop */}
+      {activeRejectId && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => {
+            setActiveRejectId(null);
+            setRejectReason("");
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: C.surface,
+              borderRadius: "12px",
+              padding: "2rem",
+              maxWidth: "400px",
+              width: "90%",
+            }}
+          >
+            <h3 style={{ color: C.text, marginBottom: "1rem" }}>سبب الرفض</h3>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="أدخل السبب..."
+              style={{
+                width: "100%",
+                border: `1px solid ${C.border}`,
+                borderRadius: "8px",
+                padding: "0.75rem",
+                marginBottom: "1rem",
+                fontFamily: "inherit",
+                minHeight: "100px",
+              }}
+            />
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                onClick={() => handleReject(activeRejectId)}
+                disabled={rejecting[activeRejectId]}
+                style={{
+                  background: C.danger,
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "0.75rem 1.5rem",
+                  cursor: rejecting[activeRejectId] ? "not-allowed" : "pointer",
+                  opacity: rejecting[activeRejectId] ? 0.6 : 1,
+                  flex: 1,
+                  fontFamily: "inherit",
+                }}
+              >
+                {rejecting[activeRejectId] ? "جاري..." : "رفض"}
+              </button>
+              <button
+                onClick={() => {
+                  setActiveRejectId(null);
+                  setRejectReason("");
+                }}
+                style={{
+                  background: C.bg,
+                  color: C.text,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: "6px",
+                  padding: "0.75rem 1.5rem",
+                  cursor: "pointer",
+                  flex: 1,
+                  fontFamily: "inherit",
+                }}
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

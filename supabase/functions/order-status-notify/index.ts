@@ -95,6 +95,17 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Verify service role key (this function is called from DB triggers only)
+    const authHeader = req.headers.get("Authorization");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const token = authHeader?.replace("Bearer ", "");
+    if (token !== serviceKey) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
+      );
+    }
+
     const body = await req.json();
 
     // Support both direct calls and Supabase Database Webhook format

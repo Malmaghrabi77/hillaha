@@ -114,6 +114,12 @@ export default function AdminRestrictionsPage() {
   const handleAddRestriction = async () => {
     if (!selectedAdmin || !newRestriction.restricted_function) return;
 
+    // Prevent freezing super_admin accounts
+    if (selectedAdmin.role === "super_admin") {
+      alert("لا يمكن تجميد حساب السوبر أدمن");
+      return;
+    }
+
     try {
       const supabase = getSupabase();
       if (!supabase || !auth.user) return;
@@ -204,7 +210,7 @@ export default function AdminRestrictionsPage() {
             إدارة التجميدات والقيود على الادمنة
           </p>
         </div>
-        {selectedAdmin && (
+        {selectedAdmin && selectedAdmin.role !== "super_admin" && (
           <button
             onClick={() => setIsModalOpen(true)}
             style={{
@@ -220,6 +226,18 @@ export default function AdminRestrictionsPage() {
           >
             🔒 إضافة تجميد
           </button>
+        )}
+        {selectedAdmin && selectedAdmin.role === "super_admin" && (
+          <span style={{
+            padding: "12px 24px",
+            borderRadius: 12,
+            background: C.warningLight,
+            color: C.warning,
+            fontWeight: 700,
+            fontSize: 13,
+          }}>
+            👑 حساب سوبر أدمن — لا يمكن تجميده
+          </span>
         )}
       </div>
 

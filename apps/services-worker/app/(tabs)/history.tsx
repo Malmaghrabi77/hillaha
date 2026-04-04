@@ -40,9 +40,13 @@ export default function History() {
     const sb = getSB();
     if (!sb) { setLoading(false); return; }
     try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
       const { data } = await sb
         .from("service_bookings")
         .select("*")
+        .eq("worker_id", user.id)
         .eq("status", "completed")
         .order("created_at", { ascending: false })
         .limit(50);

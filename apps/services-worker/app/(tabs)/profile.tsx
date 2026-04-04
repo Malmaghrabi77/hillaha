@@ -32,7 +32,7 @@ export default function Profile() {
 
       const [{ data: prof }, { data: jobs }] = await Promise.all([
         sb.from("profiles").select("full_name, phone, role").eq("id", user.id).single(),
-        sb.from("service_bookings").select("price, status"),
+        sb.from("service_bookings").select("price, status").eq("worker_id", user.id),
       ]);
       if (prof) setProfile(prof);
       if (jobs) {

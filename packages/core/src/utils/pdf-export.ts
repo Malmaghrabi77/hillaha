@@ -298,7 +298,7 @@ export const generateDailySummary = async (
   pdf.text(`الطلبات المُلغاة: ${stats.cancelledOrders}`, 200, detailsY + 8, {
     align: "right",
   });
-  pdf.text(`معدل الإتمام: ${((stats.completedOrders / stats.totalOrders) * 100).toFixed(1)}%`, 200, detailsY + 16, {
+  pdf.text(`معدل الإتمام: ${stats.totalOrders > 0 ? ((stats.completedOrders / stats.totalOrders) * 100).toFixed(1) : '0.0'}%`, 200, detailsY + 16, {
     align: "right",
   });
 

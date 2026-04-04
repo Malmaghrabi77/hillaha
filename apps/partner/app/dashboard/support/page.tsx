@@ -66,10 +66,10 @@ export default function SupportPage() {
       const supabase = getSupabase();
       if (!supabase) { setLoading(false); return; }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setLoading(false); return; }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-      const userId = session.user.id;
+      const userId = user.id;
 
       // Try to get an existing open ticket
       const { data: existingTickets, error: fetchErr } = await (supabase as any)
@@ -176,16 +176,16 @@ export default function SupportPage() {
       const supabase = getSupabase();
       if (!supabase) return;
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
       const { error } = await (supabase as any)
         .from("support_messages")
         .insert({
           ticket_id: ticket.id,
           sender_type: "partner",
-          sender_id: session.user.id,
-          sender_name: session.user.user_metadata?.name || session.user.email || "شريك",
+          sender_id: user.id,
+          sender_name: user.user_metadata?.name || user.email || "شريك",
           message: text,
         });
 

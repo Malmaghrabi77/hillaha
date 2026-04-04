@@ -44,13 +44,13 @@ export default function SettingsPage() {
       const sb = getSupabase();
       if (!sb) { setLoading(false); return; }
 
-      const { data: { session } } = await sb.auth.getSession();
-      if (!session) { setLoading(false); return; }
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
       const { data } = await sb
         .from("partners")
         .select("id, name, logo_url, address, city")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (data) setProfile(data);
@@ -91,10 +91,10 @@ export default function SettingsPage() {
       const sb = getSupabase();
       if (!sb) throw new Error("خطأ في الاتصال");
 
-      const { data: { session } } = await sb.auth.getSession();
-      if (!session) throw new Error("غير مسجل الدخول");
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) throw new Error("غير مسجل الدخول");
 
-      const userId   = session.user.id;
+      const userId   = user.id;
       const ext      = file.name.split(".").pop() ?? "jpg";
       const filePath = `${userId}/logo.${ext}`;
 

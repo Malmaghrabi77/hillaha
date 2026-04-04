@@ -152,10 +152,10 @@ export default function PartnerChat() {
       >
         {/* Header */}
       <View style={{
-        backgroundColor: C.surface,
+        backgroundColor: colors.surface,
         paddingTop: Platform.OS === "android" ? 18 : 54,
         paddingHorizontal: 16, paddingBottom: 16,
-        borderBottomWidth: 1, borderColor: C.border,
+        borderBottomWidth: 1, borderColor: colors.border,
         flexDirection: "row", alignItems: "center", gap: 12,
       }}>
         <Pressable
@@ -165,15 +165,15 @@ export default function PartnerChat() {
           }}
           style={{
             width: 40, height: 40, borderRadius: 12,
-            backgroundColor: C.primarySoft,
+            backgroundColor: colors.primarySoft,
             justifyContent: "center", alignItems: "center",
           }}
         >
           <Text style={{ fontSize: 18 }}>←</Text>
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: C.text }}>🏪 {partnerName}</Text>
-          <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>المتجر</Text>
+          <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>🏪 {partnerName}</Text>
+          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>المتجر</Text>
         </View>
         {partnerPhone && (
           <Pressable
@@ -210,20 +210,20 @@ export default function PartnerChat() {
               maxWidth: "80%",
             }}>
               <View style={{
-                backgroundColor: isCustomer ? C.primary : C.surface,
+                backgroundColor: isCustomer ? colors.primary : colors.surface,
                 borderRadius: 16, padding: 12,
                 borderWidth: isCustomer ? 0 : 1,
-                borderColor: isCustomer ? "transparent" : C.border,
+                borderColor: isCustomer ? "transparent" : colors.border,
               }}>
                 <Text style={{
-                  color: isCustomer ? "white" : C.text,
+                  color: isCustomer ? "white" : colors.text,
                   fontSize: 14, fontWeight: "500",
                 }}>
                   {item.message}
                 </Text>
               </View>
               <Text style={{
-                fontSize: 11, color: C.textMuted, marginTop: 4,
+                fontSize: 11, color: colors.textMuted, marginTop: 4,
                 alignSelf: isCustomer ? "flex-end" : "flex-start",
               }}>
                 {new Date(item.created_at).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}
@@ -234,8 +234,8 @@ export default function PartnerChat() {
         ListEmptyComponent={
           <View style={{ alignItems: "center", marginVertical: 40 }}>
             <Text style={{ fontSize: 48, marginBottom: 12 }}>💬</Text>
-            <Text style={{ color: C.textMuted, fontSize: 14 }}>لا توجد رسائل حتى الآن</Text>
-            <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>ابدأ محادثة مع المتجر</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 14 }}>لا توجد رسائل حتى الآن</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>ابدأ محادثة مع المتجر</Text>
           </View>
         }
         onEndReachedThreshold={0.5}
@@ -244,8 +244,8 @@ export default function PartnerChat() {
 
       {/* Input */}
       <View style={{
-        backgroundColor: C.surface,
-        borderTopWidth: 1, borderColor: C.border,
+        backgroundColor: colors.surface,
+        borderTopWidth: 1, borderColor: colors.border,
         paddingHorizontal: 12, paddingVertical: 8,
         paddingBottom: Platform.OS === "ios" ? 20 : 8,
         flexDirection: "row", alignItems: "center", gap: 8,
@@ -254,11 +254,11 @@ export default function PartnerChat() {
           value={newMessage}
           onChangeText={setNewMessage}
           placeholder="اكتب رسالة..."
-          placeholderTextColor={C.textMuted}
+          placeholderTextColor={colors.textMuted}
           style={{
-            flex: 1, backgroundColor: C.primarySoft,
+            flex: 1, backgroundColor: colors.primarySoft,
             borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10,
-            fontSize: 14, color: C.text, textAlign: "right",
+            fontSize: 14, color: colors.text, textAlign: "right",
           }}
           multiline
           maxLength={500}
@@ -268,7 +268,7 @@ export default function PartnerChat() {
           disabled={!newMessage.trim()}
           style={{
             width: 40, height: 40, borderRadius: 20,
-            backgroundColor: newMessage.trim() ? C.primary : C.primarySoft,
+            backgroundColor: newMessage.trim() ? colors.primary : colors.primarySoft,
             justifyContent: "center", alignItems: "center",
           }}
         >

@@ -41,23 +41,21 @@ export function useAdminAuth(): AdminAuthContext {
     try {
       const supabase = getSupabase();
       if (!supabase) {
-        console.error("Supabase client not initialized");
         setAuth(prev => ({ ...prev, loading: false }));
         router.push("/login");
         return;
       }
 
-      // Get current session
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session?.user) {
-        console.log("No active session");
+      // Get current user
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) {
         setAuth(prev => ({ ...prev, loading: false }));
         router.push("/login");
         return;
       }
 
-      const userId = sessionData.session.user.id;
-      const email = sessionData.session.user.email || "";
+      const userId = userData.user.id;
+      const email = userData.user.email || "";
 
       // Get user role and admin_type
       const { data: profile, error: profileError } = await supabase
@@ -67,14 +65,12 @@ export function useAdminAuth(): AdminAuthContext {
         .single();
 
       if (profileError) {
-        console.error("Error fetching profile:", profileError);
         setAuth(prev => ({ ...prev, loading: false }));
         router.push("/login");
         return;
       }
 
       if (!profile) {
-        console.error("Profile not found for user:", userId);
         setAuth(prev => ({ ...prev, loading: false }));
         router.push("/login");
         return;
@@ -84,7 +80,6 @@ export function useAdminAuth(): AdminAuthContext {
       const adminType = (profile as any)?.admin_type as string | null;
 
       if (!role) {
-        console.error("Role not found in profile");
         setAuth(prev => ({ ...prev, loading: false }));
         router.push("/login");
         return;
@@ -93,7 +88,6 @@ export function useAdminAuth(): AdminAuthContext {
       const isAdmin = role === "admin" || role === "super_admin" || role === "accountant" || role === "customer_service";
 
       if (!isAdmin) {
-        console.warn("User does not have admin role. Role:", role);
         setAuth(prev => ({ ...prev, loading: false }));
         router.push("/dashboard");
         return;
@@ -105,16 +99,6 @@ export function useAdminAuth(): AdminAuthContext {
       const isRegionalManager = adminType === "regional_manager";
       const isRegularAdmin = adminType === "regular_admin";
 
-      console.log("Admin auth successful.", {
-        userId,
-        role,
-        adminType,
-        isSuperAdmin,
-        isAccountant,
-        isCustomerService,
-        isRegionalManager,
-        isRegularAdmin,
-      });
 
       setAuth({
         user: { id: userId, email },
@@ -128,8 +112,7 @@ export function useAdminAuth(): AdminAuthContext {
         adminType: (adminType as "regional_manager" | "regular_admin") || null,
         loading: false,
       });
-    } catch (error) {
-      console.error("Error checking admin auth:", error);
+    } catch {
       setAuth(prev => ({ ...prev, loading: false }));
       router.push("/login");
     }

@@ -49,10 +49,10 @@ export default function CSLayout({ children }: { children: React.ReactNode }) {
       }
 
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      if (!session?.user) {
+      if (!user) {
         router.push("/admin-login");
         return;
       }
@@ -60,7 +60,7 @@ export default function CSLayout({ children }: { children: React.ReactNode }) {
       const { data: profile } = await (supabase as any)
         .from("profiles")
         .select("id, email, full_name, role")
-        .eq("id", session.user.id)
+        .eq("id", user.id)
         .single();
 
       if (!profile || profile.role !== "customer_service") {
@@ -70,7 +70,7 @@ export default function CSLayout({ children }: { children: React.ReactNode }) {
 
       setUser({
         id: profile.id,
-        email: profile.email || session.user.email || "",
+        email: profile.email || user.email || "",
         full_name: profile.full_name,
         role: profile.role,
       });

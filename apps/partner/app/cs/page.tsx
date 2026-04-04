@@ -84,15 +84,15 @@ export default function CSDashboardPage() {
       if (!supabase) return;
 
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.user) return;
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
 
       // Get agent profile
       const { data: profile } = await (supabase as any)
         .from("profiles")
         .select("full_name, email, role")
-        .eq("id", session.user.id)
+        .eq("id", user.id)
         .single();
 
       if (profile) {

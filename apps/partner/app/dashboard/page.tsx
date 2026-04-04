@@ -106,7 +106,7 @@ export default function Dashboard() {
       }
       const { data: partnerData, error: partnerError } = await ratingQuery;
 
-      if (partnerError) console.log("Partner rating not available");
+      // partnerError is non-critical; rating simply defaults to 0
 
       setStats({
         todayOrders: todayOrders.length,

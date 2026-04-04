@@ -43,18 +43,17 @@ export default function AnalyticsPage() {
       }
 
       // Get the current partner ID from session/auth
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
         setError("يجب تسجيل الدخول أولاً");
         setLoading(false);
         return;
       }
 
-      // Get partner ID from profiles
       const { data: profile } = await supabase
         .from("profiles")
         .select("partner_id")
-        .eq("id", session.user.id)
+        .eq("id", user.id)
         .single();
 
       const partnerId = (profile as any)?.partner_id;
@@ -208,9 +207,10 @@ export default function AnalyticsPage() {
       const completedCount = ((completedOrders as any[]) || []).length;
       const completionRate = totalOrders > 0 ? (completedCount / totalOrders) * 100 : 0;
 
-      // Calculate average delivery time (assuming 30 minutes default, in real app would calculate from timestamps)
+      // TODO: Calculate avgDeliveryTime from real data (e.g., difference between order created_at and delivered_at)
       const avgDeliveryTime = 32;
-      const onTimeRate = 94.2; // In real app, calculate from delivery_time vs expected_time
+      // TODO: Calculate onTimeRate from real data (e.g., delivery_time vs expected_time)
+      const onTimeRate = 94.2;
 
       setData({
         hourlyOrders,

@@ -94,11 +94,7 @@ export default function ApprovePricingPage() {
   useEffect(() => {
     if (auth.loading) return;
     if (auth.user && auth.isSuperAdmin) loadRequests();
-  }, [auth.user, auth.isSuperAdmin, auth.loading]);
-
-  useEffect(() => {
-    if (auth.user && auth.isSuperAdmin) loadRequests();
-  }, [filter]);
+  }, [auth.user, auth.isSuperAdmin, auth.loading, filter]);
 
   useEffect(() => {
     if (toast) {

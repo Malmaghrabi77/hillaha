@@ -56,7 +56,7 @@ export function AppHeader({
   showBackButton = true,
   rightContent,
 }: AppHeaderProps) {
-  const { colors } = useDarkMode();
+  const { isDarkMode, colors } = useDarkMode();
 
   const handleBackPress = () => {
     if (trackingScreen) {
@@ -73,7 +73,7 @@ export function AppHeader({
 
   return (
     <>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.bg} />
 
       <View
         style={{

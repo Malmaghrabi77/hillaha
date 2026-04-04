@@ -135,24 +135,24 @@ export default function ReferralsScreen() {
         </Pressable>
       </View>
 
-      <View contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <View style={{ padding: 16, paddingBottom: 40 }}>
         {loading ? (
           <View style={{ alignItems: "center", paddingVertical: 40 }}>
             <Text style={{ fontSize: 48 }}>⏳</Text>
-            <Text style={{ color: C.textMuted, marginTop: 12 }}>جاري التحميل...</Text>
+            <Text style={{ color: colors.textMuted, marginTop: 12 }}>جاري التحميل...</Text>
           </View>
         ) : (
           <>
             {/* Referral Code Card */}
             <View style={{
-              backgroundColor: C.primarySoft,
+              backgroundColor: colors.primarySoft,
               padding: 18,
               borderRadius: 16,
               marginBottom: 20,
               borderWidth: 1,
-              borderColor: C.border,
+              borderColor: colors.border,
             }}>
-              <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: "700", marginBottom: 8 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: "700", marginBottom: 8 }}>
                 🔗 كود الإحالة الخاص بك
               </Text>
 
@@ -160,7 +160,7 @@ export default function ReferralsScreen() {
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 10,
-                backgroundColor: C.surface,
+                backgroundColor: colors.surface,
                 borderRadius: 12,
                 paddingHorizontal: 14,
                 paddingVertical: 12,
@@ -169,7 +169,7 @@ export default function ReferralsScreen() {
                 <Text style={{
                   fontSize: 16,
                   fontWeight: "900",
-                  color: C.primary,
+                  color: colors.primary,
                   flex: 1,
                   fontFamily: "monospace",
                 }}>
@@ -179,7 +179,7 @@ export default function ReferralsScreen() {
                 <Pressable
                   onPress={copyToClipboard}
                   style={{
-                    backgroundColor: C.primary,
+                    backgroundColor: colors.primary,
                     paddingVertical: 8,
                     paddingHorizontal: 12,
                     borderRadius: 8,
@@ -193,7 +193,7 @@ export default function ReferralsScreen() {
               <Pressable
                 onPress={shareReferral}
                 style={{
-                  backgroundColor: C.primary,
+                  backgroundColor: colors.primary,
                   paddingVertical: 12,
                   borderRadius: 12,
                   alignItems: "center",
@@ -207,34 +207,34 @@ export default function ReferralsScreen() {
 
             {/* Earnings Card */}
             <View style={{
-              backgroundColor: "#FEF3C7",
+              backgroundColor: isDarkMode ? colors.surfaceSecondary : "#FEF3C7",
               padding: 18,
               borderRadius: 16,
               marginBottom: 20,
               borderWidth: 1,
-              borderColor: "#FCD34D",
+              borderColor: isDarkMode ? colors.border : "#FCD34D",
             }}>
-              <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: "700", marginBottom: 8 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: "700", marginBottom: 8 }}>
                 💰 الأرباح الكلية
               </Text>
-              <Text style={{ fontSize: 32, fontWeight: "900", color: C.warning }}>
+              <Text style={{ fontSize: 32, fontWeight: "900", color: colors.warning }}>
                 {earnings.toFixed(2)} ج.م
               </Text>
-              <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>
                 من {referrals.filter(r => r.used).length} إحالة ناجحة
               </Text>
             </View>
 
             {/* How It Works */}
             <View style={{
-              backgroundColor: C.surface,
+              backgroundColor: colors.surface,
               padding: 18,
               borderRadius: 16,
               marginBottom: 20,
               borderWidth: 1,
-              borderColor: C.border,
+              borderColor: colors.border,
             }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: C.text, marginBottom: 12 }}>
+              <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 12 }}>
                 📋 كيفية الربح؟
               </Text>
 
@@ -254,8 +254,8 @@ export default function ReferralsScreen() {
                 >
                   <Text style={{ fontSize: 20 }}>{item.icon}</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: "900", color: C.text, marginBottom: 2 }}>{item.title}</Text>
-                    <Text style={{ color: C.textMuted, fontSize: 12 }}>{item.desc}</Text>
+                    <Text style={{ fontWeight: "900", color: colors.text, marginBottom: 2 }}>{item.title}</Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 12 }}>{item.desc}</Text>
                   </View>
                 </View>
               ))}
@@ -264,13 +264,13 @@ export default function ReferralsScreen() {
             {/* Referrals List */}
             {referrals.length > 0 && (
               <View style={{
-                backgroundColor: C.surface,
+                backgroundColor: colors.surface,
                 padding: 18,
                 borderRadius: 16,
                 borderWidth: 1,
-                borderColor: C.border,
+                borderColor: colors.border,
               }}>
-                <Text style={{ fontSize: 16, fontWeight: "900", color: C.text, marginBottom: 12 }}>
+                <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 12 }}>
                   📈 إحالاتك
                 </Text>
 
@@ -283,14 +283,14 @@ export default function ReferralsScreen() {
                       alignItems: "center",
                       paddingVertical: 10,
                       borderBottomWidth: 1,
-                      borderBottomColor: C.border,
+                      borderBottomColor: colors.border,
                     }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontWeight: "700", color: C.text, marginBottom: 2 }}>
+                      <Text style={{ fontWeight: "700", color: colors.text, marginBottom: 2 }}>
                         {referral.referred_name || "عميل جديد"}
                       </Text>
-                      <Text style={{ fontSize: 11, color: C.textMuted }}>
+                      <Text style={{ fontSize: 11, color: colors.textMuted }}>
                         {new Date(referral.created_at).toLocaleDateString("ar-EG")}
                       </Text>
                     </View>
@@ -299,7 +299,7 @@ export default function ReferralsScreen() {
                       <Text style={{
                         fontWeight: "900",
                         fontSize: 14,
-                        color: referral.used ? C.success : C.warning,
+                        color: referral.used ? colors.success : colors.warning,
                         marginBottom: 2,
                       }}>
                         {referral.reward_amount.toFixed(2)} ج.م
@@ -307,8 +307,8 @@ export default function ReferralsScreen() {
                       <Text style={{
                         fontSize: 11,
                         fontWeight: "700",
-                        color: referral.used ? C.success : C.warning,
-                        backgroundColor: referral.used ? "#ECFDF5" : "#FFFBEB",
+                        color: referral.used ? colors.success : colors.warning,
+                        backgroundColor: referral.used ? (isDarkMode ? "rgba(52,211,153,0.15)" : "#ECFDF5") : (isDarkMode ? "rgba(245,158,11,0.15)" : "#FFFBEB"),
                         paddingHorizontal: 8,
                         paddingVertical: 2,
                         borderRadius: 6,
@@ -324,16 +324,16 @@ export default function ReferralsScreen() {
             {/* Empty State */}
             {referrals.length === 0 && (
               <View style={{
-                backgroundColor: C.primarySoft,
+                backgroundColor: colors.primarySoft,
                 padding: 24,
                 borderRadius: 16,
                 alignItems: "center",
               }}>
                 <Text style={{ fontSize: 48, marginBottom: 12 }}>👥</Text>
-                <Text style={{ fontSize: 16, fontWeight: "900", color: C.text, marginBottom: 4 }}>
+                <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 4 }}>
                   لم تقم بأي إحالات بعد
                 </Text>
-                <Text style={{ color: C.textMuted, fontSize: 13, textAlign: "center" }}>
+                <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: "center" }}>
                   شارك كودك الآن واحصل على أرباح سريعة!
                 </Text>
               </View>

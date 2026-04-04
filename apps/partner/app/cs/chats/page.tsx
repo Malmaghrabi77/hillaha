@@ -92,14 +92,14 @@ export default function CSChatsPage() {
       if (!supabase) return;
 
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.user) return;
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
 
       const { data: profile } = await (supabase as any)
         .from("profiles")
         .select("role")
-        .eq("id", session.user.id)
+        .eq("id", user.id)
         .single();
 
       if (!profile || profile.role !== "customer_service") return;

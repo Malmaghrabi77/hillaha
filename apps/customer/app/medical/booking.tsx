@@ -199,7 +199,7 @@ export default function Booking() {
           <LoadingAnimation />
         </View>
       ) : (
-        <View contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+        <View style={{ padding: 16, paddingBottom: 100 }}>
           {/* Doctors List */}
           <Text style={{ fontSize: 15, fontWeight: '900', color: colors.text, marginBottom: 12 }}>
             الأطباء المتاحون ({doctors.length})

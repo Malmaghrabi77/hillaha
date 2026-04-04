@@ -1,8 +1,23 @@
 import React from "react";
+import { Metadata } from "next";
 
-export const metadata = {
-  title: "حلّها — خدمات توصيل محلية",
-  description: "منصة طلبات وخدمات محلية — مصر والسعودية",
+export const metadata: Metadata = {
+  title: "حلّها — Hillaha",
+  description: "منصة التوصيل والخدمات المنزلية في قنا",
+  metadataBase: new URL("https://www.hillaha.com"),
+  openGraph: {
+    title: "حلّها — Hillaha",
+    description: "منصة التوصيل والخدمات المنزلية في قنا",
+    url: "https://www.hillaha.com",
+    siteName: "Hillaha",
+    locale: "ar_EG",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "حلّها — Hillaha",
+    description: "منصة التوصيل والخدمات المنزلية في قنا",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

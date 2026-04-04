@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, Pressable, ScrollView, Animated, FlatList,
-  Image, Dimensions, ActivityIndicator, RefreshControl, ImageBackground,
-  Linking,
+  Image, ActivityIndicator, RefreshControl, ImageBackground,
+  Linking, useWindowDimensions,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,8 +14,6 @@ import { analyticsTracker } from '../../src/utils/analyticsTracker';
 import { A11yPresets } from '../../src/hooks/useAccessibility';
 import { ANALYTICS_EVENTS } from '../../src/constants/analyticsEvents';
 import { SafeAreaDisplay } from '../../src/components';
-
-const SCREEN = Dimensions.get("window");
 
 // ─── Defaults ──────────────────────────────────────────────────────────────
 
@@ -269,6 +267,7 @@ function PartnerCard({ partner, onPress, distance, deliveryBasePrice }: PartnerC
 
 export default function Home() {
   const { isDarkMode, colors } = useDarkMode();
+  const { width: screenWidth } = useWindowDimensions();
   const supabase = useSupabase();
   const [activeCategory, setActiveCategory] = useState("all");
   const [bannerIndex, setBannerIndex] = useState(0);
@@ -505,7 +504,7 @@ export default function Home() {
     timerRef.current = setInterval(() => {
       setBannerIndex(prev => {
         const next = (prev + 1) % (banners.length || 1);
-        bannerRef.current?.scrollTo({ x: next * SCREEN.width, animated: true });
+        bannerRef.current?.scrollTo({ x: next * screenWidth, animated: true });
         return next;
       });
     }, 3500);
@@ -664,7 +663,7 @@ export default function Home() {
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={e => {
-              const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN.width);
+              const idx = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
               setBannerIndex(idx);
             }}
           >
@@ -672,7 +671,7 @@ export default function Home() {
               <View
                 key={b.id}
                 style={{
-                  width: SCREEN.width,
+                  width: screenWidth,
                   height: 170,
                   backgroundColor: b.bg,
                   overflow: "hidden",

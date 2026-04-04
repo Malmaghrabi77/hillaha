@@ -40,16 +40,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const sb = getSupabase();
     if (!sb) { setLoading(false); return; }
 
-    sb.auth.getSession().then(async ({ data }) => {
+    sb.auth.getUser().then(async ({ data: { user } }) => {
       try {
-        if (!data.session) {
+        if (!user) {
           router.replace("/login");
           return;
         }
 
-        const userId = data.session.user.id;
-        const meta = data.session.user.user_metadata as any;
-        setUserName(meta?.full_name ?? meta?.name ?? data.session.user.email?.split("@")[0] ?? "الشريك");
+        const userId = user.id;
+        const meta = user.user_metadata as any;
+        setUserName(meta?.full_name ?? meta?.name ?? user.email?.split("@")[0] ?? "الشريك");
 
         // Check role — only allow partner, store_admin, super_admin, admin, accountant
         try {

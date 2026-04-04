@@ -274,7 +274,7 @@ export default function Cart() {
             <Text style={{ fontSize: 20 }}>✅</Text>
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: "900", color: isDarkMode ? colors.success : colors.ratingDark, fontSize: 14 }}>تم تطبيق الكود!</Text>
-              <Text style={{ color: isDarkMode ? colors.success : colors.ratingDark, fontSize: 12, marginTop: 2 }}>خصم 15 جنيه على طلبك</Text>
+              <Text style={{ color: isDarkMode ? colors.success : colors.ratingDark, fontSize: 12, marginTop: 2 }}>خصم {formatCurrency(discount)} على طلبك</Text>
             </View>
             <Pressable onPress={() => setDiscount(0)}>
               <Text style={{ color: colors.textMuted, fontSize: 20 }}>✕</Text>

@@ -56,11 +56,13 @@ export default function Bookings() {
 
     try {
       const { data: { user } } = await sb.auth.getUser();
-      if (user) setMyId(user.id);
+      if (!user) { setLoading(false); return; }
+      setMyId(user.id);
 
       const { data } = await sb
         .from("service_bookings")
         .select("*")
+        .eq("worker_id", user.id)
         .in("status", ["pending", "accepted", "in_progress"])
         .order("created_at", { ascending: false })
         .limit(50);
@@ -88,11 +90,12 @@ export default function Bookings() {
 
   const updateStatus = async (bookingId: string, newStatus: string) => {
     const sb = getSB();
-    if (!sb) return;
+    if (!sb || !myId) return;
     const { error } = await sb
       .from("service_bookings")
       .update({ status: newStatus })
-      .eq("id", bookingId);
+      .eq("id", bookingId)
+      .eq("worker_id", myId);
 
     if (error) {
       Alert.alert("خطأ", "تعذّر تحديث الحالة");

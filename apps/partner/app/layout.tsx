@@ -1,5 +1,11 @@
 import React from "react";
+import { Metadata } from "next";
 import "./styles/globals.css";
+
+export const metadata: Metadata = {
+  title: "لوحة التحكم — حلّها",
+  description: "لوحة تحكم الشركاء والإدارة لمنصة حلّها",
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

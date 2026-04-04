@@ -22,6 +22,27 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Verify user JWT authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing authorization" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
+      });
+    }
+    const jwt = authHeader.replace("Bearer ", "");
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL") || "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+    );
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(jwt);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
+      });
+    }
+
     const { amount_cents, order_id, customer_name, customer_email, customer_phone } = await req.json();
 
     if (!amount_cents || !order_id) {
@@ -29,6 +50,42 @@ serve(async (req: Request) => {
         status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders(req) },
       });
+    }
+
+    // Validate amount_cents against actual order total
+    if (order_id && !order_id.startsWith("temp_")) {
+      const { data: orderData, error: orderError } = await supabaseAuth
+        .from("orders")
+        .select("total, customer_id")
+        .eq("id", order_id)
+        .single();
+
+      if (orderError || !orderData) {
+        return new Response(JSON.stringify({ error: "Order not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders(req) },
+        });
+      }
+
+      // Ensure the authenticated user owns this order
+      if (orderData.customer_id !== user.id) {
+        return new Response(JSON.stringify({ error: "Forbidden: order does not belong to user" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json", ...corsHeaders(req) },
+        });
+      }
+
+      // Verify amount matches order total (total is in EGP, amount_cents is in piasters)
+      const expectedCents = Math.round(orderData.total * 100);
+      if (amount_cents !== expectedCents) {
+        return new Response(
+          JSON.stringify({ error: "Amount mismatch: amount_cents does not match order total" }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders(req) },
+          }
+        );
+      }
     }
 
     const PAYMOB_SECRET_KEY = Deno.env.get("PAYMOB_SECRET_KEY");
@@ -81,12 +138,7 @@ serve(async (req: Request) => {
 
     // Update order with PayMob reference (only if order_id is a real UUID, not temp)
     if (order_id && !order_id.startsWith("temp_")) {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL") || "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-      );
-
-      await supabase
+      await supabaseAuth
         .from("orders")
         .update({ paymob_order_id: intentionData.id })
         .eq("id", order_id);

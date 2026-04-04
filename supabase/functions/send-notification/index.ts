@@ -33,6 +33,40 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Verify authorization
+    const authHeader = req.headers.get("Authorization");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing authorization" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders(req) },
+      });
+    }
+    // Allow service role key (from triggers) or verify JWT
+    const token = authHeader.replace("Bearer ", "");
+    if (token !== supabaseServiceKey) {
+      // Verify it's a valid admin JWT
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL") || "",
+        supabaseServiceKey || ""
+      );
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders(req) },
+        });
+      }
+      // Check if user is admin
+      const { data: profile } = await supabaseAdmin.from("profiles").select("role").eq("id", user.id).single();
+      if (!profile || !["admin", "super_admin"].includes(profile.role)) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json", ...corsHeaders(req) },
+        });
+      }
+    }
+
     const {
       user_ids,
       app_type,

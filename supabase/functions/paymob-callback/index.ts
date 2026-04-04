@@ -70,48 +70,58 @@ serve(async (req: Request) => {
     const orderId = obj.order?.merchant_order_id || obj.payment_key_claims?.extra?.order_id;
     const isSuccess = obj.success === true && obj.pending === false;
 
-    if (orderId) {
-      // Verify payment amount matches order total before marking as paid
-      const { data: order } = await supabase
-        .from("orders")
-        .select("total, payment_status")
-        .eq("id", orderId)
-        .single();
+    if (!orderId) {
+      console.error("Could not determine order ID from PayMob callback", {
+        merchant_order_id: obj.order?.merchant_order_id,
+        extra_order_id: obj.payment_key_claims?.extra?.order_id,
+        transaction_id: obj.id,
+      });
+      return new Response(
+        JSON.stringify({ error: "Could not determine order ID from transaction" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-      // Idempotency: skip if already processed
-      if (order?.payment_status === "paid") {
-        return new Response(JSON.stringify({ received: true, already_processed: true }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
+    // Verify payment amount matches order total before marking as paid
+    const { data: order } = await supabase
+      .from("orders")
+      .select("total, payment_status")
+      .eq("id", orderId)
+      .single();
 
-      // Amount verification: PayMob sends amount in cents
-      const expectedCents = order ? Math.round(order.total * 100) : null;
-      const receivedCents = obj.amount_cents;
-      if (isSuccess && expectedCents !== null && receivedCents !== expectedCents) {
-        console.error(`Amount mismatch for order ${orderId}: expected ${expectedCents}, got ${receivedCents}`);
-        await supabase
-          .from("orders")
-          .update({
-            payment_status: "amount_mismatch",
-            paymob_transaction_id: String(obj.id),
-          })
-          .eq("id", orderId);
-        return new Response(JSON.stringify({ received: true, error: "amount_mismatch" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
+    // Idempotency: skip if already processed
+    if (order?.payment_status === "paid") {
+      return new Response(JSON.stringify({ received: true, already_processed: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
+    // Amount verification: PayMob sends amount in cents
+    const expectedCents = order ? Math.round(order.total * 100) : null;
+    const receivedCents = obj.amount_cents;
+    if (isSuccess && expectedCents !== null && receivedCents !== expectedCents) {
+      console.error(`Amount mismatch for order ${orderId}: expected ${expectedCents}, got ${receivedCents}`);
       await supabase
         .from("orders")
         .update({
-          payment_status: isSuccess ? "paid" : "failed",
+          payment_status: "amount_mismatch",
           paymob_transaction_id: String(obj.id),
         })
         .eq("id", orderId);
+      return new Response(JSON.stringify({ received: true, error: "amount_mismatch" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
+
+    await supabase
+      .from("orders")
+      .update({
+        payment_status: isSuccess ? "paid" : "failed",
+        paymob_transaction_id: String(obj.id),
+      })
+      .eq("id", orderId);
 
     return new Response(JSON.stringify({ received: true }), {
       status: 200,

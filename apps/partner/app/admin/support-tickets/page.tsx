@@ -1040,7 +1040,7 @@ export default function SupportTicketsPage() {
                       key={msg.id}
                       style={{
                         display: "flex",
-                        justifyContent: isSupport ? "flex-left" : "flex-right",
+                        justifyContent: isSupport ? "flex-start" : "flex-end",
                         flexDirection: isSupport ? "row-reverse" : "row",
                         marginBottom: 12,
                       }}

@@ -75,13 +75,18 @@ export default function Prescription() {
 
       if (uploadErr) throw uploadErr;
 
-      const { data: { publicUrl } } = supabase.storage
+      // Use signed URL instead of public URL for medical image privacy
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from('prescriptions')
-        .getPublicUrl(path);
+        .createSignedUrl(path, 60 * 60 * 24 * 7); // 7 days expiry
+
+      if (signedUrlError) throw signedUrlError;
+
+      const imageUrl = signedUrlData.signedUrl;
 
       const { error: insertErr } = await supabase.from('prescription_requests').insert({
         user_id: user.id,
-        prescription_image_url: publicUrl,
+        prescription_image_url: imageUrl,
         pharmacy_id: pharmacy,
         notes: notes || null,
         status: 'pending',

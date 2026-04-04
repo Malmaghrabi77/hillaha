@@ -41,8 +41,11 @@ export default function ApproveAdminsPage() {
       return;
     }
 
-    loadInvitations();
-    setLoading(false);
+    const doLoad = async () => {
+      await loadInvitations();
+      setLoading(false);
+    };
+    doLoad();
   }, [auth.isSuperAdmin, auth.loading, router]);
 
   const loadInvitations = async () => {

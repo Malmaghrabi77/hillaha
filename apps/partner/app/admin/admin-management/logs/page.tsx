@@ -31,8 +31,11 @@ export default function AuditLogsPage() {
       return;
     }
 
-    loadLogs();
-    setLoading(false);
+    const doLoad = async () => {
+      await loadLogs();
+      setLoading(false);
+    };
+    doLoad();
   }, [auth.isSuperAdmin, auth.loading, router, filter]);
 
   const loadLogs = async () => {

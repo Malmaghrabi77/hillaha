@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
-import { getSupabase, DEFAULT_MONTHLY_COMMISSION_RULE, getMonthlyCommissionRate } from "@hillaha/core";
+import { getSupabase } from "@/lib/supabase";
+import { DEFAULT_MONTHLY_COMMISSION_RULE } from "@/lib/finance";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "@/lib/theme";
 
 interface FinanceStats {
@@ -44,7 +45,7 @@ export default function FinanceScreen() {
       let commission = 0;
       let rate = discountPercent;
 
-      if (ordersInThreshold > 0) {
+      if (ordersInThreshold > 0 && ordersPastWeek > 0) {
         const baseSales = (ordersInThreshold / ordersPastWeek) * totalSalesWeek;
         commission += baseSales * rule.baseRate;
         const discountSales = totalSalesWeek - baseSales;
@@ -66,32 +67,36 @@ export default function FinanceScreen() {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return;
 
-      const { data: partnerData } = await supabase
+      const { data: partnerData } = await (supabase as any)
         .from("partners")
         .select("id")
         .eq("user_id", user.user.id)
         .single();
 
       if (partnerData?.id) {
-        // جلب طلبات هذا الأسبوع
-        const thisWeek = new Date();
-        thisWeek.setDate(thisWeek.getDate() - 7);
+        // Align to current Saturday-Friday week
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0=Sun, 6=Sat
+        const daysSinceSaturday = dayOfWeek === 6 ? 0 : dayOfWeek + 1;
+        const thisWeekStart = new Date(now);
+        thisWeekStart.setDate(now.getDate() - daysSinceSaturday);
+        thisWeekStart.setHours(0, 0, 0, 0);
 
-        const { data: ordersWeek } = await supabase
+        const { data: ordersWeek } = await (supabase as any)
           .from("orders")
-          .select("*")
+          .select("total")
           .eq("partner_id", partnerData.id)
           .eq("status", "delivered")
-          .gte("created_at", thisWeek.toISOString());
+          .gte("created_at", thisWeekStart.toISOString());
 
         // جلب طلبات الشهر الحالي من اليوم الأول
         const monthStart = new Date();
         monthStart.setDate(1);
         monthStart.setHours(0, 0, 0, 0);
 
-        const { data: ordersMonth } = await supabase
+        const { data: ordersMonth } = await (supabase as any)
           .from("orders")
-          .select("*")
+          .select("id")
           .eq("partner_id", partnerData.id)
           .eq("status", "delivered")
           .gte("created_at", monthStart.toISOString());
@@ -148,8 +153,8 @@ export default function FinanceScreen() {
       </View>
 
       <View style={styles.statCard}>
-        <Text style={styles.statLabel}>العمولة ({stats.commissionRate})</Text>
-        <Text style={styles.statValue} style={{color: COLORS.danger}}>
+        <Text style={styles.statLabel}>العمولة</Text>
+        <Text style={[styles.statValue, {color: COLORS.danger}]}>
           -{stats.commission.toFixed(0)}
         </Text>
         <Text style={styles.statUnit}>ج.م</Text>
@@ -157,7 +162,7 @@ export default function FinanceScreen() {
 
       <View style={styles.statCard}>
         <Text style={styles.statLabel}>صافي الربح</Text>
-        <Text style={styles.statValue} style={{color: COLORS.success}}>
+        <Text style={[styles.statValue, {color: COLORS.success}]}>
           {stats.netProfit.toFixed(0)}
         </Text>
         <Text style={styles.statUnit}>ج.م</Text>

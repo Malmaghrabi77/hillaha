@@ -32,7 +32,7 @@ export default function WebHome() {
           ))}
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <a href="/login?role=accountant" style={{
+          <a href="https://partner.hillaha.com/login" style={{
             padding: "8px 18px", borderRadius: 10,
             background: "rgba(139,92,246,0.15)",
             border: "1px solid rgba(139,92,246,0.4)",

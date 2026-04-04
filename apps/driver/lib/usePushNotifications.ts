@@ -60,7 +60,7 @@ export function usePushNotifications(supabase: any, userId: string | null) {
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data;
       if (data?.screen === "delivery" && data?.order_id) {
-        router.push(`/delivery/${data.order_id}`);
+        router.push("/(tabs)/active");
       }
     });
 

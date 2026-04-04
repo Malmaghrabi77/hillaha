@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, Pressable, Animated, Platform, ScrollView, Linking,
+  Dimensions,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useDarkMode } from "../../src/hooks/useDarkMode";
 import { useSupabase } from "../../src/hooks/useSupabase";
 import { analyticsTracker } from "../../src/utils/analyticsTracker";
-import { A11yPresets } from "../../src/hooks/useAccessibility";
 import { SafeAreaDisplay } from "../../src/components";
+import { haversineKm } from "../../lib/utils";
 import { LiveMap } from "../../src/components/LiveMap";
 
 const C = {
@@ -20,14 +21,15 @@ const C = {
   deepPurple: "#6D28D9",
 } as const;
 
-const SCREEN = { height: 800 };
+const SCREEN = { height: Dimensions.get("window").height };
 const QENA_DEFAULT = { latitude: 26.1551, longitude: 32.7160 };
 
 const STEP_CONFIG = [
   { id: 0, label: "تم استلام الطلب",  desc: "المطعم استلم طلبك",          icon: "✅", color: "#7C3AED" },
   { id: 1, label: "قيد التجهيز",      desc: "الشيف يحضر طلبك الآن",       icon: "👨‍🍳", color: "#F59E0B" },
-  { id: 2, label: "خرج للتوصيل",      desc: "المندوب في الطريق إليك",      icon: "🛵", color: "#2563EB" },
-  { id: 3, label: "تم التسليم",        desc: "استمتع بطلبك 😊",            icon: "🎉", color: "#059669" },
+  { id: 2, label: "جاهز للاستلام",    desc: "طلبك جاهز وبانتظار المندوب", icon: "📦", color: "#8B5CF6" },
+  { id: 3, label: "خرج للتوصيل",      desc: "المندوب في الطريق إليك",      icon: "🛵", color: "#2563EB" },
+  { id: 4, label: "تم التسليم",        desc: "استمتع بطلبك 😊",            icon: "🎉", color: "#059669" },
 ];
 
 // Supabase status → step index
@@ -37,9 +39,9 @@ function statusToStep(status: string): number {
     case "pending":
     case "accepted":  return 0;
     case "preparing": return 1;
-    case "ready":
-    case "picked_up": return 2;
-    case "delivered": return 3;
+    case "ready":     return 2;
+    case "picked_up": return 3;
+    case "delivered": return 4;
     default:          return 0;
   }
 }
@@ -64,18 +66,6 @@ interface OrderInfo {
   partnerType:  string;  // restaurant, pharmacy, clinic, store
   serviceName?: string;  // service name if applicable (e.g., "Home Cleaning", "سباكة")
   deliveryType: "platform" | "self";
-}
-
-// Calculate distance between two coordinates (in km)
-function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLng/2) * Math.sin(dLng/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
 }
 
 // Get icon and colors based on partner type and service
@@ -146,17 +136,24 @@ export default function Tracking() {
 
     async function loadOrder() {
       setLoading(true);
-      const { data } = await supabase!
+      // Get current user to scope order query
+      const { data: { user } } = await supabase!.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      const query = supabase!
         .from("orders")
         .select(`
           id, status, total, delivery_fee, delivery_type,
+          delivery_lat, delivery_lng,
           driver_lat, driver_lng, driver_heading,
           partners(name, address, lat, lng, type),
           profiles!orders_customer_id_fkey(full_name, phone),
           driver:profiles!orders_driver_id_fkey(full_name, phone)
         `)
         .eq("id", orderId)
-        .maybeSingle();
+        .eq("customer_id", user.id);
+
+      const { data } = await query.maybeSingle();
 
       if (data) {
         const currentStep = statusToStep(data.status);
@@ -166,15 +163,15 @@ export default function Tracking() {
         // Use partner lat/lng if available, else default to Qena area
         const restLat = data.partners?.lat ?? QENA_DEFAULT.latitude + 0.005;
         const restLng = data.partners?.lng ?? QENA_DEFAULT.longitude - 0.008;
-        const custLat = QENA_DEFAULT.latitude - 0.004;
-        const custLng = QENA_DEFAULT.longitude + 0.006;
+        const custLat = data.delivery_lat || QENA_DEFAULT.latitude;
+        const custLng = data.delivery_lng || QENA_DEFAULT.longitude;
 
         const orderObj = {
           id:           data.id.substring(0, 8).toUpperCase(),
           status:       data.status,
-          driverName:   (data as any).driver?.full_name ?? "أحمد المندوب",
+          driverName:   (data as any).driver?.full_name ?? "المندوب",
           driverPhone:  (data as any).driver?.phone ?? "",
-          driverRating: "4.9",
+          driverRating: (data as any).driver?.rating?.toString() ?? "—",
           totalEgp:     Number(data.total),
           restaurantLat: restLat,
           restaurantLng: restLng,
@@ -189,7 +186,7 @@ export default function Tracking() {
 
         // Calculate initial distance if driver location is available
         if (data.driver_lat && data.driver_lng) {
-          const initialDist = calculateDistance(
+          const initialDist = haversineKm(
             Number(data.driver_lat), Number(data.driver_lng),
             custLat, custLng
           );
@@ -233,7 +230,7 @@ export default function Tracking() {
             // Calculate distance to customer in real-time
             setOrderInfo(prev => {
               if (!prev) return null;
-              const dist = calculateDistance(driverLat, driverLng, prev.customerLat, prev.customerLng);
+              const dist = haversineKm(driverLat, driverLng, prev.customerLat, prev.customerLng);
               setDistance(dist);
               return prev;
             });
@@ -245,15 +242,15 @@ export default function Tracking() {
     return () => { supabase.removeChannel(channel); };
   }, [orderId, supabase]);
 
-  const isDelivered   = step === 3;
+  const isDelivered   = step === 4;
   const isSelfDelivery = orderInfo?.deliveryType === "self";
   const stepCfg       = STEP_CONFIG[step];
 
   // Override step descriptions for self-delivery
-  const activeStepDesc = isSelfDelivery && step === 2
+  const activeStepDesc = isSelfDelivery && step === 3
     ? "موظف المتجر في الطريق إليك"
     : stepCfg.desc;
-  const activeStepLabel = isSelfDelivery && step === 2
+  const activeStepLabel = isSelfDelivery && step === 3
     ? "خرج للتوصيل"
     : stepCfg.label;
 
@@ -337,7 +334,7 @@ export default function Tracking() {
       )}
 
       {/* Distance badge - overlay */}
-      {step >= 2 && distance > 0 && (
+      {step >= 3 && distance > 0 && (
         <View style={{
           position: "absolute", right: 16, top: SCREEN.height * 0.3,
           backgroundColor: "white",
@@ -365,7 +362,6 @@ export default function Tracking() {
           analyticsTracker.trackEvent("tracking_back");
           router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
         }}
-        {...A11yPresets.pressable}
         style={{
           position: "absolute", top: Platform.OS === "android" ? 28 : 54,
           right: 16,
@@ -522,8 +518,8 @@ export default function Tracking() {
             </View>
           </View>
 
-          {/* DRIVER / SELF-DELIVERY CARD (step >= 2) */}
-          {step >= 2 && !isSelfDelivery && (
+          {/* DRIVER / SELF-DELIVERY CARD (step >= 3) */}
+          {step >= 3 && !isSelfDelivery && (
             <View style={{
               backgroundColor: "white", borderRadius: 20, padding: 16,
               shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
@@ -550,7 +546,7 @@ export default function Tracking() {
                     <Text style={{ fontWeight: "700", color: "#374151", fontSize: 13 }}>
                       {orderInfo?.driverRating}
                     </Text>
-                    <Text style={{ color: "#9CA3AF", fontSize: 12 }}>• 247+ توصيلة</Text>
+                    <Text style={{ color: "#9CA3AF", fontSize: 12 }}>• مندوب توصيل</Text>
                   </View>
                 </View>
                 <View style={{ gap: 8 }}>
@@ -563,7 +559,6 @@ export default function Tracking() {
                         } catch (e) {}
                       }
                     }}
-                    {...A11yPresets.pressable}
                     style={{
                       width: 44, height: 44, borderRadius: 14,
                       backgroundColor: "#D1FAE5",
@@ -577,7 +572,6 @@ export default function Tracking() {
                       analyticsTracker.trackEvent("chat_driver", { orderId });
                       router.push(`/chat/driver/${orderId}`);
                     }}
-                    {...A11yPresets.pressable}
                     style={{
                       width: 44, height: 44, borderRadius: 14,
                       backgroundColor: "#EDE9FE",
@@ -590,7 +584,7 @@ export default function Tracking() {
               </View>
 
               {/* Live GPS indicator */}
-              {!!driverCoord && step === 2 && (
+              {!!driverCoord && step === 3 && (
                 <View style={{
                   marginTop: 12, flexDirection: "row", alignItems: "center", gap: 8,
                   backgroundColor: "#F0FDF4", borderRadius: 12, padding: 10,
@@ -608,8 +602,8 @@ export default function Tracking() {
             </View>
           )}
 
-          {/* SELF-DELIVERY INFO (step >= 2, self delivery) */}
-          {step >= 2 && isSelfDelivery && (
+          {/* SELF-DELIVERY INFO (step >= 3, self delivery) */}
+          {step >= 3 && isSelfDelivery && (
             <View style={{
               backgroundColor: "white", borderRadius: 20, padding: 16,
               shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
@@ -644,7 +638,6 @@ export default function Tracking() {
                   analyticsTracker.trackEvent("rate_order", { orderId });
                   router.push(`/rate-order?orderId=${orderId}`);
                 }}
-                {...A11yPresets.pressable}
                 style={{
                   backgroundColor: "#7C3AED", borderRadius: 18,
                   paddingVertical: 16, alignItems: "center",
@@ -661,7 +654,6 @@ export default function Tracking() {
                   analyticsTracker.trackEvent("home_after_delivery");
                   router.replace("/(tabs)/home");
                 }}
-                {...A11yPresets.pressable}
                 style={{
                   paddingVertical: 14, borderRadius: 18,
                   borderWidth: 1.5, borderColor: "#E5E7EB",

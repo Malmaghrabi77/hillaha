@@ -24,34 +24,47 @@ export default function Rejected() {
     if (data?.rejection_reason) setReason(data.rejection_reason);
   }
 
-  async function handleReapply() {
-    setReapplying(true);
-    try {
-      const supabase = getSB();
-      if (!supabase) return;
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.session?.user) return;
-      const userId = session.session.user.id;
+  function handleReapply() {
+    Alert.alert(
+      "تأكيد إعادة التقديم",
+      "سيتم حذف طلبك السابق وإعادة التقديم من جديد. هل أنت متأكد؟",
+      [
+        { text: "إلغاء", style: "cancel" },
+        {
+          text: "نعم، إعادة التقديم",
+          style: "destructive",
+          onPress: async () => {
+            setReapplying(true);
+            try {
+              const supabase = getSB();
+              if (!supabase) return;
+              const { data: session } = await supabase.auth.getSession();
+              if (!session?.session?.user) return;
+              const userId = session.session.user.id;
 
-      // Delete old application so user can re-submit
-      await (supabase as any)
-        .from("driver_applications")
-        .delete()
-        .eq("user_id", userId);
+              // Delete old application so user can re-submit
+              await (supabase as any)
+                .from("driver_applications")
+                .delete()
+                .eq("user_id", userId);
 
-      // Reset profile status
-      await (supabase as any)
-        .from("profiles")
-        .update({ driver_application_status: null, is_approved: false })
-        .eq("id", userId);
+              // Reset profile status
+              await (supabase as any)
+                .from("profiles")
+                .update({ driver_application_status: null, is_approved: false })
+                .eq("id", userId);
 
-      // Navigate to registration (step2 — personal info already on file)
-      router.replace("/(auth)/register/step2-vehicle");
-    } catch {
-      Alert.alert("خطأ", "حدث خطأ أثناء إعادة التقديم. حاول مرة أخرى.");
-    } finally {
-      setReapplying(false);
-    }
+              // Navigate to registration (step2 — personal info already on file)
+              router.replace("/(auth)/register/step2-vehicle");
+            } catch {
+              Alert.alert("خطأ", "حدث خطأ أثناء إعادة التقديم. حاول مرة أخرى.");
+            } finally {
+              setReapplying(false);
+            }
+          },
+        },
+      ]
+    );
   }
 
   async function handleLogout() {

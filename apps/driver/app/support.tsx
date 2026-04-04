@@ -6,9 +6,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { C, getSB } from "../lib/constants";
-
-const PHONE_NUMBER = "+201153624184";
+import { C, getSB, SUPPORT_PHONE } from "../lib/constants";
 
 interface FaqItem { question: string; answer: string; }
 
@@ -57,6 +55,7 @@ export default function SupportScreen() {
   useEffect(() => {
     async function load() {
       const supabase = getSB();
+      if (!supabase) { setLoading(false); return; }
 
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -95,6 +94,7 @@ export default function SupportScreen() {
           if (msgData) setMessages(msgData as Message[]);
         }
       } catch (error) {
+        console.warn("load_support_ticket:", error);
       } finally {
         setLoading(false);
       }
@@ -107,6 +107,7 @@ export default function SupportScreen() {
   useEffect(() => {
     if (!ticketId) return;
     const supabase = getSB();
+    if (!supabase) return;
 
     const channel = supabase
       .channel(`support-${ticketId}`)
@@ -119,7 +120,10 @@ export default function SupportScreen() {
           filter: `ticket_id=eq.${ticketId}`,
         },
         (payload: any) => {
-          setMessages(prev => [...prev, payload.new as Message]);
+          setMessages(prev => {
+            if (prev.some(m => m.id === (payload.new as Message).id)) return prev;
+            return [...prev, payload.new as Message];
+          });
           setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
         }
       )
@@ -131,6 +135,7 @@ export default function SupportScreen() {
   async function sendMessage() {
     if (!newMessage.trim() || !ticketId) return;
     const supabase = getSB();
+    if (!supabase) return;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -142,6 +147,7 @@ export default function SupportScreen() {
       });
       setNewMessage("");
     } catch (error) {
+      console.warn("send_support_message:", error);
     }
   }
 
@@ -182,7 +188,7 @@ export default function SupportScreen() {
           <Text style={{ fontSize: 12, color: C.textMuted }}>فريق هيلاها</Text>
         </View>
         <Pressable
-          onPress={() => Linking.openURL(`tel:${PHONE_NUMBER}`)}
+          onPress={() => Linking.openURL(`tel:${SUPPORT_PHONE}`)}
           style={{
             width: 40, height: 40, borderRadius: 12,
             backgroundColor: "#D1FAE5",
@@ -250,7 +256,7 @@ export default function SupportScreen() {
           <View style={{ marginTop: 16 }}>
             {/* Phone contact card */}
             <Pressable
-              onPress={() => Linking.openURL(`tel:${PHONE_NUMBER}`)}
+              onPress={() => Linking.openURL(`tel:${SUPPORT_PHONE}`)}
               style={{
                 flexDirection: "row", alignItems: "center", gap: 12,
                 backgroundColor: C.surface, borderRadius: 14, padding: 14,
@@ -266,7 +272,7 @@ export default function SupportScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 13, fontWeight: "700", color: C.text }}>اتصل بنا</Text>
-                <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>{PHONE_NUMBER}</Text>
+                <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>{SUPPORT_PHONE}</Text>
               </View>
             </Pressable>
 

@@ -56,15 +56,15 @@ export default function NotificationsPage() {
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
         setError("يجب تسجيل الدخول أولاً");
         return;
       }
 
       let query = (supabase.from("notifications") as any)
         .select("*")
-        .eq("recipient_id", session.user.id)
+        .eq("recipient_id", user.id)
         .order("created_at", { ascending: false });
 
       if (filter === "unread") {
@@ -91,13 +91,17 @@ export default function NotificationsPage() {
   const handleMarkAsRead = async (notificationId: string) => {
     try {
       const supabase = getSupabase();
+      const { data: { user } } = await supabase!.auth.getUser();
+      const userId = user?.id;
+      if (!userId) return;
       const { error: updateError } = await (supabase!
         .from("notifications") as any)
         .update({
           is_read: true,
           read_at: new Date().toISOString(),
         })
-        .eq("id", notificationId);
+        .eq("id", notificationId)
+        .eq("recipient_id", userId);
 
       if (updateError) throw updateError;
       loadNotifications();
@@ -109,10 +113,14 @@ export default function NotificationsPage() {
   const handleArchive = async (notificationId: string) => {
     try {
       const supabase = getSupabase();
+      const { data: { user } } = await supabase!.auth.getUser();
+      const userId = user?.id;
+      if (!userId) return;
       const { error: updateError } = await (supabase!
         .from("notifications") as any)
         .update({ is_archived: true })
-        .eq("id", notificationId);
+        .eq("id", notificationId)
+        .eq("recipient_id", userId);
 
       if (updateError) throw updateError;
       loadNotifications();
@@ -124,10 +132,14 @@ export default function NotificationsPage() {
   const handleDelete = async (notificationId: string) => {
     try {
       const supabase = getSupabase();
+      const { data: { user } } = await supabase!.auth.getUser();
+      const userId = user?.id;
+      if (!userId) return;
       const { error: deleteError } = await (supabase!
         .from("notifications") as any)
         .delete()
-        .eq("id", notificationId);
+        .eq("id", notificationId)
+        .eq("recipient_id", userId);
 
       if (deleteError) throw deleteError;
       loadNotifications();

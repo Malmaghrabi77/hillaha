@@ -157,7 +157,7 @@ serve(async (req: Request) => {
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
+    const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const notifyUrl = `${SUPABASE_URL}/functions/v1/send-notification`;
     const results: string[] = [];
 
@@ -168,8 +168,8 @@ serve(async (req: Request) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+          apikey: SUPABASE_SERVICE_KEY,
         },
         body: JSON.stringify({
           user_id: order.customer_id,
@@ -191,8 +191,8 @@ serve(async (req: Request) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+          apikey: SUPABASE_SERVICE_KEY,
         },
         body: JSON.stringify({
           user_id: order.driver_id,
@@ -207,32 +207,42 @@ serve(async (req: Request) => {
       results.push("driver");
     }
 
-    // Notify partner
+    // Notify partner — resolve user_id from partners table since order.partner_id is the partner record ID
     if (template.forPartner && order.partner_id) {
-      const partnerTpl = PARTNER_TEMPLATES[new_status] || template;
-      await fetch(notifyUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          apikey: SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({
-          user_id: order.partner_id,
-          app_type: "partner",
-          title: partnerTpl.title,
-          body: partnerTpl.body(order.id),
-          notification_type: "order",
-          sound: "default",
-          data: { order_id: order.id, status: new_status, screen: "orders" },
-        }),
-      });
-      results.push("partner");
+      // Look up the partner's auth user_id
+      const { data: partnerRecord } = await supabase
+        .from("partners")
+        .select("user_id")
+        .eq("id", order.partner_id)
+        .single();
+      const partnerUserId = partnerRecord?.user_id;
+
+      if (partnerUserId) {
+        const partnerTpl = PARTNER_TEMPLATES[new_status] || template;
+        await fetch(notifyUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+            apikey: SUPABASE_SERVICE_KEY,
+          },
+          body: JSON.stringify({
+            user_id: partnerUserId,
+            app_type: "partner",
+            title: partnerTpl.title,
+            body: partnerTpl.body(order.id),
+            notification_type: "order",
+            sound: "default",
+            data: { order_id: order.id, status: new_status, screen: "orders" },
+          }),
+        });
+        results.push("partner");
+      }
     }
 
     return new Response(
       JSON.stringify({ success: true, notified: results }),
-      { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
     );
   } catch (error) {
     return new Response(

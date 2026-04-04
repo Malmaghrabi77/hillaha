@@ -27,6 +27,7 @@ interface PartnerInvitation {
   status: string;
   invited_type: string;
   created_at: string;
+  invitation_token?: string;
 }
 
 export default function ApprovePartnersPage() {
@@ -38,6 +39,7 @@ export default function ApprovePartnersPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [selectedInvite, setSelectedInvite] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"pending" | "accepted" | "rejected" | "all">("pending");
 
   useEffect(() => {
     if (auth.loading) return;
@@ -46,20 +48,23 @@ export default function ApprovePartnersPage() {
       return;
     }
     setError(null);
-    loadPendingInvitations();
-  }, [auth.user, auth.isSuperAdmin, auth.loading]);
+    loadInvitations();
+  }, [auth.user, auth.isSuperAdmin, auth.loading, filter]);
 
-  const loadPendingInvitations = async () => {
+  const loadInvitations = async () => {
     try {
       const supabase = getSupabase();
       if (!supabase) throw new Error("لا يوجد اتصال");
 
-      const { data, error: err } = await (supabase
-        .from("partner_invitations") as any)
+      let query = (supabase.from("partner_invitations") as any)
         .select("*")
-        .eq("status", "pending")
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: false });
 
+      if (filter !== "all") {
+        query = query.eq("status", filter);
+      }
+
+      const { data, error: err } = await query;
       if (err) throw err;
       setInvitations(data || []);
       setLoading(false);
@@ -69,25 +74,42 @@ export default function ApprovePartnersPage() {
     }
   };
 
-  const handleApprove = async (invitationId: string, email: string, name: string) => {
-    if (!window.confirm(`تأكيد قبول الشريك: ${name}؟`)) return;
+  const handleApprove = async (invitation: PartnerInvitation) => {
+    if (!window.confirm(`تأكيد قبول الشريك: ${invitation.name}؟`)) return;
 
     setProcessing(true);
+    setError(null);
     try {
       const supabase = getSupabase();
       if (!supabase) throw new Error("لا يوجد اتصال");
 
-      // 1. Update invitation status
+      // 1. Update invitation status to accepted
       const { error: updateErr } = await (supabase
         .from("partner_invitations") as any)
-        .update({ status: "accepted", accepted_at: new Date().toISOString() })
-        .eq("id", invitationId);
+        .update({
+          status: "accepted",
+          accepted_at: new Date().toISOString(),
+          approved_by_super_admin: auth.user?.id,
+          super_admin_approval: "approved",
+        })
+        .eq("id", invitation.id);
 
       if (updateErr) throw updateErr;
 
-      // 2. Send approval notification (في المستقبل)
-      setSuccess(`✅ تم قبول الشريك: ${name}`);
-      await loadPendingInvitations();
+      // 2. Generate invitation token
+      try {
+        await (supabase as any).rpc("generate_invitation_token", {
+          p_invitation_id: invitation.id,
+        });
+      } catch (tokenErr) {
+        console.warn("Token generation failed (function may not exist yet):", tokenErr);
+      }
+
+      setSuccess(
+        `✅ تم قبول الشريك: ${invitation.name}\n` +
+        `📧 يمكن للشريك الآن التسجيل باستخدام البريد: ${invitation.email}`
+      );
+      await loadInvitations();
     } catch (err: any) {
       setError(`❌ ${err.message}`);
     } finally {
@@ -113,7 +135,7 @@ export default function ApprovePartnersPage() {
         .update({
           status: "rejected",
           rejection_reason: rejectReason,
-          accepted_at: new Date().toISOString(),
+          rejected_at: new Date().toISOString(),
         })
         .eq("id", invitationId);
 
@@ -122,12 +144,37 @@ export default function ApprovePartnersPage() {
       setSuccess(`✅ تم رفض الشريك: ${name}`);
       setRejectReason("");
       setSelectedInvite(null);
-      await loadPendingInvitations();
+      await loadInvitations();
     } catch (err: any) {
       setError(`❌ ${err.message}`);
     } finally {
       setProcessing(false);
     }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const map: Record<string, { bg: string; color: string; label: string }> = {
+      pending: { bg: C.warningSoft, color: C.warning, label: "قيد المراجعة" },
+      accepted: { bg: C.successSoft, color: "#065F46", label: "مقبول — بانتظار التسجيل" },
+      rejected: { bg: C.dangerSoft, color: C.danger, label: "مرفوض" },
+      registered: { bg: C.primarySoft, color: C.primary, label: "مسجل ✓" },
+    };
+    const s = map[status] || { bg: "#F3F4F6", color: "#6B7280", label: status };
+    return (
+      <span
+        style={{
+          display: "inline-block",
+          padding: "4px 12px",
+          borderRadius: 20,
+          fontSize: 12,
+          fontWeight: 700,
+          backgroundColor: s.bg,
+          color: s.color,
+        }}
+      >
+        {s.label}
+      </span>
+    );
   };
 
   if (auth.loading) {
@@ -143,23 +190,47 @@ export default function ApprovePartnersPage() {
   }
 
   if (loading) {
-    return (
-      <div style={{ padding: 20, textAlign: "center", color: C.textMuted }}>
-        جاري التحميل...
-      </div>
-    );
+    return <div style={{ padding: 20, textAlign: "center", color: C.textMuted }}>جاري التحميل...</div>;
   }
 
   return (
     <div dir="rtl" style={{ padding: "24px" }}>
       {/* Header */}
-      <div style={{ marginBottom: 32 }}>
+      <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 900, color: C.text, margin: "0 0 8px 0" }}>
-          ✅ موافقة دعوات الشركاء
+          إدارة دعوات الشركاء
         </h1>
         <p style={{ color: C.textMuted, fontSize: 14, margin: 0 }}>
-          مراجعة والموافقة على دعوات الشركاء الجدد (صلاحية السوبر أدمن فقط)
+          مراجعة والموافقة على دعوات الشركاء الجدد
         </p>
+      </div>
+
+      {/* Filter tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+        {([
+          { key: "pending", label: "قيد المراجعة" },
+          { key: "accepted", label: "مقبول" },
+          { key: "registered", label: "مسجل" },
+          { key: "rejected", label: "مرفوض" },
+          { key: "all", label: "الكل" },
+        ] as { key: typeof filter; label: string }[]).map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => { setFilter(tab.key as any); setLoading(true); }}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 8,
+              border: "none",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              backgroundColor: filter === tab.key ? C.primary : C.primarySoft,
+              color: filter === tab.key ? "white" : C.primary,
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {error && (
@@ -171,6 +242,7 @@ export default function ApprovePartnersPage() {
             borderRadius: 12,
             marginBottom: 24,
             fontWeight: 700,
+            whiteSpace: "pre-line",
           }}
         >
           {error}
@@ -181,18 +253,19 @@ export default function ApprovePartnersPage() {
         <div
           style={{
             backgroundColor: C.successSoft,
-            color: C.success,
+            color: "#065F46",
             padding: 16,
             borderRadius: 12,
             marginBottom: 24,
             fontWeight: 700,
+            whiteSpace: "pre-line",
           }}
         >
           {success}
         </div>
       )}
 
-      {/* Pending Invitations */}
+      {/* Invitations List */}
       {invitations.length === 0 ? (
         <div
           style={{
@@ -203,12 +276,11 @@ export default function ApprovePartnersPage() {
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>
+            {filter === "pending" ? "✅" : "📋"}
+          </div>
           <p style={{ color: C.textMuted, fontSize: 16, fontWeight: 700, margin: 0 }}>
-            لا توجد دعوات قيد الانتظار
-          </p>
-          <p style={{ color: C.textMuted, fontSize: 13, margin: "8px 0 0 0" }}>
-            جميع الدعوات قد تم معالجتها
+            {filter === "pending" ? "لا توجد دعوات قيد الانتظار" : "لا توجد دعوات"}
           </p>
         </div>
       ) : (
@@ -223,144 +295,160 @@ export default function ApprovePartnersPage() {
                 padding: 20,
               }}
             >
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 20, marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                 <div>
-                  <h3 style={{ fontSize: 18, fontWeight: 900, color: C.text, margin: "0 0 8px 0" }}>
-                    {inv.name}
-                  </h3>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                    <h3 style={{ fontSize: 18, fontWeight: 900, color: C.text, margin: 0 }}>
+                      {inv.name}
+                    </h3>
+                    {getStatusBadge(inv.status)}
+                  </div>
                   <p style={{ fontSize: 13, color: C.textMuted, margin: "0 0 4px 0" }}>
                     📧 {inv.email}
                   </p>
-                  <p style={{ fontSize: 13, color: C.textMuted, margin: "0 0 8px 0" }}>
+                  <p style={{ fontSize: 13, color: C.textMuted, margin: "0 0 4px 0" }}>
                     📱 {inv.phone}
                   </p>
-                  <p style={{ fontSize: 12, color: C.warning, margin: 0 }}>
-                    دعوة من: {inv.invited_type === "super_admin" ? "السوبر أدمن" : "مدير إقليمي"}
-                  </p>
-                </div>
-
-                <div style={{ textAlign: "center" }}>
-                  <p style={{ fontSize: 12, color: C.textMuted, margin: "0 0 8px 0" }}>التاريخ</p>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0 }}>
-                    {new Date(inv.created_at).toLocaleDateString("ar-EG")}
+                  <p style={{ fontSize: 12, color: C.textMuted, margin: 0 }}>
+                    📅 {new Date(inv.created_at).toLocaleDateString("ar-EG", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
                   </p>
                 </div>
               </div>
 
-              {/* Rejection Reason Input */}
-              {selectedInvite === inv.id && (
-                <div
-                  style={{
-                    backgroundColor: C.warningSoft,
-                    borderRadius: 8,
-                    padding: 12,
-                    marginBottom: 16,
-                  }}
-                >
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 8 }}>
-                    سبب الرفض
-                  </label>
-                  <textarea
-                    value={rejectReason}
-                    onChange={(e) => setRejectReason(e.target.value)}
-                    placeholder="اكتب سبب رفض هذه الدعوة..."
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 6,
-                      border: `1px solid ${C.border}`,
-                      fontSize: 13,
-                      fontFamily: "inherit",
-                      outline: "none",
-                      minHeight: 80,
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
+              {/* Actions for pending invitations only */}
+              {inv.status === "pending" && (
+                <>
+                  {/* Rejection Reason Input */}
+                  {selectedInvite === inv.id && (
+                    <div
+                      style={{
+                        backgroundColor: C.warningSoft,
+                        borderRadius: 8,
+                        padding: 12,
+                        marginBottom: 16,
+                      }}
+                    >
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 8 }}>
+                        سبب الرفض
+                      </label>
+                      <textarea
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        placeholder="اكتب سبب رفض هذه الدعوة..."
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          borderRadius: 6,
+                          border: `1px solid ${C.border}`,
+                          fontSize: 13,
+                          fontFamily: "inherit",
+                          outline: "none",
+                          minHeight: 80,
+                          boxSizing: "border-box",
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: 12 }}>
+                    {selectedInvite === inv.id ? (
+                      <>
+                        <button
+                          onClick={() => handleReject(inv.id, inv.name)}
+                          disabled={processing || !rejectReason.trim()}
+                          style={{
+                            flex: 1,
+                            padding: "10px 16px",
+                            borderRadius: 8,
+                            background: C.danger,
+                            color: "white",
+                            border: "none",
+                            fontWeight: 700,
+                            fontSize: 13,
+                            cursor: processing ? "not-allowed" : "pointer",
+                            opacity: processing || !rejectReason.trim() ? 0.6 : 1,
+                          }}
+                        >
+                          تأكيد الرفض
+                        </button>
+                        <button
+                          onClick={() => { setSelectedInvite(null); setRejectReason(""); }}
+                          style={{
+                            flex: 1,
+                            padding: "10px 16px",
+                            borderRadius: 8,
+                            background: C.border,
+                            color: C.text,
+                            border: "none",
+                            fontWeight: 700,
+                            fontSize: 13,
+                            cursor: "pointer",
+                          }}
+                        >
+                          إلغاء
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleApprove(inv)}
+                          disabled={processing}
+                          style={{
+                            flex: 1,
+                            padding: "10px 16px",
+                            borderRadius: 8,
+                            background: C.success,
+                            color: "white",
+                            border: "none",
+                            fontWeight: 700,
+                            fontSize: 13,
+                            cursor: processing ? "not-allowed" : "pointer",
+                            opacity: processing ? 0.6 : 1,
+                          }}
+                        >
+                          ✅ قبول
+                        </button>
+                        <button
+                          onClick={() => setSelectedInvite(inv.id)}
+                          disabled={processing}
+                          style={{
+                            flex: 1,
+                            padding: "10px 16px",
+                            borderRadius: 8,
+                            background: C.dangerSoft,
+                            color: C.danger,
+                            border: `1px solid ${C.danger}`,
+                            fontWeight: 700,
+                            fontSize: 13,
+                            cursor: processing ? "not-allowed" : "pointer",
+                          }}
+                        >
+                          ✕ رفض
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </>
               )}
 
-              {/* Action Buttons */}
-              <div style={{ display: "flex", gap: 12 }}>
-                {selectedInvite === inv.id ? (
-                  <>
-                    <button
-                      onClick={() => handleReject(inv.id, inv.name)}
-                      disabled={processing || !rejectReason.trim()}
-                      style={{
-                        flex: 1,
-                        padding: "10px 16px",
-                        borderRadius: 8,
-                        background: C.danger,
-                        color: "white",
-                        border: "none",
-                        fontWeight: 700,
-                        fontSize: 13,
-                        cursor: processing ? "not-allowed" : "pointer",
-                        opacity: processing || !rejectReason.trim() ? 0.6 : 1,
-                      }}
-                    >
-                      ✕ تأكيد الرفض
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedInvite(null);
-                        setRejectReason("");
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: "10px 16px",
-                        borderRadius: 8,
-                        background: C.border,
-                        color: C.text,
-                        border: "none",
-                        fontWeight: 700,
-                        fontSize: 13,
-                        cursor: "pointer",
-                      }}
-                    >
-                      ← إلغاء
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => handleApprove(inv.id, inv.email, inv.name)}
-                      disabled={processing}
-                      style={{
-                        flex: 1,
-                        padding: "10px 16px",
-                        borderRadius: 8,
-                        background: C.success,
-                        color: "white",
-                        border: "none",
-                        fontWeight: 700,
-                        fontSize: 13,
-                        cursor: processing ? "not-allowed" : "pointer",
-                        opacity: processing ? 0.6 : 1,
-                      }}
-                    >
-                      ✅ قبول
-                    </button>
-                    <button
-                      onClick={() => setSelectedInvite(inv.id)}
-                      disabled={processing}
-                      style={{
-                        flex: 1,
-                        padding: "10px 16px",
-                        borderRadius: 8,
-                        background: C.dangerSoft,
-                        color: C.danger,
-                        border: `1px solid ${C.danger}`,
-                        fontWeight: 700,
-                        fontSize: 13,
-                        cursor: processing ? "not-allowed" : "pointer",
-                      }}
-                    >
-                      ✕ رفض
-                    </button>
-                  </>
-                )}
-              </div>
+              {/* Info for accepted invitations */}
+              {inv.status === "accepted" && (
+                <div
+                  style={{
+                    backgroundColor: C.successSoft,
+                    borderRadius: 8,
+                    padding: 12,
+                    fontSize: 13,
+                    color: "#065F46",
+                  }}
+                >
+                  الشريك يمكنه الآن التسجيل باستخدام البريد: <strong>{inv.email}</strong>
+                </div>
+              )}
             </div>
           ))}
         </div>

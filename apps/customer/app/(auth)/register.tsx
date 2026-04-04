@@ -7,21 +7,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { getCustomerSupabase as getSupabase } from "../../lib/supabase";
+import { useDarkMode } from "../../src/hooks/useDarkMode";
 import { COUNTRIES, detectCountryIndex, searchCountries, type CountryCode } from "../../src/constants/countryCodes";
-
-const C = {
-  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
-  pink: "#EC4899",       pinkSoft: "#FCE7F3",
-  bg: "#FAFAFF",         surface: "#FFFFFF",
-  border: "#E7E3FF",     text: "#1F1B2E",
-  textMuted: "#6B6480",  success: "#34D399",
-  warning: "#F59E0B",    danger: "#EF4444",
-  deepPurple: "#6D28D9",
-} as const;
 
 type AuthMode = "email" | "phone";
 
 export default function Register() {
+  const { colors } = useDarkMode();
   const [authMode, setAuthMode]     = useState<AuthMode>("email");
   const [countryIdx, setCountryIdx] = useState(() => detectCountryIndex());
   const [showCountry, setShowCountry] = useState(false);
@@ -112,6 +104,7 @@ export default function Register() {
       const fullPhone = COUNTRIES[countryIdx].code + cleanPhone;
       const { error: err } = await supabase.auth.signInWithOtp({ phone: fullPhone });
       if (err) throw err;
+      setOtpSent(true);
       setResendTimer(60);
       setOtp(["", "", "", "", "", ""]);
       setTimeout(() => otpRefs.current[0]?.focus(), 300);
@@ -210,27 +203,27 @@ export default function Register() {
   // ══════════════════════════════════════════════════════════════════════
   if (success) {
     return (
-      <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: "center", alignItems: "center", padding: 28 }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: "center", alignItems: "center", padding: 28 }}>
         <View style={{
           width: 90, height: 90, borderRadius: 45,
           backgroundColor: "#D1FAE5", justifyContent: "center", alignItems: "center", marginBottom: 20,
         }}>
           <Text style={{ fontSize: 44 }}>✓</Text>
         </View>
-        <Text style={{ fontSize: 22, fontWeight: "900", color: C.text, marginBottom: 10 }}>
+        <Text style={{ fontSize: 22, fontWeight: "900", color: colors.text, marginBottom: 10 }}>
           تم إنشاء حسابك!
         </Text>
-        <Text style={{ color: C.textMuted, textAlign: "center", lineHeight: 22, fontSize: 14, marginBottom: 30 }}>
+        <Text style={{ color: colors.textMuted, textAlign: "center", lineHeight: 22, fontSize: 14, marginBottom: 30 }}>
           تم إرسال رابط تأكيد إلى بريدك الإلكتروني{"\n"}
-          <Text style={{ fontWeight: "700", color: C.primary }}>{email}</Text>
+          <Text style={{ fontWeight: "700", color: colors.primary }}>{email}</Text>
           {"\n"}يرجى تأكيد الحساب ثم تسجيل الدخول
         </Text>
         <Pressable
           onPress={() => router.replace("/(auth)/login")}
           style={{
             width: "100%", paddingVertical: 16, borderRadius: 16,
-            backgroundColor: C.primary,
-            shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 },
             shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
           }}
         >
@@ -247,16 +240,16 @@ export default function Register() {
   // ══════════════════════════════════════════════════════════════════════
   if (otpSent) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={["top", "left", "right"]}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top", "left", "right"]}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }} keyboardShouldPersistTaps="handled">
           <View style={{ alignItems: "center", marginBottom: 32 }}>
             <Text style={{ fontSize: 52, marginBottom: 16 }}>📱</Text>
-            <Text style={{ fontSize: 22, fontWeight: "900", color: C.text, marginBottom: 8 }}>
+            <Text style={{ fontSize: 22, fontWeight: "900", color: colors.text, marginBottom: 8 }}>
               كود التحقق
             </Text>
-            <Text style={{ color: C.textMuted, textAlign: "center", lineHeight: 22, fontSize: 14 }}>
+            <Text style={{ color: colors.textMuted, textAlign: "center", lineHeight: 22, fontSize: 14 }}>
               تم إرسال كود التحقق إلى{"\n"}
-              <Text style={{ fontWeight: "700", color: C.primary }}>{maskedPhone()}</Text>
+              <Text style={{ fontWeight: "700", color: colors.primary }}>{maskedPhone()}</Text>
             </Text>
           </View>
 
@@ -279,9 +272,9 @@ export default function Register() {
                 maxLength={1}
                 style={{
                   width: 48, height: 56, borderRadius: 14,
-                  borderWidth: 2, borderColor: digit ? C.primary : C.border,
-                  backgroundColor: digit ? C.primarySoft : C.surface,
-                  fontSize: 22, fontWeight: "900", color: C.text,
+                  borderWidth: 2, borderColor: digit ? colors.primary : colors.border,
+                  backgroundColor: digit ? colors.primarySoft : colors.surface,
+                  fontSize: 22, fontWeight: "900", color: colors.text,
                   textAlign: "center",
                 }}
               />
@@ -294,9 +287,9 @@ export default function Register() {
             disabled={loading}
             style={{
               paddingVertical: 16, borderRadius: 16, marginBottom: 16,
-              backgroundColor: loading ? C.primarySoft : C.primary,
+              backgroundColor: loading ? colors.primarySoft : colors.primary,
               alignItems: "center",
-              shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
+              shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 },
               shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
             }}
           >
@@ -308,7 +301,7 @@ export default function Register() {
 
           {/* Resend */}
           <Pressable onPress={handleResendOtp} disabled={resendTimer > 0} style={{ alignItems: "center", marginBottom: 20 }}>
-            <Text style={{ color: resendTimer > 0 ? C.textMuted : C.primary, fontWeight: "700", fontSize: 13 }}>
+            <Text style={{ color: resendTimer > 0 ? colors.textMuted : colors.primary, fontWeight: "700", fontSize: 13 }}>
               {resendTimer > 0
                 ? `إعادة إرسال الكود (${resendTimer} ثانية)`
                 : "إعادة إرسال الكود"
@@ -318,7 +311,7 @@ export default function Register() {
 
           {/* Back */}
           <Pressable onPress={() => { setOtpSent(false); setError(""); setOtp(["", "", "", "", "", ""]); }} style={{ alignItems: "center" }}>
-            <Text style={{ color: C.textMuted, fontSize: 13 }}>
+            <Text style={{ color: colors.textMuted, fontSize: 13 }}>
               ← تغيير رقم الهاتف
             </Text>
           </Pressable>
@@ -339,11 +332,11 @@ export default function Register() {
   ] : null;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={["top", "left", "right"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top", "left", "right"]}>
       <View style={{
         position: "absolute", top: -60, left: -50,
         width: 180, height: 180, borderRadius: 90,
-        backgroundColor: C.pinkSoft, opacity: 0.6,
+        backgroundColor: colors.pinkSoft, opacity: 0.6,
       }} />
 
       <ScrollView
@@ -357,35 +350,35 @@ export default function Register() {
             style={{ width: 80, height: 80, resizeMode: "contain", marginBottom: 16 }}
           />
           <View style={{ alignItems: "center", marginBottom: 16 }}>
-            <Text style={{ fontSize: 20, color: C.text, fontWeight: "900", marginBottom: 8 }}>حلها يحلها</Text>
+            <Text style={{ fontSize: 20, color: colors.text, fontWeight: "900", marginBottom: 8 }}>حلها يحلها</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ fontSize: 16, color: C.primary, fontWeight: "900" }}>7illaha</Text>
+              <Text style={{ fontSize: 16, color: colors.primary, fontWeight: "900" }}>7illaha</Text>
               <Image
                 source={require("../../assets/hillaha-logo.png")}
                 style={{ width: 20, height: 20, resizeMode: "contain" }}
               />
-              <Text style={{ fontSize: 16, color: C.primary, fontWeight: "900" }}>7illaha</Text>
+              <Text style={{ fontSize: 16, color: colors.primary, fontWeight: "900" }}>7illaha</Text>
             </View>
           </View>
-          <Text style={{ fontSize: 22, fontWeight: "900", color: C.text }}>إنشاء حساب جديد</Text>
-          <Text style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>انضم لحلّها دلوقتي</Text>
+          <Text style={{ fontSize: 22, fontWeight: "900", color: colors.text }}>إنشاء حساب جديد</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 4 }}>انضم لحلّها دلوقتي</Text>
         </View>
 
         {/* MODE TOGGLE */}
         <View style={{
           flexDirection: "row", borderRadius: 14, overflow: "hidden",
-          borderWidth: 1.5, borderColor: C.border, marginBottom: 20,
+          borderWidth: 1.5, borderColor: colors.border, marginBottom: 20,
         }}>
           <Pressable
             onPress={() => { setAuthMode("email"); setError(""); }}
             style={{
               flex: 1, paddingVertical: 12, alignItems: "center",
-              backgroundColor: authMode === "email" ? C.primary : C.surface,
+              backgroundColor: authMode === "email" ? colors.primary : colors.surface,
             }}
           >
             <Text style={{
               fontWeight: "800", fontSize: 13,
-              color: authMode === "email" ? "white" : C.textMuted,
+              color: authMode === "email" ? "white" : colors.textMuted,
             }}>
               ✉️ بالبريد الإلكتروني
             </Text>
@@ -394,12 +387,12 @@ export default function Register() {
             onPress={() => { setAuthMode("phone"); setError(""); }}
             style={{
               flex: 1, paddingVertical: 12, alignItems: "center",
-              backgroundColor: authMode === "phone" ? C.primary : C.surface,
+              backgroundColor: authMode === "phone" ? colors.primary : colors.surface,
             }}
           >
             <Text style={{
               fontWeight: "800", fontSize: 13,
-              color: authMode === "phone" ? "white" : C.textMuted,
+              color: authMode === "phone" ? "white" : colors.textMuted,
             }}>
               📞 برقم الهاتف
             </Text>
@@ -421,23 +414,23 @@ export default function Register() {
         {/* TEXT FIELDS — email mode */}
         {fields && fields.map((f, i) => (
           <View key={`email-${i}`} style={{ marginBottom: 14 }}>
-            <Text style={{ fontSize: 12, fontWeight: "700", color: C.textMuted, marginBottom: 6 }}>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted, marginBottom: 6 }}>
               {f.label}
             </Text>
             <View style={{
               flexDirection: "row", alignItems: "center",
-              borderWidth: 1.5, borderColor: C.border, borderRadius: 14,
-              backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10,
+              borderWidth: 1.5, borderColor: colors.border, borderRadius: 14,
+              backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10,
             }}>
               <Text style={{ fontSize: 18 }}>{f.icon}</Text>
               <TextInput
                 value={f.value}
                 onChangeText={f.setter as any}
                 placeholder={f.placeholder}
-                placeholderTextColor={C.textMuted}
+                placeholderTextColor={colors.textMuted}
                 keyboardType={f.keyboard as any}
                 autoCapitalize="none"
-                style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
+                style={{ flex: 1, fontSize: 14, color: colors.text, textAlign: "right" }}
               />
             </View>
           </View>
@@ -448,42 +441,42 @@ export default function Register() {
           <>
             {/* Name */}
             <View style={{ marginBottom: 14 }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: C.textMuted, marginBottom: 6 }}>الاسم الكامل</Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted, marginBottom: 6 }}>الاسم الكامل</Text>
               <View style={{
                 flexDirection: "row", alignItems: "center",
-                borderWidth: 1.5, borderColor: C.border, borderRadius: 14,
-                backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10,
+                borderWidth: 1.5, borderColor: colors.border, borderRadius: 14,
+                backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10,
               }}>
                 <Text style={{ fontSize: 18 }}>👤</Text>
                 <TextInput
                   value={name} onChangeText={setName}
-                  placeholder="مصطفى محمد" placeholderTextColor={C.textMuted}
-                  style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
+                  placeholder="مصطفى محمد" placeholderTextColor={colors.textMuted}
+                  style={{ flex: 1, fontSize: 14, color: colors.text, textAlign: "right" }}
                 />
               </View>
             </View>
 
             {/* Phone with country picker */}
             <View style={{ marginBottom: 14 }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: C.textMuted, marginBottom: 6 }}>رقم الهاتف</Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted, marginBottom: 6 }}>رقم الهاتف</Text>
               <View style={{
                 flexDirection: "row", alignItems: "center",
-                borderWidth: 1.5, borderColor: C.border, borderRadius: 14,
-                backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10,
+                borderWidth: 1.5, borderColor: colors.border, borderRadius: 14,
+                backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10,
               }}>
                 <Pressable
                   onPress={() => { setShowCountry(true); setCountrySearch(""); }}
                   style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
                 >
                   <Text style={{ fontSize: 20 }}>{selectedCountry.flag}</Text>
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: C.text }}>{selectedCountry.code}</Text>
-                  <Text style={{ fontSize: 10, color: C.textMuted }}>▼</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.text }}>{selectedCountry.code}</Text>
+                  <Text style={{ fontSize: 10, color: colors.textMuted }}>▼</Text>
                 </Pressable>
                 <TextInput
                   value={phone} onChangeText={setPhone}
-                  placeholder="01012345678" placeholderTextColor={C.textMuted}
+                  placeholder="01012345678" placeholderTextColor={colors.textMuted}
                   keyboardType="phone-pad"
-                  style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
+                  style={{ flex: 1, fontSize: 14, color: colors.text, textAlign: "right" }}
                 />
               </View>
             </View>
@@ -494,22 +487,22 @@ export default function Register() {
         {authMode === "email" && (
           <>
             <View style={{ marginBottom: 14 }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: C.textMuted, marginBottom: 6 }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted, marginBottom: 6 }}>
                 كلمة المرور
               </Text>
               <View style={{
                 flexDirection: "row", alignItems: "center",
-                borderWidth: 1.5, borderColor: C.border, borderRadius: 14,
-                backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10,
+                borderWidth: 1.5, borderColor: colors.border, borderRadius: 14,
+                backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10,
               }}>
                 <Text style={{ fontSize: 18 }}>🔒</Text>
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
                   placeholder="8 أحرف على الأقل"
-                  placeholderTextColor={C.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   secureTextEntry={!showPass}
-                  style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
+                  style={{ flex: 1, fontSize: 14, color: colors.text, textAlign: "right" }}
                 />
                 <Pressable onPress={() => setShowPass(v => !v)}>
                   <Text style={{ fontSize: 18 }}>{showPass ? "🙈" : "👁️"}</Text>
@@ -518,24 +511,24 @@ export default function Register() {
             </View>
 
             <View style={{ marginBottom: 20 }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: C.textMuted, marginBottom: 6 }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted, marginBottom: 6 }}>
                 تأكيد كلمة المرور
               </Text>
               <View style={{
                 flexDirection: "row", alignItems: "center",
                 borderWidth: 1.5,
-                borderColor: confirm && confirm !== password ? "#FECACA" : C.border,
+                borderColor: confirm && confirm !== password ? "#FECACA" : colors.border,
                 borderRadius: 14,
-                backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10,
+                backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10,
               }}>
                 <Text style={{ fontSize: 18 }}>🔒</Text>
                 <TextInput
                   value={confirm}
                   onChangeText={setConfirm}
                   placeholder="أعد كتابة كلمة المرور"
-                  placeholderTextColor={C.textMuted}
+                  placeholderTextColor={colors.textMuted}
                   secureTextEntry={!showPass}
-                  style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
+                  style={{ flex: 1, fontSize: 14, color: colors.text, textAlign: "right" }}
                 />
                 {confirm.length > 0 && (
                   <Text style={{ fontSize: 16 }}>{confirm === password ? "✅" : "❌"}</Text>
@@ -551,22 +544,22 @@ export default function Register() {
           style={{
             flexDirection: "row", alignItems: "center", gap: 12,
             padding: 14, borderRadius: 14, marginBottom: 20,
-            backgroundColor: agreed ? C.primarySoft : C.surface,
-            borderWidth: 1.5, borderColor: agreed ? C.primary : C.border,
+            backgroundColor: agreed ? colors.primarySoft : colors.surface,
+            borderWidth: 1.5, borderColor: agreed ? colors.primary : colors.border,
           }}
         >
           <View style={{
             width: 24, height: 24, borderRadius: 8,
-            borderWidth: 2, borderColor: agreed ? C.primary : C.border,
-            backgroundColor: agreed ? C.primary : "transparent",
+            borderWidth: 2, borderColor: agreed ? colors.primary : colors.border,
+            backgroundColor: agreed ? colors.primary : "transparent",
             justifyContent: "center", alignItems: "center",
           }}>
             {agreed && <Text style={{ color: "white", fontSize: 14, fontWeight: "900" }}>✓</Text>}
           </View>
-          <Text style={{ flex: 1, fontSize: 13, color: C.text, lineHeight: 20 }}>
+          <Text style={{ flex: 1, fontSize: 13, color: colors.text, lineHeight: 20 }}>
             أوافق على{" "}
             <Text
-              style={{ color: C.primary, fontWeight: "700" }}
+              style={{ color: colors.primary, fontWeight: "700" }}
               onPress={() => router.push("/legal/consent")}
             >
               الشروط والأحكام
@@ -581,9 +574,9 @@ export default function Register() {
           disabled={loading}
           style={{
             paddingVertical: 16, borderRadius: 16, marginBottom: 16,
-            backgroundColor: loading ? C.primarySoft : C.pink,
+            backgroundColor: loading ? colors.primarySoft : colors.pink,
             alignItems: "center",
-            shadowColor: C.pink, shadowOffset: { width: 0, height: 6 },
+            shadowColor: colors.pink, shadowOffset: { width: 0, height: 6 },
             shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
           }}
         >
@@ -597,9 +590,9 @@ export default function Register() {
 
         {/* LOGIN LINK */}
         <Pressable onPress={() => router.replace("/(auth)/login")} style={{ alignItems: "center" }}>
-          <Text style={{ color: C.textMuted, fontSize: 13 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 13 }}>
             عندك حساب بالفعل؟{" "}
-            <Text style={{ color: C.primary, fontWeight: "700" }}>تسجيل الدخول</Text>
+            <Text style={{ color: colors.primary, fontWeight: "700" }}>تسجيل الدخول</Text>
           </Text>
         </Pressable>
 
@@ -610,26 +603,26 @@ export default function Register() {
       <Modal visible={showCountry} transparent animationType="slide">
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
           <View style={{
-            backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            backgroundColor: colors.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24,
             maxHeight: "75%", paddingTop: 16,
           }}>
-            <View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: C.border, alignSelf: "center", marginBottom: 12 }} />
-            <Text style={{ fontSize: 17, fontWeight: "900", color: C.text, textAlign: "center", marginBottom: 12 }}>اختر الدولة</Text>
+            <View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: colors.border, alignSelf: "center", marginBottom: 12 }} />
+            <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text, textAlign: "center", marginBottom: 12 }}>اختر الدولة</Text>
 
             {/* Search */}
             <View style={{
               marginHorizontal: 16, marginBottom: 12, flexDirection: "row", alignItems: "center",
-              borderWidth: 1.5, borderColor: C.border, borderRadius: 14,
-              backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 10, gap: 8,
+              borderWidth: 1.5, borderColor: colors.border, borderRadius: 14,
+              backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 10, gap: 8,
             }}>
               <Text style={{ fontSize: 16 }}>🔍</Text>
               <TextInput
                 value={countrySearch}
                 onChangeText={setCountrySearch}
                 placeholder="ابحث عن الدولة..."
-                placeholderTextColor={C.textMuted}
+                placeholderTextColor={colors.textMuted}
                 autoFocus
-                style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
+                style={{ flex: 1, fontSize: 14, color: colors.text, textAlign: "right" }}
               />
             </View>
 
@@ -650,25 +643,25 @@ export default function Register() {
                     style={{
                       flexDirection: "row", alignItems: "center", gap: 12,
                       paddingVertical: 14, paddingHorizontal: 20,
-                      backgroundColor: isSelected ? C.primarySoft : "transparent",
+                      backgroundColor: isSelected ? colors.primarySoft : "transparent",
                     }}
                   >
                     <Text style={{ fontSize: 24 }}>{item.flag}</Text>
-                    <Text style={{ fontSize: 15, fontWeight: "700", color: C.text, flex: 1 }}>{item.nameAr}</Text>
-                    <Text style={{ fontSize: 14, color: C.textMuted, fontWeight: "600" }}>{item.code}</Text>
-                    {isSelected && <Text style={{ fontSize: 16, color: C.primary }}>✓</Text>}
+                    <Text style={{ fontSize: 15, fontWeight: "700", color: colors.text, flex: 1 }}>{item.nameAr}</Text>
+                    <Text style={{ fontSize: 14, color: colors.textMuted, fontWeight: "600" }}>{item.code}</Text>
+                    {isSelected && <Text style={{ fontSize: 16, color: colors.primary }}>✓</Text>}
                   </Pressable>
                 );
               }}
-              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: C.border, marginHorizontal: 20 }} />}
+              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 20 }} />}
               style={{ maxHeight: 400 }}
             />
 
             <Pressable
               onPress={() => setShowCountry(false)}
-              style={{ padding: 16, alignItems: "center", borderTopWidth: 1, borderTopColor: C.border }}
+              style={{ padding: 16, alignItems: "center", borderTopWidth: 1, borderTopColor: colors.border }}
             >
-              <Text style={{ fontWeight: "700", color: C.textMuted, fontSize: 15 }}>إغلاق</Text>
+              <Text style={{ fontWeight: "700", color: colors.textMuted, fontSize: 15 }}>إغلاق</Text>
             </Pressable>
           </View>
         </View>

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { View, Text, Pressable, TextInput, Image } from "react-native";
 import { router } from "expo-router";
 import { useCart } from "../lib/cartStore";
+import { formatCurrency } from "../lib/utils";
 import { useDarkMode } from "../src/hooks/useDarkMode";
+import { useSupabase } from "../src/hooks/useSupabase";
 import { analyticsTracker } from "../src/utils/analyticsTracker";
 import { A11yPresets } from "../src/hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../src/constants/analyticsEvents";
@@ -11,12 +13,37 @@ import { SafeAreaScrollView, SafeAreaDisplay } from "../src/components";
 export default function Cart() {
   const { isDarkMode, colors } = useDarkMode();
   const cart = useCart();
+  const supabase = useSupabase();
   const [promo, setPromo]     = useState("");
   const [promoOn, setPromoOn] = useState(false);
   const [discount, setDiscount] = useState(0);
+  const [savedAddress, setSavedAddress] = useState<{ label: string; street: string } | null>(null);
 
   useEffect(() => {
     analyticsTracker.trackScreenView(ANALYTICS_EVENTS.SCREEN.CART);
+
+    // Fetch user's default saved address
+    if (!supabase) return;
+    supabase.auth.getUser().then(({ data }: any) => {
+      const userId = data.user?.id;
+      if (!userId) return;
+      (supabase as any)
+        .from("addresses")
+        .select("label, street, building")
+        .eq("user_id", userId)
+        .order("is_default", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data: addr }: any) => {
+          if (addr) {
+            setSavedAddress({
+              label: addr.label || "عنوان محفوظ",
+              street: [addr.street, addr.building].filter(Boolean).join("، "),
+            });
+          }
+        })
+        .catch(() => {});
+    }).catch(() => {});
   }, []);
 
   const subtotal    = cart.subtotal;
@@ -24,11 +51,27 @@ export default function Cart() {
   const total       = subtotal + deliveryFee - discount;
   const loyaltyEarn = cart.loyaltyEarn;
 
-  function applyPromo() {
-    if (promo.trim().toUpperCase() === "HILLAHA1") {
-      analyticsTracker.trackEvent(ANALYTICS_EVENTS.CART.PROMO_APPLIED, { code: 'HILLAHA1', discount: 15 });
-      setDiscount(15);
+  // Server-side promotional code validation
+  async function applyPromo() {
+    const trimmed = promo.trim();
+    if (!trimmed) return;
+    if (!supabase) { setDiscount(0); return; }
+    try {
+      const { data, error } = await (supabase as any).rpc("validate_promo_code", {
+        p_code: trimmed,
+        p_subtotal: subtotal,
+      });
+      if (error || !data?.valid) {
+        setDiscount(0);
+        setPromoOn(false);
+        // Fallback: show error (or silently ignore for UX)
+        return;
+      }
+      analyticsTracker.trackEvent(ANALYTICS_EVENTS.CART.PROMO_APPLIED, { code: trimmed, discount: data.discount });
+      setDiscount(Number(data.discount));
       setPromoOn(false);
+    } catch {
+      setDiscount(0);
     }
   }
 
@@ -89,7 +132,7 @@ export default function Cart() {
               {cart.partnerName ?? "المتجر"}
             </Text>
             <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
-              🛵 {deliveryFee} جنيه توصيل
+              🛵 {formatCurrency(deliveryFee)} توصيل
             </Text>
           </View>
           <Pressable
@@ -136,7 +179,7 @@ export default function Cart() {
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: "800", color: colors.text, fontSize: 14 }}>{item.nameAr}</Text>
                 <Text style={{ color: colors.primary, fontWeight: "900", marginTop: 4, fontSize: 14 }}>
-                  {item.price * item.qty} جنيه
+                  {formatCurrency(item.price * item.qty)}
                 </Text>
               </View>
               <View style={{
@@ -193,7 +236,10 @@ export default function Cart() {
         }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <Text style={{ fontWeight: "900", color: colors.text, fontSize: 15 }}>📍 عنوان التوصيل</Text>
-            <Pressable {...A11yPresets.button("تغيير العنوان", "انقر لتغيير عنوان التوصيل")}>
+            <Pressable
+              onPress={() => router.push("/addresses")}
+              {...A11yPresets.button("تغيير العنوان", "انقر لتغيير عنوان التوصيل")}
+            >
               <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 13 }}>تغيير</Text>
             </Pressable>
           </View>
@@ -203,8 +249,17 @@ export default function Cart() {
           }}>
             <Text style={{ fontSize: 18 }}>📍</Text>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "700", color: colors.text, fontSize: 13 }}>قنا — وسط المدينة</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>شارع النيل، أمام الكورنيش</Text>
+              {savedAddress ? (
+                <>
+                  <Text style={{ fontWeight: "700", color: colors.text, fontSize: 13 }}>{savedAddress.label}</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{savedAddress.street}</Text>
+                </>
+              ) : (
+                <Pressable onPress={() => router.push("/addresses")}>
+                  <Text style={{ fontWeight: "700", color: colors.primary, fontSize: 13 }}>اختر عنوان التوصيل</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>اضغط هنا لاختيار أو إضافة عنوان</Text>
+                </Pressable>
+              )}
             </View>
           </View>
         </View>
@@ -307,9 +362,9 @@ export default function Cart() {
           </View>
           <View style={{ padding: 16, gap: 12 }}>
             {[
-              { label: "المجموع الجزئي", value: `${subtotal} جنيه`, bold: false },
-              { label: "رسوم التوصيل",   value: `+ ${deliveryFee} جنيه`, bold: false },
-              ...(discount > 0 ? [{ label: "خصم الكود", value: `- ${discount} جنيه`, bold: false, green: true }] : []),
+              { label: "المجموع الجزئي", value: formatCurrency(subtotal), bold: false },
+              { label: "رسوم التوصيل",   value: `+ ${formatCurrency(deliveryFee)}`, bold: false },
+              ...(discount > 0 ? [{ label: "خصم الكود", value: `- ${formatCurrency(discount)}`, bold: false, green: true }] : []),
             ].map((row: any, i) => (
               <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <Text style={{ color: colors.textMuted, fontSize: 14 }}>{row.label}</Text>
@@ -321,7 +376,7 @@ export default function Cart() {
             <View style={{ height: 1.5, backgroundColor: colors.border, marginVertical: 4 }} />
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <Text style={{ fontWeight: "900", color: colors.text, fontSize: 16 }}>الإجمالي</Text>
-              <Text style={{ fontWeight: "900", color: colors.primary, fontSize: 18 }}>{total} جنيه</Text>
+              <Text style={{ fontWeight: "900", color: colors.primary, fontSize: 18 }}>{formatCurrency(total)}</Text>
             </View>
           </View>
         </View>
@@ -336,7 +391,7 @@ export default function Cart() {
         <Pressable
           onPress={() => {
             analyticsTracker.trackEvent(ANALYTICS_EVENTS.CART.CHECKOUT_INITIATED, { total, itemCount: cart.totalItems });
-            router.push("/checkout");
+            router.push({ pathname: "/checkout", params: { discount: String(discount), promoCode: promo.trim() || undefined } });
           }}
           {...A11yPresets.button("إتمام الطلب", `انقر للانتقال إلى الدفع - المجموع: ${total} جنيه`)}
           style={{
@@ -356,7 +411,7 @@ export default function Cart() {
             </Text>
           </View>
           <Text style={{ color: "white", fontWeight: "900", fontSize: 17 }}>إتمام الطلب</Text>
-          <Text style={{ color: "rgba(255,255,255,0.9)", fontWeight: "900", fontSize: 16 }}>{total} جنيه</Text>
+          <Text style={{ color: "rgba(255,255,255,0.9)", fontWeight: "900", fontSize: 16 }}>{formatCurrency(total)}</Text>
         </Pressable>
       </View>
     </View>

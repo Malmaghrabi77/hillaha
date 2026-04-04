@@ -41,7 +41,11 @@ export default function DriverChat() {
       if (!supabase) { setLoading(false); return; }
 
       try {
-        // Get order and driver info
+        // Get current user for ownership verification
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setLoading(false); return; }
+
+        // Get order and driver info — scoped to current customer
         const { data: orderData } = await supabase
           .from("orders")
           .select(`
@@ -49,6 +53,7 @@ export default function DriverChat() {
             profiles!orders_driver_id_fkey(full_name, phone)
           `)
           .eq("id", orderId)
+          .eq("customer_id", user.id)
           .single();
 
         if (orderData) {

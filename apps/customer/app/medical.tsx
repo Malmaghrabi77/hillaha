@@ -3,7 +3,6 @@ import { View, Text, Pressable, ScrollView, StatusBar, Platform, Image, Activity
 import { router } from "expo-router";
 import { useDarkMode } from "../src/hooks/useDarkMode";
 import { analyticsTracker } from "../src/utils/analyticsTracker";
-import { A11yPresets } from "../src/hooks/useAccessibility";
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -73,7 +72,6 @@ export default function Medical() {
             analyticsTracker.trackEvent("medical_back");
             router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
           }}
-          {...A11yPresets.pressable}
           style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}
         >
           <Text style={{ fontSize: 20, color: colors.text }}>←</Text>
@@ -96,7 +94,6 @@ export default function Medical() {
                 analyticsTracker.trackEvent("medical_service_open", { serviceId: service.id, serviceName: service.title });
                 router.push(service.route as any);
               }}
-              {...A11yPresets.pressable}
               style={{
                 backgroundColor: colors.surface,
                 borderRadius: 20,

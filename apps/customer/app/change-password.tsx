@@ -16,12 +16,12 @@ export default function ChangePassword() {
   const [showNew, setShowNew] = useState(false);
 
   const handleChangePassword = async () => {
-    if (!newPassword || !confirmPassword) {
+    if (!currentPassword || !newPassword || !confirmPassword) {
       Alert.alert("خطأ", "يرجى ملء جميع الحقول");
       return;
     }
-    if (newPassword.length < 6) {
-      Alert.alert("خطأ", "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل");
+    if (newPassword.length < 8) {
+      Alert.alert("خطأ", "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -34,6 +34,18 @@ export default function ChangePassword() {
       if (!supabase) {
         Alert.alert("خطأ", "غير متصل بالخادم");
         return;
+      }
+      // Verify current password by attempting sign-in
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: currentPassword,
+        });
+        if (signInError) {
+          Alert.alert("خطأ", "كلمة المرور الحالية غير صحيحة");
+          return;
+        }
       }
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) {
@@ -101,7 +113,7 @@ export default function ChangePassword() {
       <View style={{ marginBottom: 16 }}>
         <TextInput
           style={inputStyle}
-          placeholder="أدخل كلمة المرور الجديدة (6 أحرف على الأقل)"
+          placeholder="أدخل كلمة المرور الجديدة (8 أحرف على الأقل)"
           placeholderTextColor={colors.textMuted}
           secureTextEntry={!showNew}
           value={newPassword}

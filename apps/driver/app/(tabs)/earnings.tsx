@@ -295,7 +295,7 @@ export default function EarningsTab() {
                   التسوية الأسبوعية القادمة
                 </Text>
                 <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
-                  يتم تحويل أرباحك كل جمعة تلقائياً
+                  يتم تحويل أرباحك أسبوعياً (السبت - الجمعة)
                 </Text>
               </View>
             </View>

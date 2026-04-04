@@ -129,7 +129,7 @@ export default function EditProfile() {
                 if (status !== "granted") { Alert.alert("تنبيه", "يجب السماح بالوصول للصور"); return; }
                 const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
                 if (!result.canceled && result.assets?.[0]?.uri) {
-                  Alert.alert("تم", "سيتم تفعيل تحديث الصورة الشخصية قريباً");
+                  Alert.alert("تنبيه", "تحميل الصورة قريبا\u064B — هذه الميزة قيد التطوير");
                 }
               } catch { Alert.alert("خطأ", "تعذّر فتح المعرض"); }
             }}

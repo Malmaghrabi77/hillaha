@@ -29,23 +29,18 @@ export default function AdminLoginPage() {
     setLoading(true);
     try {
       const sb = getSupabase();
-      console.log("Supabase client:", sb ? "✓ Connected" : "✗ Failed");
 
       if (!sb) throw new Error("خطأ: لا يمكن الاتصال بقاعدة البيانات");
 
       // Sign in with Supabase
-      console.log("Attempting login with:", email);
       const { error: authError, data } = await sb.auth.signInWithPassword({
         email: email.toLowerCase(),
         password,
       });
 
       if (authError) {
-        console.error("Auth error:", authError);
         throw authError;
       }
-
-      console.log("Login successful, user ID:", data.user?.id);
 
       // Check if user is admin or super_admin
       const userId = data.user?.id;
@@ -59,12 +54,10 @@ export default function AdminLoginPage() {
         .single();
 
       if (profileError) {
-        console.error("Profile fetch error:", profileError);
         throw new Error("فشل التحقق من صلاحيات الادمن");
       }
 
       const role = (profileData as { role: string } | null)?.role;
-      console.log("User role:", role);
 
       // Check if user has admin role
       if (role !== "super_admin" && role !== "admin" && role !== "accountant" && role !== "customer_service") {
@@ -80,7 +73,6 @@ export default function AdminLoginPage() {
         router.push("/admin");
       }
     } catch (e: any) {
-      console.error("Login error:", e);
       const msg = e?.message ?? "";
       if (msg.includes("Invalid login credentials")) {
         setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");

@@ -32,6 +32,7 @@ export default function BankDetailsScreen() {
   async function loadData() {
     try {
       const supabase = getSB();
+      if (!supabase) { setLoading(false); return; }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserId(user.id);
@@ -58,6 +59,7 @@ export default function BankDetailsScreen() {
         }
       }
     } catch (e) {
+      console.warn("load_bank_details:", e);
     } finally {
       setLoading(false);
     }
@@ -68,6 +70,7 @@ export default function BankDetailsScreen() {
     setSaving(true);
     try {
       const supabase = getSB();
+      if (!supabase) { Alert.alert("خطأ", "تأكد من اتصالك بالإنترنت"); setSaving(false); return; }
 
       const upsertData =
         mode === "bank"

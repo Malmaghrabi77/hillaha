@@ -3,6 +3,7 @@ import {
   View, Text, Pressable, TextInput,
   Alert, ActivityIndicator,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { useFocusEffect } from "expo-router";
 import { useDarkMode } from "../src/hooks/useDarkMode";
 import { useSupabase } from "../src/hooks/useSupabase";
@@ -259,12 +260,12 @@ export default function PromoCode() {
 
                     {/* Copy Button */}
                     <Pressable
-                      onPress={() => {
+                      onPress={async () => {
                         analyticsTracker.trackEvent(ANALYTICS_EVENTS.PROMO.CODE_COPIED, {
                           coupon_code: c.code,
                           coupon_id: c.id,
                         });
-                        // Copy to clipboard in real app
+                        await Clipboard.setStringAsync(c.code);
                         Alert.alert("تم", `تم نسخ الكود: ${c.code}`);
                       }}
                       {...A11yPresets.button()}

@@ -45,6 +45,8 @@ export default function Dashboard() {
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -59,14 +61,31 @@ export default function Dashboard() {
         return;
       }
 
+      // Detect partner_id from authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+      const { data: profile } = await (supabase as any).from("profiles").select("role, partner_id").eq("id", user.id).maybeSingle();
+      const isSA = profile?.role === "super_admin";
+      setIsSuperAdmin(isSA);
+      const pId = profile?.partner_id;
+      setPartnerId(pId || null);
+
+      if (!isSA && !pId) {
+        setError("لا يوجد متجر مرتبط بحسابك");
+        setLoading(false);
+        return;
+      }
+
       const today = new Date().toISOString().split('T')[0];
 
       // Get today's orders
-      const { data: todayOrdersData, error: ordersError } = await (supabase
-        .from("orders") as any)
+      let todayQuery = (supabase.from("orders") as any)
         .select("id, total, status, created_at, profiles(full_name)")
         .gte("created_at", `${today}T00:00:00`)
         .lte("created_at", `${today}T23:59:59`);
+      if (!isSA && pId) todayQuery = todayQuery.eq("partner_id", pId);
+
+      const { data: todayOrdersData, error: ordersError } = await todayQuery;
 
       if (ordersError) throw ordersError;
 
@@ -78,10 +97,14 @@ export default function Dashboard() {
       const pendingOrders = todayOrders.filter(o => o.status === 'pending').length;
 
       // Get partner rating
-      const { data: partnerData, error: partnerError } = await (supabase
-        .from("partners") as any)
-        .select("average_rating")
-        .single();
+      let ratingQuery = (supabase.from("partners") as any)
+        .select("average_rating");
+      if (!isSA && pId) {
+        ratingQuery = ratingQuery.eq("id", pId).maybeSingle();
+      } else {
+        ratingQuery = ratingQuery.maybeSingle();
+      }
+      const { data: partnerData, error: partnerError } = await ratingQuery;
 
       if (partnerError) console.log("Partner rating not available");
 
@@ -93,11 +116,13 @@ export default function Dashboard() {
       });
 
       // Get recent orders (last 5)
-      const { data: recentData, error: recentError } = await (supabase
-        .from("orders") as any)
+      let recentQuery = (supabase.from("orders") as any)
         .select("id, total, status, created_at, profiles(full_name)")
         .order("created_at", { ascending: false })
         .limit(5);
+      if (!isSA && pId) recentQuery = recentQuery.eq("partner_id", pId);
+
+      const { data: recentData, error: recentError } = await recentQuery;
 
       if (recentError) throw recentError;
       setRecentOrders(recentData || []);
@@ -112,7 +137,7 @@ export default function Dashboard() {
 
   const STAT_CARDS = [
     { label: "طلبات اليوم", value: stats.todayOrders.toString(), icon: "📦", color: C.primary, bg: C.primarySoft },
-    { label: "إيراد اليوم", value: `${stats.todayRevenue.toFixed(0)} ر.س`, icon: "💰", color: "#059669", bg: "#D1FAE5" },
+    { label: "إيراد اليوم", value: `${stats.todayRevenue.toFixed(0)} ج.م`, icon: "💰", color: "#059669", bg: "#D1FAE5" },
     { label: "بانتظار القبول", value: stats.pendingOrders.toString(), icon: "⏳", color: C.warning, bg: "#FEF3C7" },
     { label: "التقييم", value: `${stats.averageRating.toFixed(1)} ⭐`, icon: "⭐", color: C.pink, bg: C.pinkSoft },
   ];
@@ -214,7 +239,7 @@ export default function Dashboard() {
 
                   <div style={{ textAlign: "center", flex: 1 }}>
                     <div style={{ fontWeight: 700, color: C.text }}>
-                      {order.total.toFixed(0)} ر.س
+                      {order.total.toFixed(0)} ج.م
                     </div>
                     <div style={{ fontSize: 12, color: C.textMuted }}>
                       {timeLabel}

@@ -41,6 +41,8 @@ export default function MenuPage() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
   const [saving, setSaving]     = useState(false);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     loadMenuItems();
@@ -55,10 +57,27 @@ export default function MenuPage() {
         return;
       }
 
-      const { data, error: fetchError } = await (supabase
-        .from("menu_items") as any)
+      // Detect partner_id from authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+      const { data: profile } = await (supabase as any).from("profiles").select("role, partner_id").eq("id", user.id).maybeSingle();
+      const isSA = profile?.role === "super_admin";
+      setIsSuperAdmin(isSA);
+      const pId = profile?.partner_id;
+      setPartnerId(pId || null);
+
+      if (!isSA && !pId) {
+        setError("لا يوجد متجر مرتبط بحسابك");
+        setLoading(false);
+        return;
+      }
+
+      let query = (supabase.from("menu_items") as any)
         .select("*")
         .order("created_at", { ascending: false });
+      if (!isSA && pId) query = query.eq("partner_id", pId);
+
+      const { data, error: fetchError } = await query;
 
       if (fetchError) throw fetchError;
 
@@ -87,7 +106,7 @@ export default function MenuPage() {
   }
 
   function saveItem() {
-    if (!form.name.trim() || !form.price) return;
+    if (!form.name.trim() || !form.price || form.price < 0) return;
 
     setSaving(true);
     const saveToSupabase = async () => {
@@ -99,15 +118,18 @@ export default function MenuPage() {
         }
 
         if (modal === "add") {
+          if (!partnerId) { setError("لا يمكن إضافة صنف بدون متجر"); return; }
+          const insertData = { ...form, partner_id: partnerId };
           const { error: insertError } = await (supabase
             .from("menu_items") as any)
-            .insert([form]);
+            .insert([insertData]);
           if (insertError) throw insertError;
         } else if (editing) {
           const { error: updateError } = await (supabase
             .from("menu_items") as any)
             .update(form)
-            .eq("id", editing.id);
+            .eq("id", editing.id)
+            .eq("partner_id", partnerId);
           if (updateError) throw updateError;
         }
 
@@ -140,7 +162,8 @@ export default function MenuPage() {
         const { error: updateError } = await (supabase
           .from("menu_items") as any)
           .update({ available: !item.available })
-          .eq("id", id);
+          .eq("id", id)
+          .eq("partner_id", partnerId);
 
         if (updateError) throw updateError;
         await loadMenuItems();
@@ -168,7 +191,8 @@ export default function MenuPage() {
         const { error: deleteError } = await (supabase
           .from("menu_items") as any)
           .delete()
-          .eq("id", deleteId);
+          .eq("id", deleteId)
+          .eq("partner_id", partnerId);
 
         if (deleteError) throw deleteError;
         setDeleteId(null);
@@ -308,7 +332,7 @@ export default function MenuPage() {
             </p>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 18, fontWeight: 900, color: C.primary }}>{item.price} ج</span>
+              <span style={{ fontSize: 18, fontWeight: 900, color: C.primary }}>{item.price} ج.م</span>
               <div style={{ display: "flex", gap: 8 }}>
                 <button
                   onClick={() => openEdit(item)}

@@ -51,7 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         const meta = data.session.user.user_metadata as any;
         setUserName(meta?.full_name ?? meta?.name ?? data.session.user.email?.split("@")[0] ?? "الشريك");
 
-        // Check super_admin role
+        // Check role — only allow partner, store_admin, super_admin, admin, accountant
         try {
           const { data: profile, error: profileError } = await sb
             .from("profiles")
@@ -61,14 +61,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           if (profileError) {
             console.error("Error fetching profile:", profileError);
-          } else if (profile) {
-            const profileRole = (profile as { role: string | null } | null)?.role;
-            if (profileRole === "super_admin") {
-              setIsSuperAdmin(true);
-            }
+          }
+
+          const profileRole = (profile as { role: string | null } | null)?.role;
+          const allowedRoles = ["partner", "store_admin", "super_admin", "admin", "accountant", "customer_service"];
+          if (!profileRole || !allowedRoles.includes(profileRole)) {
+            await sb.auth.signOut();
+            router.replace("/login");
+            return;
+          }
+          if (profileRole === "super_admin") {
+            setIsSuperAdmin(true);
           }
         } catch (err) {
-          console.error("Error checking super admin:", err);
+          console.error("Error checking role:", err);
+          router.replace("/login");
+          return;
         }
 
         // Load partner logo from partners table

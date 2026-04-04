@@ -4,6 +4,7 @@ import {
   StatusBar, ActivityIndicator, Image,
 } from "react-native";
 import { router } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { C, getSB } from "../../lib/constants";
 
 const VEHICLE_LABELS: Record<string, string> = { car: "سيارة", scooter: "سكوتر / فيسبا", bicycle: "دراجة هوائية" };
@@ -73,6 +74,10 @@ export default function ProfileTab() {
   }
 
   async function handleLogout() {
+    try {
+      await SecureStore.deleteItemAsync("hillaha_driver_email");
+      await SecureStore.deleteItemAsync("hillaha_driver_refresh_token");
+    } catch {}
     const supabase = getSB();
     if (supabase) await supabase.auth.signOut();
     router.replace("/(auth)/login");

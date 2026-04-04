@@ -6,6 +6,7 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import { useDarkMode } from "../../src/hooks/useDarkMode";
 import { useSupabase } from "../../src/hooks/useSupabase";
+import { formatCurrency } from "../../lib/utils";
 import { analyticsTracker } from "../../src/utils/analyticsTracker";
 import { A11yPresets } from "../../src/hooks/useAccessibility";
 import { LoadingAnimation, EmptyStateAnimation } from "../../src/hooks/useLottieAnimations";
@@ -103,7 +104,9 @@ export default function Orders() {
                   partnerMap[p.id] = p.name_ar;
                 }
               }
-            } catch {}
+            } catch (e) {
+              console.warn("fetch_partner_names:", e);
+            }
           }
 
           for (const o of ordersData as any[]) {
@@ -125,12 +128,14 @@ export default function Orders() {
                 "نوع الطلب": "طلب مطعم / متجر",
                 "المتجر": partnerName,
                 "المنتجات": items.map((i: any) => `${i.name} × ${i.qty}`).join("، ") || "-",
-                "الإجمالي": `${Number(o.total)} جنيه`,
+                "الإجمالي": formatCurrency(Number(o.total)),
               },
             });
           }
         }
-      } catch {}
+      } catch (e) {
+        console.warn("fetch_restaurant_orders:", e);
+      }
 
       // 2. Service bookings (cleaning, electrical)
       try {
@@ -158,12 +163,14 @@ export default function Orders() {
                 "الموعد": s.scheduled_time ?? "-",
                 "العنوان": s.address ?? "-",
                 "ملاحظات": s.notes ?? "-",
-                "السعر": `${Number(s.price ?? 0)} جنيه`,
+                "السعر": formatCurrency(Number(s.price ?? 0)),
               },
             });
           }
         }
-      } catch {}
+      } catch (e) {
+        console.warn("fetch_service_bookings:", e);
+      }
 
       // 3. Delivery requests
       try {
@@ -194,17 +201,19 @@ export default function Orders() {
                 "هاتف المستلم": d.receiver_phone ?? "-",
                 "اسم المستلم": d.receiver_name ?? "-",
                 "ملاحظات": d.notes ?? "-",
-                "رسوم التوصيل": `${Number(d.delivery_fee ?? 0)} جنيه`,
+                "رسوم التوصيل": formatCurrency(Number(d.delivery_fee ?? 0)),
               },
             });
           }
         }
-      } catch {}
+      } catch (e) {
+        console.warn("fetch_delivery_requests:", e);
+      }
 
       // Sort all by date descending
       all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setOrders(all);
-    } catch { /* ignore */ } finally {
+    } catch (e) { console.warn("fetchOrders:", e); } finally {
       setLoading(false);
       setRefreshing(false);
     }
@@ -420,7 +429,7 @@ export default function Orders() {
                   backgroundColor: colors.primarySoft, borderRadius: 14, padding: 14, marginBottom: 16,
                 }}>
                   <Text style={{ fontSize: 15, fontWeight: "900", color: colors.text }}>المبلغ</Text>
-                  <Text style={{ fontSize: 20, fontWeight: "900", color: colors.primary }}>{selectedOrder.total} جنيه</Text>
+                  <Text style={{ fontSize: 20, fontWeight: "900", color: colors.primary }}>{formatCurrency(selectedOrder.total)}</Text>
                 </View>
 
                 {/* Track button for active restaurant orders */}
@@ -540,7 +549,7 @@ function OrderCard({
       {/* Footer */}
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Text style={{ fontWeight: "900", color: colors.primary, fontSize: 16 }}>
-          {order.total} جنيه
+          {formatCurrency(order.total)}
         </Text>
         {active && order.source === "order" && (
           <View style={{

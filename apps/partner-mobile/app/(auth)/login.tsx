@@ -10,15 +10,18 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  Image,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { getSupabase } from "@hillaha/core";
+import { getSupabase } from "@/lib/supabase";
 import * as SecureStore from "expo-secure-store";
 import * as LocalAuthentication from "expo-local-authentication";
-import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "@/lib/theme";
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, SHADOWS } from "@/lib/theme";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,74 +38,77 @@ export default function LoginScreen() {
       const compatible = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
       setBiometricAvailable(compatible && enrolled);
-    } catch (error) {
-      console.error("Biometric check failed:", error);
+    } catch (e) {
+      console.warn("check_biometric:", e);
     }
   };
 
   const loadSavedEmail = async () => {
     try {
       const saved = await SecureStore.getItemAsync("PARTNER_EMAIL");
-      if (saved) {
-        setSavedEmail(saved);
-        setEmail(saved);
-      }
-    } catch (error) {
-      console.error("Failed to load saved email:", error);
+      if (saved) { setSavedEmail(saved); setEmail(saved); }
+    } catch (e) {
+      console.warn("load_saved_email:", e);
     }
-  };
-
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
   };
 
   const handleLogin = async () => {
-    // Validate inputs
-    if (!email.trim()) {
-      Alert.alert("خطأ", "يرجى إدخال البريد الإلكتروني");
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      Alert.alert("خطأ", "البريد الإلكتروني غير صحيح");
-      return;
-    }
-
-    if (!password) {
-      Alert.alert("خطأ", "يرجى إدخال كلمة المرور");
-      return;
-    }
+    if (!email.trim()) { Alert.alert("خطأ", "يرجى إدخال البريد الإلكتروني"); return; }
+    if (!password) { Alert.alert("خطأ", "يرجى إدخال كلمة المرور"); return; }
 
     setLoading(true);
     try {
       const supabase = getSupabase();
-      if (!supabase) {
-        Alert.alert("خطأ", "فشل الاتصال بالمنصة");
-        return;
-      }
+      if (!supabase) { Alert.alert("خطأ", "فشل الاتصال بالمنصة"); return; }
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       });
 
-      if (error) {
-        Alert.alert("خطأ", error.message || "فشل تسجيل الدخول");
-        return;
-      }
+      if (error) { Alert.alert("خطأ", error.message || "فشل تسجيل الدخول"); return; }
 
       if (data.session) {
-        // Save credentials for biometric login
+        // Verify user role is partner or super_admin
+        const { data: profileData } = await (supabase as any)
+          .from("profiles")
+          .select("role")
+          .eq("id", data.session.user.id)
+          .single();
+
+        const userRole = profileData?.role;
+        if (userRole !== "partner" && userRole !== "super_admin") {
+          await supabase.auth.signOut();
+          Alert.alert("خطأ", "هذا الحساب ليس حساب شريك");
+          return;
+        }
+
         await SecureStore.setItemAsync("PARTNER_EMAIL", email.trim().toLowerCase());
         await SecureStore.setItemAsync("PARTNER_ACCESS_TOKEN", data.session.access_token);
         await SecureStore.setItemAsync("PARTNER_REFRESH_TOKEN", data.session.refresh_token || "");
 
-        // Navigate to dashboard
+        // Check if partner record exists
+        const { data: partnerData } = await (supabase as any)
+          .from("partners")
+          .select("id")
+          .eq("user_id", data.session.user.id)
+          .single();
+
+        if (!partnerData) {
+          // Try to complete onboarding (for users who registered before the trigger fix)
+          const { error: onboardError } = await (supabase as any).rpc("complete_partner_onboarding", {
+            p_user_id: data.session.user.id,
+          });
+          if (onboardError) {
+            console.warn("Onboarding RPC error:", onboardError.message);
+            // Continue anyway — the partner record may already exist
+          }
+        }
+
         router.replace("/(root)/dashboard");
       }
-    } catch (error) {
-      console.error("Login error:", error);
+    } catch (e) {
+      console.warn("handle_login:", e);
       Alert.alert("خطأ", "حدث خطأ أثناء تسجيل الدخول");
     } finally {
       setLoading(false);
@@ -110,233 +116,249 @@ export default function LoginScreen() {
   };
 
   const handleBiometricLogin = async () => {
-    if (!savedEmail) {
-      Alert.alert("تنبيه", "لا توجد بيانات محفوظة للدخول البيومتري");
-      return;
-    }
-
+    if (!savedEmail) return;
     try {
       const result = await LocalAuthentication.authenticateAsync({
         disableDeviceFallback: false,
-        reason: "تحقق من هويتك للدخول",
+        promptMessage: "تحقق من هويتك للدخول",
       });
-
       if (result.success) {
-        const token = await SecureStore.getItemAsync("PARTNER_ACCESS_TOKEN");
-        if (token) {
+        const accessToken = await SecureStore.getItemAsync("PARTNER_ACCESS_TOKEN");
+        const refreshToken = await SecureStore.getItemAsync("PARTNER_REFRESH_TOKEN");
+        if (accessToken && refreshToken) {
+          const supabase = getSupabase();
+          if (!supabase) {
+            Alert.alert("خطأ", "فشل الاتصال بالمنصة");
+            return;
+          }
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (error || !data.session) {
+            // Session expired — clear stored tokens and show login form
+            await SecureStore.deleteItemAsync("PARTNER_ACCESS_TOKEN");
+            await SecureStore.deleteItemAsync("PARTNER_REFRESH_TOKEN");
+            Alert.alert("خطأ", "انتهت الجلسة. سجّل دخولك مجدداً");
+            return;
+          }
+          // Update stored tokens with refreshed values
+          await SecureStore.setItemAsync("PARTNER_ACCESS_TOKEN", data.session.access_token);
+          await SecureStore.setItemAsync("PARTNER_REFRESH_TOKEN", data.session.refresh_token || "");
           router.replace("/(root)/dashboard");
         } else {
-          Alert.alert("خطأ", "انتهت جلسة الدخول. يرجى تسجيل الدخول مجددًا");
+          Alert.alert("خطأ", "انتهت الجلسة. سجّل دخولك مجدداً");
         }
       }
-    } catch (error) {
-      console.error("Biometric error:", error);
+    } catch (e) {
+      console.warn("biometric_login:", e);
       Alert.alert("خطأ", "فشل التحقق البيومتري");
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>مرحباً بك 👋</Text>
-          <Text style={styles.subtitle}>شريك حلّها</Text>
-        </View>
+    <View style={styles.container}>
+      {/* Purple top section */}
+      <View style={[styles.topSection, { paddingTop: insets.top + SPACING.xl }]}>
+        <View style={styles.decorCircle1} />
+        <View style={styles.decorCircle2} />
+        <Image
+          source={require("../../assets/images/icon.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <Text style={styles.brandTitle}>شريك حلّها</Text>
+        <Text style={styles.brandSubtitle}>إدارة متجرك بسهولة</Text>
+      </View>
 
-        {/* Form */}
-        <View style={styles.form}>
-          {/* Email Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>البريد الإلكتروني</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="example@example.com"
-              placeholderTextColor={COLORS.textMuted}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!loading}
-            />
-          </View>
+      {/* White form card */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.formSection}
+      >
+        <ScrollView
+          contentContainerStyle={[styles.formContent, { paddingBottom: insets.bottom + SPACING.lg }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.formCard}>
+            <Text style={styles.formTitle}>تسجيل الدخول</Text>
 
-          {/* Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>كلمة المرور</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor={COLORS.textMuted}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              editable={!loading}
-            />
-          </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>البريد الإلكتروني</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="example@email.com"
+                placeholderTextColor={COLORS.textMuted}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!loading}
+                textAlign="right"
+              />
+            </View>
 
-          {/* Login Button */}
-          <TouchableOpacity
-            style={[styles.button, styles.buttonPrimary, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="white" size="small" />
-            ) : (
-              <Text style={styles.buttonText}>دخول</Text>
-            )}
-          </TouchableOpacity>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>كلمة المرور</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor={COLORS.textMuted}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                editable={!loading}
+                textAlign="right"
+              />
+            </View>
 
-          {/* Biometric Login */}
-          {biometricAvailable && savedEmail && (
-            <>
-              <View style={styles.divider}>
-                <View style={styles.line} />
-                <Text style={styles.dividerText}>أو</Text>
-                <View style={styles.line} />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.button, styles.buttonSecondary]}
-                onPress={handleBiometricLogin}
-              >
-                <Text style={styles.buttonText}>🔐 بيومتري</Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          {/* Forgot Password */}
-          <TouchableOpacity
-            onPress={() => router.push("/(auth)/forgot-password")}
-          >
-            <Text style={styles.link}>هل نسيت كلمة المرور؟</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Footer Links */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            لا تملك حساب؟{" "}
-            <Text
-              style={styles.footerLink}
-              onPress={() => router.push("/(auth)/register")}
+            <TouchableOpacity
+              style={[styles.loginButton, loading && { opacity: 0.6 }]}
+              onPress={handleLogin}
+              disabled={loading}
             >
-              سجل الآن
+              {loading ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <Text style={styles.loginButtonText}>تسجيل الدخول</Text>
+              )}
+            </TouchableOpacity>
+
+            {biometricAvailable && savedEmail && (
+              <TouchableOpacity style={styles.biometricButton} onPress={handleBiometricLogin}>
+                <Text style={styles.biometricButtonText}>🔐 الدخول بالبصمة</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity onPress={() => router.push("/(auth)/forgot-password")}>
+              <Text style={styles.forgotLink}>نسيت كلمة المرور؟</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              ليس لديك حساب؟{" "}
+              <Text style={styles.footerLink} onPress={() => router.push("/(auth)/register")}>
+                سجّل الآن
+              </Text>
             </Text>
-          </Text>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: COLORS.deepPurple },
+  topSection: {
+    paddingHorizontal: SPACING.xl,
+    paddingBottom: SPACING.xxl,
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  decorCircle1: {
+    position: "absolute",
+    top: -40,
+    right: -60,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: "rgba(139, 92, 246, 0.3)",
+  },
+  decorCircle2: {
+    position: "absolute",
+    bottom: -30,
+    left: -50,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: "rgba(236, 72, 153, 0.2)",
+  },
+  logo: { width: 72, height: 72, marginBottom: SPACING.md },
+  brandTitle: {
+    fontSize: FONT_SIZES["3xl"],
+    fontWeight: "900",
+    color: COLORS.textLight,
+    marginBottom: SPACING.xs,
+  },
+  brandSubtitle: {
+    fontSize: FONT_SIZES.base,
+    color: "rgba(255,255,255,0.7)",
+  },
+  formSection: {
     flex: 1,
     backgroundColor: COLORS.bg,
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderTopRightRadius: BORDER_RADIUS.xl,
+    marginTop: -SPACING.lg,
   },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: "space-between",
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.xl,
+  formContent: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.xl },
+  formCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.xl,
+    ...SHADOWS.md,
   },
-  header: {
-    marginBottom: SPACING.xxl,
-    marginTop: SPACING.xxl,
-  },
-  title: {
-    fontSize: FONT_SIZES["2xl"],
-    fontWeight: "bold",
+  formTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: "800",
     color: COLORS.text,
-    marginBottom: SPACING.sm,
+    textAlign: "center",
+    marginBottom: SPACING.xl,
   },
-  subtitle: {
-    fontSize: FONT_SIZES.lg,
-    color: COLORS.textMuted,
-  },
-  form: {
-    flex: 1,
-  },
-  inputGroup: {
-    marginBottom: SPACING.lg,
-  },
+  inputGroup: { marginBottom: SPACING.lg },
   label: {
     fontSize: FONT_SIZES.sm,
-    fontWeight: "600",
+    fontWeight: "700",
     color: COLORS.text,
     marginBottom: SPACING.sm,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md + 2,
     fontSize: FONT_SIZES.base,
     color: COLORS.text,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.bg,
   },
-  button: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
+  loginButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.md + 2,
     borderRadius: BORDER_RADIUS.md,
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: SPACING.md,
+    marginTop: SPACING.sm,
+    ...SHADOWS.sm,
   },
-  buttonPrimary: {
-    backgroundColor: COLORS.primary,
+  loginButtonText: {
+    fontSize: FONT_SIZES.base,
+    fontWeight: "800",
+    color: COLORS.textLight,
   },
-  buttonSecondary: {
-    backgroundColor: COLORS.surface,
+  biometricButton: {
+    backgroundColor: COLORS.primarySoft,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: "center",
+    marginTop: SPACING.md,
     borderWidth: 1.5,
     borderColor: COLORS.primary,
   },
-  buttonText: {
+  biometricButtonText: {
     fontSize: FONT_SIZES.base,
     fontWeight: "700",
-    color: COLORS.surface,
+    color: COLORS.primary,
   },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: SPACING.lg,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.border,
-  },
-  dividerText: {
-    marginHorizontal: SPACING.md,
-    color: COLORS.textMuted,
-    fontSize: FONT_SIZES.sm,
-  },
-  link: {
+  forgotLink: {
     textAlign: "center",
     color: COLORS.primary,
     fontSize: FONT_SIZES.sm,
     fontWeight: "600",
-    marginTop: SPACING.md,
+    marginTop: SPACING.lg,
   },
-  footer: {
-    alignItems: "center",
-    marginTop: SPACING.xl,
-  },
-  footerText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textMuted,
-  },
-  footerLink: {
-    color: COLORS.primary,
-    fontWeight: "700",
-  },
+  footer: { alignItems: "center", marginTop: SPACING.xl, paddingBottom: SPACING.lg },
+  footerText: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted },
+  footerLink: { color: COLORS.primary, fontWeight: "800" },
 });

@@ -153,16 +153,25 @@ export default function UsersPage() {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm("هل تريد بالفعل حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء!")) return;
+  const handleDeleteUser = async (userId: string, user?: User) => {
+    // Prevent deleting super_admin users
+    const targetUser = user || users.find(u => u.id === userId);
+    if (targetUser?.role === "super_admin") {
+      alert("لا يمكن حذف حساب سوبر أدمن");
+      return;
+    }
+
+    const userEmail = targetUser?.email || userId;
+    if (!confirm(`هل تريد بالفعل حذف المستخدم "${userEmail}"؟ لا يمكن التراجع عن هذا الإجراء!`)) return;
 
     setDeleting(userId);
     try {
       const supabase = getSupabase();
       if (!supabase) throw new Error("لا يوجد اتصال");
 
+      // Soft-delete: deactivate profile instead of deleting (auth user requires admin API)
       const { error } = await (supabase.from("profiles") as any)
-        .delete()
+        .update({ is_active: false, role: "deactivated" })
         .eq("id", userId);
 
       if (error) throw error;
@@ -717,7 +726,7 @@ export default function UsersPage() {
                     : "تفعيل المستخدم"}
                 </button>
                 <button
-                  onClick={() => handleDeleteUser(selectedUser.id)}
+                  onClick={() => handleDeleteUser(selectedUser.id, selectedUser)}
                   disabled={deleting === selectedUser.id}
                   style={{
                     padding: 12,

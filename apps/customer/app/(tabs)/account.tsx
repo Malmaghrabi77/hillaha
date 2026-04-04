@@ -8,6 +8,9 @@ import { A11yPresets } from "../../src/hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../../src/constants/analyticsEvents";
 import { SafeAreaScrollView } from '../../src/components';
 
+let SecureStore: typeof import("expo-secure-store") | null = null;
+try { SecureStore = require("expo-secure-store"); } catch {}
+
 // عناوين البريد الإلكتروني الرسمية لمنصة حلّها
 const EMAILS = {
   legal: "legal@hillaha.com",
@@ -53,6 +56,13 @@ export default function Account() {
 
   async function handleLogout() {
     if (!supabase) return;
+    // Clear biometric tokens from secure storage
+    if (SecureStore) {
+      try {
+        await SecureStore.deleteItemAsync("hillaha_customer_email");
+        await SecureStore.deleteItemAsync("hillaha_customer_refresh");
+      } catch {}
+    }
     await supabase.auth.signOut();
     router.replace("/");
   }

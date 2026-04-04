@@ -28,6 +28,7 @@ export default function CustomerChat() {
   useEffect(() => {
     if (!orderId) return;
     const supabase = getSB();
+    if (!supabase) { setLoading(false); return; }
 
     async function load() {
       try {
@@ -52,6 +53,7 @@ export default function CustomerChat() {
 
         if (msgData) setMessages(msgData as Message[]);
       } catch (error) {
+        console.warn("load_driver_chat:", error);
       } finally {
         setLoading(false);
       }
@@ -70,7 +72,10 @@ export default function CustomerChat() {
           filter: `order_id=eq.${orderId}`,
         },
         (payload: any) => {
-          setMessages(prev => [...prev, payload.new as Message]);
+          setMessages(prev => {
+            if (prev.some(m => m.id === (payload.new as Message).id)) return prev;
+            return [...prev, payload.new as Message];
+          });
           setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
         }
       )
@@ -82,6 +87,7 @@ export default function CustomerChat() {
   async function sendMessage() {
     if (!newMessage.trim() || !orderId) return;
     const supabase = getSB();
+    if (!supabase) return;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -93,6 +99,7 @@ export default function CustomerChat() {
       });
       setNewMessage("");
     } catch (error) {
+      console.warn("send_driver_message:", error);
     }
   }
 

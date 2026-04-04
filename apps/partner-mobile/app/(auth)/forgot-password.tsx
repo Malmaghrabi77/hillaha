@@ -12,7 +12,7 @@ import {
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { getSupabase } from "@hillaha/core";
+import { getSupabase } from "@/lib/supabase";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "@/lib/theme";
 
 export default function ForgotPasswordScreen() {
@@ -46,10 +46,7 @@ export default function ForgotPasswordScreen() {
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(
-        email.trim().toLowerCase(),
-        {
-          redirectTo: `partnermobile://reset-password`,
-        }
+        email.trim().toLowerCase()
       );
 
       if (error) {

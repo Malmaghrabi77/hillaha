@@ -13,15 +13,48 @@ interface LiveMapProps {
 }
 
 export const LiveMap: React.FC<LiveMapProps> = ({
-  driverLat,
-  driverLng,
-  customerLat,
-  customerLng,
-  restaurantLat,
-  restaurantLng,
+  driverLat: rawDriverLat,
+  driverLng: rawDriverLng,
+  customerLat: rawCustomerLat,
+  customerLng: rawCustomerLng,
+  restaurantLat: rawRestaurantLat,
+  restaurantLng: rawRestaurantLng,
   height = "100%",
 }) => {
   const webViewRef = useRef<WebView>(null);
+  const initialRender = useRef(true);
+
+  // Validate all coordinates as finite numbers to prevent XSS via HTML interpolation
+  const driverLat = Number.isFinite(Number(rawDriverLat)) ? Number(rawDriverLat) : 0;
+  const driverLng = Number.isFinite(Number(rawDriverLng)) ? Number(rawDriverLng) : 0;
+  const customerLat = Number.isFinite(Number(rawCustomerLat)) ? Number(rawCustomerLat) : 0;
+  const customerLng = Number.isFinite(Number(rawCustomerLng)) ? Number(rawCustomerLng) : 0;
+  const restaurantLat = Number.isFinite(Number(rawRestaurantLat)) ? Number(rawRestaurantLat) : 0;
+  const restaurantLng = Number.isFinite(Number(rawRestaurantLng)) ? Number(rawRestaurantLng) : 0;
+
+  // Update driver marker position when coordinates change
+  useEffect(() => {
+    if (initialRender.current) {
+      initialRender.current = false;
+      return;
+    }
+    if (webViewRef.current && driverLat && driverLng) {
+      const js = `
+        if (window.driverMarker) {
+          window.driverMarker.setLatLng([${driverLat}, ${driverLng}]);
+          if (window.routeLine) {
+            window.routeLine.setLatLngs([
+              [${restaurantLat}, ${restaurantLng}],
+              [${driverLat}, ${driverLng}],
+              [${customerLat}, ${customerLng}]
+            ]);
+          }
+        }
+        true;
+      `;
+      webViewRef.current.injectJavaScript(js);
+    }
+  }, [driverLat, driverLng]);
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -82,7 +115,7 @@ export const LiveMap: React.FC<LiveMapProps> = ({
         });
 
         // Add markers
-        L.marker([${driverLat}, ${driverLng}], { icon: driverIcon })
+        window.driverMarker = L.marker([${driverLat}, ${driverLng}], { icon: driverIcon })
           .addTo(map)
           .bindPopup('<strong>🛵 موقع المندوب</strong><br>يتحدّث مباشرة', { className: 'marker-label' });
 
@@ -101,7 +134,7 @@ export const LiveMap: React.FC<LiveMapProps> = ({
           [${customerLat}, ${customerLng}]
         ];
 
-        L.polyline(latlngs, { color: '#7C3AED', weight: 3, opacity: 0.7 }).addTo(map);
+        window.routeLine = L.polyline(latlngs, { color: '#7C3AED', weight: 3, opacity: 0.7 }).addTo(map);
 
         // Fit bounds
         const group = new L.featureGroup([

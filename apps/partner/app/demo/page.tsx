@@ -39,6 +39,11 @@ export default function DemoLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  if (process.env.NODE_ENV === 'production') {
+    router.replace("/login");
+    return null;
+  }
+
   async function handleDemoLogin(email: string, password: string) {
     setError("");
     setLoading(true);

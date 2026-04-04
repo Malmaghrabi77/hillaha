@@ -4,7 +4,6 @@ import { router } from "expo-router";
 import { useDarkMode } from "../../src/hooks/useDarkMode";
 import { useSupabase } from "../../src/hooks/useSupabase";
 import { analyticsTracker } from "../../src/utils/analyticsTracker";
-import { A11yPresets } from "../../src/hooks/useAccessibility";
 import { SafeAreaScrollView } from "../../src/components";
 
 const C = {
@@ -134,7 +133,6 @@ export default function SubscriptionsScreen() {
             analyticsTracker.trackEvent("subscriptions_back");
             router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
           }}
-          {...A11yPresets.pressable}
           style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
         >
           <Text style={{ fontSize: 20, color: "white" }}>←</Text>
@@ -225,7 +223,6 @@ export default function SubscriptionsScreen() {
               <Pressable
                 onPress={() => subscribePlan(plan.id)}
                 disabled={currentSubscription?.subscription_id === plan.id || subscribing === plan.id}
-                {...A11yPresets.pressable}
                 style={{
                   backgroundColor: currentSubscription?.subscription_id === plan.id ? "#D1D5DB" : C.primary,
                   paddingVertical: 12,

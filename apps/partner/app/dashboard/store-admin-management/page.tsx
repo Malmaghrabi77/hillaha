@@ -51,12 +51,18 @@ export default function AssignStoreAdminPage() {
         if (user) {
           setUserId(user.id);
 
-          // Get partner ID
+          // Get partner ID and role
           const { data: profile } = await (supabase
             .from("profiles") as any)
-            .select("partner_id")
+            .select("partner_id, role")
             .eq("id", user.id)
             .single();
+
+          // Only partner owners and super_admins can manage store admins
+          if (profile && profile.role !== "partner" && profile.role !== "super_admin") {
+            setLoading(false);
+            return;
+          }
 
           if (profile && profile.partner_id) {
             setPartnerId(profile.partner_id);
@@ -159,7 +165,8 @@ export default function AssignStoreAdminPage() {
 
       const { error: err } = await (supabase.from("store_admins") as any)
         .delete()
-        .eq("id", adminId);
+        .eq("id", adminId)
+        .eq("partner_id", partnerId);
 
       if (err) throw err;
 

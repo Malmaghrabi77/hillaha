@@ -3,7 +3,7 @@ import {
   View, Text, Pressable, TextInput,
   ActivityIndicator, Image, Alert, Modal, Linking,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { WebView } from "react-native-webview";
 import { useCart } from "../lib/cartStore";
 import { useDarkMode } from "../src/hooks/useDarkMode";
@@ -15,6 +15,7 @@ import { SafeAreaScrollView } from "../src/components";
 import { LocationPickerMap } from "../src/components/LocationPickerMap";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
+import { haversineKm, formatCurrency } from "../lib/utils";
 
 interface SavedAddress {
   id: string;
@@ -31,6 +32,8 @@ interface SavedAddress {
 
 type PayMethod = "cash" | "wallet" | "instapay" | "etisalat" | "vodafone" | "card" | "we_pay" | "orange_money" | "meeza" | "fawry" | "aman" | "bee" | "khazna";
 
+// Fallback payment accounts — used ONLY when platform_settings fetch fails.
+// Primary source is the `platform_settings` table (keys: instapay_account, etisalat_phone, vodafone_phone).
 const FALLBACK_ACCOUNTS = {
   instapay:  { account: "@malmaghrabi77",  instructions: "افتح تطبيق InstaPay وحوّل المبلغ إلى الحساب التالي" },
   etisalat:  { phone:   "01107549225",     instructions: "حوّل المبلغ عبر خدمة E& (اتصالات) إلى الرقم التالي" },
@@ -38,14 +41,6 @@ const FALLBACK_ACCOUNTS = {
 } as const;
 
 const FALLBACK_METHODS: { id: PayMethod; label: string; desc: string; icon: string; soon?: boolean }[] = [
-
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
   { id: "cash",      label: "كاش عند الاستلام", desc: "ادفع نقداً للمندوب",                           icon: "💵" },
   { id: "wallet",    label: "المحفظة",            desc: "ادفع من رصيد محفظتك",                         icon: "👛" },
   { id: "instapay",  label: "InstaPay",           desc: `تحويل لحظي — حساب: ${FALLBACK_ACCOUNTS.instapay.account}`, icon: "📲" },
@@ -58,6 +53,11 @@ export default function Checkout() {
   const { isDarkMode, colors } = useDarkMode();
   const supabase = useSupabase();
   const cart = useCart();
+  const { discount: discountParam, promoCode: promoCodeParam } = useLocalSearchParams<{ discount?: string; promoCode?: string }>();
+  // Display discount from cart validation (server will re-validate on submit)
+  const rawDiscount = Number(discountParam) || 0;
+  const discountAmount = Math.max(0, Math.min(rawDiscount, cart.total));
+  const finalTotal = Math.max(0, cart.total - discountAmount);
   const [method, setMethod]             = useState<PayMethod>("cash");
   const [address, setAddress]           = useState("");
   const [note, setNote]                 = useState("");
@@ -81,6 +81,7 @@ export default function Checkout() {
   const [paymobUrl, setPaymobUrl]         = useState<string | null>(null);
   const [paymobOrderId, setPaymobOrderId] = useState<string | null>(null);
   const [dbPayMethods, setDbPayMethods]   = useState<any[]>([]);
+  const addressSelectedRef = useRef(false);
 
   // Delivery pricing
   const [deliveryRules, setDeliveryRules] = useState<any[]>([]);
@@ -91,7 +92,7 @@ export default function Checkout() {
   const [appliedRuleId, setAppliedRuleId] = useState<string | null>(null);
   const [tooFar, setTooFar] = useState(false);
 
-  const isHighValue = cart.total > 1000;
+  const isHighValue = finalTotal > 1000;
   const needsProof = method !== "cash" && method !== "wallet" && method !== "card";
 
   // Map DB payment_methods codes to checkout PayMethod IDs
@@ -131,7 +132,7 @@ export default function Checkout() {
           .then(({ data: bal }: any) => {
             if (bal !== null && bal !== undefined) setWalletBalance(Number(bal));
           })
-          .catch(() => {});
+          .catch((e: any) => console.warn("fetch_wallet_balance:", e));
 
         // Fetch saved addresses
         (supabase as any)
@@ -153,13 +154,14 @@ export default function Checkout() {
                   setMapLat(defaultAddr.latitude);
                   setMapLng(defaultAddr.longitude ?? null);
                   setLocationSource("manual");
+                  addressSelectedRef.current = true;
                 }
               }
             }
           })
-          .catch(() => {});
+          .catch((e: any) => console.warn("fetch_saved_addresses:", e));
       }
-    }).catch(() => {});
+    }).catch((e: any) => console.warn("get_user:", e));
 
     supabase
       .from("platform_settings")
@@ -174,7 +176,7 @@ export default function Checkout() {
           etisalat_phone:   map["etisalat_phone"]   || FALLBACK_ACCOUNTS.etisalat.phone,
           vodafone_phone:   map["vodafone_phone"]    || "",
         });
-      }).catch(() => {});
+      }).catch((e: any) => console.warn("fetch_platform_settings:", e));
 
     // Fetch partner location for delivery fee calculation
     if (cart.partnerId) {
@@ -192,7 +194,7 @@ export default function Checkout() {
             cart.setDeliveryFee(Number(p.delivery_fee));
           }
         })
-        .catch(() => {});
+        .catch((e: any) => console.warn("fetch_partner_location:", e));
     }
 
     // Fetch delivery pricing rules
@@ -203,13 +205,18 @@ export default function Checkout() {
       .then(({ data: rules }: any) => {
         if (rules?.length) setDeliveryRules(rules);
       })
-      .catch(() => {});
+      .catch((e: any) => console.warn("fetch_delivery_pricing_rules:", e));
 
-    // Auto-request GPS location on checkout open
+    // Auto-request GPS location on checkout open — only if no saved address was selected
     (async () => {
+      // Small delay to let saved address loading settle
+      await new Promise(r => setTimeout(r, 500));
+      if (addressSelectedRef.current) return;
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === "granted") {
+        if (addressSelectedRef.current) return;
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        if (addressSelectedRef.current) return;
         setMapLat(loc.coords.latitude);
         setMapLng(loc.coords.longitude);
         setLocationSource("gps");
@@ -227,11 +234,12 @@ export default function Checkout() {
       .then(({ data }: any) => {
         if (data?.length) setDbPayMethods(data);
       })
-      .catch(() => {});
+      .catch((e: any) => console.warn("fetch_payment_methods:", e));
   }, [supabase]);
 
   // Auto-deselect cash if location is not GPS
   useEffect(() => {
+    if (locationSource === null) return; // Don't change on initial render
     if (locationSource !== "gps" && method === "cash") {
       setMethod("wallet");
     }
@@ -350,9 +358,9 @@ export default function Checkout() {
 
       // Wallet balance validation
       if (method === "wallet") {
-        if (walletBalance === null || walletBalance < cart.total) {
+        if (walletBalance === null || walletBalance < finalTotal) {
           const bal = walletBalance ?? 0;
-          setError(`رصيد المحفظة غير كافٍ (${bal.toFixed(2)} ج). المطلوب: ${cart.total} ج`);
+          setError(`رصيد المحفظة غير كافٍ (${bal.toFixed(2)} ج). المطلوب: ${finalTotal} ج`);
           setLoading(false);
           return;
         }
@@ -363,7 +371,7 @@ export default function Checkout() {
         try {
           const { data: intentData, error: intentError } = await supabase.functions.invoke("paymob-intent", {
             body: {
-              amount_cents: Math.round(cart.total * 100),
+              amount_cents: Math.round(finalTotal * 100),
               order_id: `temp_${Date.now()}`,
               customer_email: user.email || "",
               customer_phone: phone.trim() || "",
@@ -419,7 +427,7 @@ export default function Checkout() {
     if (method === "wallet") {
       const { data: deductResult } = await supabase.rpc("deduct_wallet_balance", {
         p_customer_id: user.id,
-        p_amount: cart.total,
+        p_amount: finalTotal,
         p_description: `دفع طلب — ${cart.partnerName ?? "طلب"}`,
       });
       if (!deductResult?.success) {
@@ -428,65 +436,47 @@ export default function Checkout() {
       setWalletBalance(Number(deductResult.remaining));
     }
 
-    const orderInsert: Record<string, any> = {
-      customer_id:       user.id,
-      partner_id:        cart.partnerId,
-      delivery_address:  address.trim(),
-      delivery_lat:      mapLat,
-      delivery_lng:      mapLng,
-      location_source:   locationSource,
-      customer_phone:    phone.trim() || null,
-      customer_note:     note.trim()  || null,
-      items:             cart.itemList.map(i => ({ name: i.nameAr, qty: i.qty, price: i.price })),
-      subtotal:          cart.subtotal,
-      delivery_fee:      cart.deliveryFee,
-      delivery_distance_km: deliveryDistance,
-      delivery_pricing_rule_id: appliedRuleId,
-      discount:          0,
-      total:             cart.total,
-      payment_method:    method,
-      payment_proof_url: proofStorageUrl,
-      status:            "pending",
-    };
+    // ── Create order via server-side RPC (validates prices, delivery fee, promo) ──
+    const { data: orderResult, error: rpcError } = await (supabase as any).rpc(
+      "create_validated_order",
+      {
+        p_partner_id:        cart.partnerId,
+        p_items:             cart.itemList.map(i => ({ menu_item_id: i.id, qty: i.qty })),
+        p_delivery_address:  address.trim(),
+        p_delivery_lat:      mapLat,
+        p_delivery_lng:      mapLng,
+        p_location_source:   locationSource,
+        p_customer_phone:    phone.trim() || null,
+        p_customer_note:     note.trim()  || null,
+        p_payment_method:    method,
+        p_payment_proof_url: proofStorageUrl,
+        p_promo_code:        promoCodeParam || null,
+        p_delivery_type:     "platform",
+      }
+    );
 
-    // High-value non-wallet orders: hold for payment approval
-    const needsPaymentApproval = isHighValue && method !== "wallet" && method !== "card";
-    if (needsPaymentApproval) {
-      orderInsert.payment_approval_status = "pending";
-      orderInsert.status = "awaiting_payment_approval";
+    if (rpcError) {
+      throw rpcError;
     }
 
-    if (method === "card") {
-      orderInsert.payment_status = "paid";
-      if (paymobTransactionId) orderInsert.paymob_transaction_id = paymobTransactionId;
-      if (paymobOrderId) orderInsert.paymob_order_id = paymobOrderId;
+    if (!orderResult?.success) {
+      throw new Error(orderResult?.error ?? "لم يتم إنشاء الطلب بشكل صحيح");
     }
 
-    const { data: order, error: insertError } = await supabase
-      .from("orders")
-      .insert(orderInsert)
-      .select("id")
-      .single();
+    const orderId = orderResult.order_id;
+    const serverTotal = orderResult.total;
 
-    if (insertError) {
-      throw insertError;
-    }
-
-    if (!order?.id) {
-      throw new Error("لم يتم إنشاء الطلب بشكل صحيح");
-    }
-
-    analyticsTracker.trackOrderCompleted(order.id, cart.total, cart.partnerId!, method);
+    analyticsTracker.trackOrderCompleted(orderId, serverTotal, cart.partnerId!, method);
     cart.clearCart();
 
-    if (needsPaymentApproval) {
+    if (orderResult.status === "awaiting_payment_approval") {
       Alert.alert(
         "تم إرسال الطلب",
         "طلبك بانتظار اعتماد إيصال الدفع من الإدارة. سيتم إشعارك عند الاعتماد.",
         [{ text: "حسناً", onPress: () => router.replace("/(tabs)/home") }]
       );
     } else {
-      router.replace(`/tracking/${order.id}`);
+      router.replace(`/tracking/${orderId}`);
     }
   }
 
@@ -534,13 +524,14 @@ export default function Checkout() {
           {cart.itemList.map((item, i) => (
             <View key={item.id} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
               <Text style={{ color: colors.textMuted, fontSize: 13 }}>{item.nameAr} × {item.qty}</Text>
-              <Text style={{ fontWeight: "700", color: colors.text, fontSize: 13 }}>{item.price * item.qty} ج</Text>
+              <Text style={{ fontWeight: "700", color: colors.text, fontSize: 13 }}>{formatCurrency(item.price * item.qty)}</Text>
             </View>
           ))}
           <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 8 }} />
           {[
-            { label: "المجموع الجزئي", value: `${cart.subtotal} ج` },
-            { label: "رسوم التوصيل",   value: deliveryDistance != null ? `${cart.deliveryFee} ج (${deliveryDistance} كم)` : `${cart.deliveryFee} ج` },
+            { label: "المجموع الجزئي", value: formatCurrency(cart.subtotal) },
+            { label: "رسوم التوصيل",   value: deliveryDistance != null ? `${formatCurrency(cart.deliveryFee)} (${deliveryDistance} كم)` : formatCurrency(cart.deliveryFee) },
+            ...(discountAmount > 0 ? [{ label: "الخصم", value: `- ${formatCurrency(discountAmount)}` }] : []),
           ].map((row, i) => (
             <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
               <Text style={{ color: colors.textMuted, fontSize: 13 }}>{row.label}</Text>
@@ -550,7 +541,7 @@ export default function Checkout() {
           <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 8 }} />
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <Text style={{ fontWeight: "900", color: colors.text, fontSize: 15 }}>الإجمالي</Text>
-            <Text style={{ fontWeight: "900", color: colors.primary, fontSize: 18 }}>{cart.total} ج</Text>
+            <Text style={{ fontWeight: "900", color: colors.primary, fontSize: 18 }}>{formatCurrency(finalTotal)}</Text>
           </View>
         </View>
 
@@ -738,7 +729,7 @@ export default function Checkout() {
         </Text>
         {METHODS.map(m => {
           const isWallet = m.id === "wallet";
-          const walletInsufficient = isWallet && walletBalance !== null && walletBalance < cart.total;
+          const walletInsufficient = isWallet && walletBalance !== null && walletBalance < finalTotal;
           const isCashBlocked = m.id === "cash" && locationSource !== "gps";
           const isDisabled = m.soon || walletInsufficient || isCashBlocked;
           const desc = isWallet && walletBalance !== null
@@ -817,17 +808,17 @@ export default function Checkout() {
         )}
 
         {/* WALLET TOP-UP LINK (always visible when wallet selected but insufficient) */}
-        {method === "wallet" && walletBalance !== null && walletBalance < cart.total && (
+        {method === "wallet" && walletBalance !== null && walletBalance < finalTotal && (
           <View style={{
             padding: 16, borderRadius: 16, marginBottom: 12,
             backgroundColor: "#FEF2F2", borderWidth: 1.5, borderColor: "#EF4444",
           }}>
             <Text style={{ fontWeight: "900", color: "#991B1B", fontSize: 13, marginBottom: 8 }}>
-              رصيد المحفظة غير كافٍ ({walletBalance.toFixed(2)} ج من {cart.total} ج)
+              رصيد المحفظة غير كافٍ ({walletBalance.toFixed(2)} ج من {finalTotal} ج)
             </Text>
             <Pressable
               onPress={() => {
-                Linking.openURL("https://wa.me/201153624184?text=" + encodeURIComponent(`مرحباً، أريد شحن محفظتي بمبلغ ${Math.ceil(cart.total - walletBalance)} جنيه في تطبيق حلّها`));
+                Linking.openURL("https://wa.me/201153624184?text=" + encodeURIComponent(`مرحباً، أريد شحن محفظتي بمبلغ ${Math.ceil(finalTotal - walletBalance)} جنيه في تطبيق حلّها`));
               }}
               style={{
                 flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
@@ -987,7 +978,7 @@ export default function Checkout() {
         <Pressable
           onPress={handleConfirm}
           disabled={loading || uploadingProof || (needsProof && !proofUri)}
-          {...A11yPresets.button("تأكيد الطلب", `انقر لتأكيد الطلب - المجموع: ${cart.total} جنيه`)}
+          {...A11yPresets.button("تأكيد الطلب", `انقر لتأكيد الطلب - المجموع: ${finalTotal} جنيه`)}
           style={{
             backgroundColor: (loading || uploadingProof || (needsProof && !proofUri)) ? colors.primarySoft : colors.primary,
             paddingVertical: 16, borderRadius: 16, alignItems: "center",
@@ -1003,7 +994,7 @@ export default function Checkout() {
                 color: (needsProof && !proofUri) ? colors.textMuted : "white",
                 fontWeight: "900", fontSize: 16,
               }}>
-                تأكيد الطلب — {cart.total} ج
+                تأكيد الطلب — {formatCurrency(finalTotal)}
               </Text>
           }
         </Pressable>

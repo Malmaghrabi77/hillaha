@@ -20,8 +20,8 @@ export const C = {
   deepPurple: "#6D28D9",
 } as const;
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || "https://ynduborjddqwyperlkrq.supabase.co";
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_UkEr17IyjCEscr16OnCVDg_iQsNxzHk";
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
 
 let _sb: ReturnType<typeof createClient> | null = null;
 
@@ -72,3 +72,6 @@ export const IDENTITY_LABELS: Record<string, string> = {
 };
 
 export const MAX_BICYCLE_DISTANCE_KM = 2;
+
+export const SUPPORT_PHONE = "+201153624184";
+export const SUPPORT_WHATSAPP = "201153624184";

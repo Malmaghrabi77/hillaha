@@ -4,7 +4,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useDarkMode } from "../../src/hooks/useDarkMode";
 import { analyticsTracker } from "../../src/utils/analyticsTracker";
-import { A11yPresets } from "../../src/hooks/useAccessibility";
 
 const C = {
   primary: "#8B5CF6",   primarySoft: "#EDE9FE",
@@ -94,7 +93,6 @@ export default function ConsentScreen() {
             setAccepted(v => !v);
             analyticsTracker.trackEvent("toggle_consent");
           }}
-          {...A11yPresets.pressable}
           style={{
             flexDirection: "row", alignItems: "center", gap: 12,
             padding: 16, borderRadius: 16, marginTop: 8,
@@ -126,7 +124,6 @@ export default function ConsentScreen() {
             analyticsTracker.trackEvent("consent_accepted");
             router.replace("/(tabs)/home");
           }}
-          {...A11yPresets.pressable}
           style={{
             paddingVertical: 16, borderRadius: 16,
             backgroundColor: accepted ? C.primary : C.border,
@@ -148,7 +145,6 @@ export default function ConsentScreen() {
             analyticsTracker.trackEvent("consent_back");
             router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
           }}
-          {...A11yPresets.pressable}
           style={{ marginTop: 14, alignItems: "center" }}
         >
           <Text style={{ color: C.textMuted, fontSize: 13 }}>رجوع للصفحة السابقة</Text>

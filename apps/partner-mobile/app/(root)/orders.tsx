@@ -10,26 +10,12 @@ import {
   RefreshControl,
   FlatList,
 } from "react-native";
-import { getSupabase } from "@hillaha/core";
-import { Audio } from "expo-av";
+import { getSupabase } from "@/lib/supabase";
+import { useRouter } from "expo-router";
+import { useAudioPlayer } from "expo-audio";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "@/lib/theme";
-import { notificationTemplates, NOTIFICATION_TYPES } from "@/lib/notifications";
-import { logNotification } from "@/lib/notificationService";
-import * as Notifications from "expo-notifications";
 
-const playNewOrderSound = async () => {
-  try {
-    const { sound } = await Audio.Sound.createAsync(
-      require("../../assets/sounds/new-order.wav")
-    );
-    await sound.playAsync();
-    sound.setOnPlaybackStatusUpdate((status: any) => {
-      if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
-    });
-  } catch (e) {
-    console.log("Sound play error:", e);
-  }
-};
+const soundSource = require("../../assets/sounds/new-order.wav");
 
 interface OrderItem {
   id: string;
@@ -42,7 +28,7 @@ interface OrderItem {
   customer_name?: string;
 }
 
-type OrderStatus = "pending" | "accepted" | "preparing" | "ready" | "delivered" | "cancelled";
+type OrderStatus = "pending" | "accepted" | "preparing" | "ready" | "picked_up" | "delivered" | "cancelled" | "awaiting_payment_approval";
 
 export default function OrdersScreen() {
   const [orders, setOrders] = useState<OrderItem[]>([]);
@@ -51,13 +37,17 @@ export default function OrdersScreen() {
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [lastOrderIds, setLastOrderIds] = useState<Set<string>>(new Set());
+  const player = useAudioPlayer(soundSource);
+  const router = useRouter();
 
   const statuses: { label: string; value: string }[] = [
     { label: "جميع", value: "all" },
     { label: "معلق", value: "pending" },
+    { label: "بانتظار دفع", value: "awaiting_payment_approval" },
     { label: "مقبول", value: "accepted" },
     { label: "يحضّر", value: "preparing" },
     { label: "جاهز", value: "ready" },
+    { label: "تم الاستلام", value: "picked_up" },
     { label: "مسلم", value: "delivered" },
     { label: "ملغى", value: "cancelled" },
   ];
@@ -66,7 +56,8 @@ export default function OrdersScreen() {
     loadOrders();
   }, []);
 
-  const loadOrders = async () => {
+  const loadOrders = async (filterOverride?: string) => {
+    const activeFilter = filterOverride !== undefined ? filterOverride : selectedFilter;
     setLoading(true);
     try {
       const supabase = getSupabase();
@@ -75,7 +66,7 @@ export default function OrdersScreen() {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return;
 
-      const { data: partnerData } = await supabase
+      const { data: partnerData } = await (supabase as any)
         .from("partners")
         .select("id")
         .eq("user_id", user.user.id)
@@ -84,15 +75,17 @@ export default function OrdersScreen() {
       if (partnerData?.id) {
         setPartnerId(partnerData.id);
 
-        let query = supabase
+        let query = (supabase as any)
           .from("orders")
-          .select("*")
+          .select("id, status, total, created_at, customer_name, customer_phone, delivery_address, delivery_type, items, notes, payment_method, payment_status")
           .eq("partner_id", partnerData.id)
           .order("created_at", { ascending: false });
 
-        if (selectedFilter !== "all") {
-          query = query.eq("status", selectedFilter);
+        if (activeFilter !== "all") {
+          query = query.eq("status", activeFilter);
         }
+
+        query = query.limit(100);
 
         const { data: ordersData } = await query;
 
@@ -108,16 +101,7 @@ export default function OrdersScreen() {
             customer_name: order.customer_name || "عميل",
           }));
 
-          const currentOrderIds = new Set(formattedOrders.map((o) => o.id));
-          const newOrders = formattedOrders.filter(
-            (o) => !lastOrderIds.has(o.id) && o.status === "pending"
-          );
-
-          if (newOrders.length > 0 && lastOrderIds.size > 0) {
-            for (const order of newOrders) {
-              await notifyNewOrder(order, partnerData.id);
-            }
-          }
+          const currentOrderIds = new Set<string>(formattedOrders.map((o: OrderItem) => o.id));
 
           setLastOrderIds(currentOrderIds);
           setOrders(formattedOrders);
@@ -128,41 +112,6 @@ export default function OrdersScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
-    }
-  };
-
-  const notifyNewOrder = async (order: OrderItem, partnerId: string) => {
-    try {
-      // Play alert sound
-      playNewOrderSound();
-
-      await logNotification(
-        partnerId,
-        NOTIFICATION_TYPES.NEW_ORDER,
-        `طلب جديد من ${order.customer_name}`,
-        `${order.total.toFixed(0)} ج.م`,
-        { orderId: order.id }
-      );
-
-      const notification = notificationTemplates.newOrder(
-        order.customer_name || "عميل",
-        order.total,
-        order.id
-      );
-
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: notification.title,
-          body: notification.body,
-          data: notification.data,
-          sound: notification.sound,
-        },
-        trigger: null,
-      });
-
-      console.log("✅ تم إرسال إشعار بالطلب الجديد");
-    } catch (error) {
-      console.error("❌ خطأ في إرسال الإشعار:", error);
     }
   };
 
@@ -180,7 +129,7 @@ export default function OrdersScreen() {
         (payload: any) => {
           // Play sound for new pending orders
           if (payload.eventType === "INSERT" && payload.new?.status === "pending") {
-            playNewOrderSound();
+            try { player.seekTo(0); player.play(); } catch {}
           }
           loadOrders();
         }
@@ -190,24 +139,91 @@ export default function OrdersScreen() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [partnerId]);
+  }, [partnerId, selectedFilter]);
 
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
       const supabase = getSupabase();
       if (!supabase) return;
 
-      const { error } = await supabase
+      // For accepting orders, use the RPC to handle delivery type + commission
+      if (newStatus === "accepted") {
+        Alert.alert(
+          "نوع التوصيل",
+          "اختر طريقة توصيل هذا الطلب",
+          [
+            {
+              text: "توصيل عبر حلّها",
+              onPress: async () => {
+                try {
+                  const { error } = await (supabase as any).rpc("accept_order_with_delivery_type", {
+                    p_order_id: orderId,
+                    p_delivery_type: "platform",
+                  });
+                  if (error) {
+                    Alert.alert("خطأ", error.message || "فشل في قبول الطلب");
+                    loadOrders();
+                    return;
+                  }
+                  Alert.alert("تم", "تم قبول الطلب — التوصيل عبر حلّها");
+                  loadOrders();
+                } catch {
+                  Alert.alert("خطأ", "فشل قبول الطلب");
+                }
+              },
+            },
+            {
+              text: "توصيل ذاتي",
+              onPress: async () => {
+                try {
+                  const { error } = await (supabase as any).rpc("accept_order_with_delivery_type", {
+                    p_order_id: orderId,
+                    p_delivery_type: "self",
+                  });
+                  if (error) {
+                    Alert.alert("خطأ", error.message || "فشل في قبول الطلب");
+                    loadOrders();
+                    return;
+                  }
+                  Alert.alert("تم", "تم قبول الطلب — توصيل ذاتي");
+                  loadOrders();
+                } catch {
+                  Alert.alert("خطأ", "فشل قبول الطلب");
+                }
+              },
+            },
+            { text: "إلغاء", style: "cancel" },
+          ]
+        );
+        return;
+      }
+
+      // For other statuses, include timestamps
+      const timestampField: Record<string, string> = {
+        preparing: "preparing_at",
+        ready: "ready_at",
+        picked_up: "picked_up_at",
+        delivered: "delivered_at",
+        cancelled: "cancelled_at",
+      };
+
+      const updateData: Record<string, any> = { status: newStatus };
+      if (timestampField[newStatus]) {
+        updateData[timestampField[newStatus]] = new Date().toISOString();
+      }
+
+      const { error } = await (supabase as any)
         .from("orders")
-        .update({ status: newStatus })
-        .eq("id", orderId);
+        .update(updateData)
+        .eq("id", orderId)
+        .eq("partner_id", partnerId);
 
       if (error) {
         Alert.alert("خطأ", "فشل تحديث حالة الطلب");
         return;
       }
 
-      Alert.alert("نجح", "تم تحديث حالة الطلب");
+      Alert.alert("تم", "تم تحديث حالة الطلب");
       loadOrders();
     } catch (error) {
       console.error("Error updating order:", error);
@@ -219,12 +235,16 @@ export default function OrdersScreen() {
     switch (status) {
       case "pending":
         return COLORS.warning;
+      case "awaiting_payment_approval":
+        return "#F59E0B";
       case "accepted":
         return COLORS.primary;
       case "preparing":
         return COLORS.primary;
       case "ready":
         return COLORS.success;
+      case "picked_up":
+        return "#059669";
       case "delivered":
         return COLORS.success;
       case "cancelled":
@@ -238,12 +258,16 @@ export default function OrdersScreen() {
     switch (status) {
       case "pending":
         return "معلق";
+      case "awaiting_payment_approval":
+        return "بانتظار الدفع";
       case "accepted":
         return "مقبول";
       case "preparing":
         return "قيد التحضير";
       case "ready":
         return "جاهز";
+      case "picked_up":
+        return "تم الاستلام بواسطة المندوب";
       case "delivered":
         return "تم التسليم";
       case "cancelled":
@@ -254,11 +278,13 @@ export default function OrdersScreen() {
   };
 
   const getNextStatus = (currentStatus: OrderStatus): OrderStatus | null => {
-    const statusFlow = {
+    const statusFlow: Record<string, string | null> = {
       pending: "accepted",
+      awaiting_payment_approval: null, // Admin must approve payment first
       accepted: "preparing",
       preparing: "ready",
-      ready: "delivered",
+      ready: "picked_up",
+      picked_up: "delivered",
       delivered: null,
       cancelled: null,
     };
@@ -298,8 +324,7 @@ export default function OrdersScreen() {
             ]}
             onPress={() => {
               setSelectedFilter(status.value);
-              setLoading(true);
-              setTimeout(() => loadOrders(), 100);
+              loadOrders(status.value);
             }}
           >
             <Text
@@ -354,7 +379,7 @@ export default function OrdersScreen() {
                 {order.items.map((item: any, idx: number) => (
                   <View key={idx} style={styles.itemRow}>
                     <Text style={styles.itemName}>{item.name || "صنف"}</Text>
-                    <Text style={styles.itemQty}>×{item.quantity || 1}</Text>
+                    <Text style={styles.itemQty}>×{item.qty || item.quantity || 1}</Text>
                     <Text style={styles.itemPrice}>
                       {(item.price || 0).toFixed(0)} ج.م
                     </Text>
@@ -395,7 +420,7 @@ export default function OrdersScreen() {
                 </TouchableOpacity>
               )}
 
-              {order.status !== "cancelled" && (
+              {!["delivered", "picked_up", "cancelled"].includes(order.status) && (
                 <TouchableOpacity
                   style={[styles.actionBtn, styles.actionBtnDanger]}
                   onPress={() => {
@@ -412,6 +437,14 @@ export default function OrdersScreen() {
                   <Text style={styles.actionBtnTextDanger}>إلغاء</Text>
                 </TouchableOpacity>
               )}
+
+              {/* Chat with customer */}
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: COLORS.primarySoft, borderColor: COLORS.primary }]}
+                onPress={() => router.push(`/chat/${order.id}` as any)}
+              >
+                <Text style={[styles.actionBtnText, { color: COLORS.primary }]}>💬 محادثة</Text>
+              </TouchableOpacity>
             </View>
           </View>
         )}

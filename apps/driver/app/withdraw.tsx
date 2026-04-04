@@ -36,6 +36,8 @@ const METHODS = [
 
 const QUICK_AMOUNTS = [50, 100, 200, 500];
 
+const MIN_WITHDRAWAL = 50;
+
 const STATUS_MAP: Record<string, { label: string; bg: string; fg: string }> = {
   pending: { label: "قيد المراجعة", bg: C.warningSoft, fg: "#92400E" },
   approved: { label: "تمت الموافقة", bg: "#DBEAFE", fg: "#1E40AF" },
@@ -70,12 +72,14 @@ export default function WithdrawScreen() {
     try {
       setLoading(true);
       const supabase = getSB();
+      if (!supabase) { setLoading(false); return; }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       // balance
       const { data: balData } = await (supabase as any).rpc(
         "get_driver_wallet_balance",
+        { p_driver_id: user.id },
       );
       if (balData !== null && balData !== undefined) setBalance(Number(balData));
 
@@ -95,8 +99,8 @@ export default function WithdrawScreen() {
         .order("created_at", { ascending: false })
         .limit(20);
       if (wds) setWithdrawals(wds);
-    } catch (_) {
-      /* silent */
+    } catch (e) {
+      console.warn("withdraw_loadData:", e);
     } finally {
       setLoading(false);
     }
@@ -125,13 +129,28 @@ export default function WithdrawScreen() {
 
   const handleSubmit = async () => {
     const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount < 50) {
-      Alert.alert("خطأ", "الحد الأدنى للسحب 50 جنيه");
+    if (isNaN(numAmount) || numAmount < MIN_WITHDRAWAL) {
+      Alert.alert("خطأ", `الحد الأدنى للسحب ${MIN_WITHDRAWAL} جنيه`);
       return;
     }
     if (numAmount > balance) {
       Alert.alert("خطأ", "المبلغ أكبر من الرصيد المتاح");
       return;
+    }
+
+    // Validate account details
+    if (method === "instapay") {
+      const iban = (accountDetails.iban ?? "").trim().toUpperCase();
+      if (!iban.startsWith("EG") || iban.length !== 29) {
+        Alert.alert("خطأ", "رقم IBAN مصري غير صحيح (يجب أن يبدأ بـ EG ويتكون من 29 حرف)");
+        return;
+      }
+    } else {
+      const phone = (accountDetails.phone ?? "").trim();
+      if (!/^01[0-9]{9}$/.test(phone)) {
+        Alert.alert("خطأ", "رقم الهاتف غير صحيح (يجب أن يكون 11 رقم ويبدأ بـ 01)");
+        return;
+      }
     }
 
     let details: any;
@@ -144,6 +163,7 @@ export default function WithdrawScreen() {
     try {
       setSubmitting(true);
       const supabase = getSB();
+      if (!supabase) { setSubmitting(false); Alert.alert("خطأ", "تأكد من اتصالك بالإنترنت"); return; }
       const { error } = await (supabase as any).rpc(
         "request_driver_withdrawal",
         {
@@ -164,7 +184,8 @@ export default function WithdrawScreen() {
       setAmount("");
       setAccountDetails({});
       loadData();
-    } catch (_) {
+    } catch (e) {
+      console.warn("withdraw_submit:", e);
       Alert.alert("خطأ", "حدث خطأ غير متوقع");
     } finally {
       setSubmitting(false);
@@ -178,7 +199,7 @@ export default function WithdrawScreen() {
   const canGoStep2 = method !== "";
   const canGoStep3 =
     amount !== "" &&
-    parseFloat(amount) >= 50 &&
+    parseFloat(amount) >= MIN_WITHDRAWAL &&
     (method === "instapay"
       ? !!(accountDetails.iban && accountDetails.holder)
       : !!accountDetails.phone);

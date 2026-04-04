@@ -5,8 +5,9 @@
 
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
+import Constants from "expo-constants";
 import { useRef, useEffect } from "react";
-import { useRouter, useSegments } from "expo-router";
+import { useRouter } from "expo-router";
 
 // تكوين سلوك الإشعارات كلما كان التطبيق نشطاً
 Notifications.setNotificationHandler({
@@ -22,9 +23,8 @@ Notifications.setNotificationHandler({
  */
 export function useNotifications() {
   const router = useRouter();
-  const segments = useSegments();
-  const notificationListener = useRef<any>();
-  const responseListener = useRef<any>();
+  const notificationListener = useRef<any>(null);
+  const responseListener = useRef<any>(null);
 
   useEffect(() => {
     // استقبال الإشعارات عندما يكون التطبيق مفتوحاً
@@ -61,7 +61,7 @@ export function useNotifications() {
         Notifications.removeNotificationSubscription(responseListener.current);
       }
     };
-  }, [router]);
+  }, []);
 }
 
 /**
@@ -90,9 +90,10 @@ export async function requestNotificationPermissions() {
 
   // الحصول على Expo Push Token
   try {
-    const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
     if (!projectId) {
-      throw new Error("EXPO_PUBLIC_PROJECT_ID غير موجود");
+      console.warn("⚠️ EAS projectId غير موجود — تخطي Push Token");
+      return null;
     }
 
     const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;

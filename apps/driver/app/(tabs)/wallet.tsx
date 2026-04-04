@@ -58,6 +58,7 @@ export default function WalletTab() {
     setLoading(true);
     try {
       const supabase = getSB();
+      if (!supabase) { setLoading(false); return; }
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -79,8 +80,8 @@ export default function WalletTab() {
         .order("created_at", { ascending: false })
         .limit(50);
       setHistory(txns ?? []);
-    } catch {
-      // silent
+    } catch (e) {
+      console.warn("driver_wallet_fetchData:", e);
     } finally {
       setLoading(false);
     }
@@ -107,6 +108,7 @@ export default function WalletTab() {
     setRedeeming(true);
     try {
       const supabase = getSB();
+      if (!supabase) { Alert.alert("خطأ", "تأكد من اتصالك بالإنترنت"); return; }
       const { data: result, error } = await (supabase as any).rpc(
         "redeem_driver_wallet_code",
         {
@@ -143,7 +145,8 @@ export default function WalletTab() {
       } else {
         Alert.alert("\u{274C} خطأ", result.error || "حدث خطأ غير متوقع");
       }
-    } catch {
+    } catch (e) {
+      console.warn("driver_wallet_redeem:", e);
       Alert.alert("\u{274C} خطأ", "تعذر الاتصال بالخادم");
     } finally {
       setRedeeming(false);
@@ -155,6 +158,7 @@ export default function WalletTab() {
     setConfirming(true);
     try {
       const supabase = getSB();
+      if (!supabase) { Alert.alert("خطأ", "تأكد من اتصالك بالإنترنت"); return; }
       const { data: result, error } = await (supabase as any).rpc(
         "confirm_driver_wallet_redemption",
         {
@@ -166,7 +170,6 @@ export default function WalletTab() {
 
       if (error) {
         Alert.alert("\u{274C} خطأ", error.message || "حدث خطأ");
-        setConfirming(false);
         return;
       }
 
@@ -183,7 +186,8 @@ export default function WalletTab() {
       } else {
         Alert.alert("\u{274C} خطأ", result.error || "كود التأكيد غير صحيح");
       }
-    } catch {
+    } catch (e) {
+      console.warn("driver_wallet_confirm2FA:", e);
       Alert.alert("\u{274C} خطأ", "تعذر الاتصال بالخادم");
     } finally {
       setConfirming(false);

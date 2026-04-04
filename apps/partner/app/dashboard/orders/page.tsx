@@ -62,6 +62,8 @@ export default function OrdersPage() {
   const [liveCount, setLiveCount] = useState(0);
   const [acceptDialog, setAcceptDialog] = useState<{ orderId: string; uuid: string } | null>(null);
   const [acceptLoading, setAcceptLoading] = useState(false);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const supabase = getSupabase()!;
 
@@ -86,11 +88,31 @@ export default function OrdersPage() {
   // ─── جلب الطلبات + اشتراك real-time ─────────────────────
   useEffect(() => {
     async function loadOrders() {
-      const { data } = await supabase
+      // Detect partner_id from authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await (supabase as any).from("profiles").select("role, partner_id").eq("id", user.id).maybeSingle();
+      const isSuperAdmin = profile?.role === "super_admin";
+      const pId = profile?.partner_id;
+      setPartnerId(pId || null);
+
+      if (!isSuperAdmin && !pId) {
+        setError("لا يوجد متجر مرتبط بحسابك");
+        return;
+      }
+
+      let query = supabase
         .from("orders")
         .select("*, profiles(full_name, phone)")
         .order("created_at", { ascending: false })
         .limit(50);
+
+      // Non-super-admin partners only see their own orders
+      if (!isSuperAdmin && pId) {
+        query = query.eq("partner_id", pId);
+      }
+
+      const { data } = await query;
       if (data && data.length > 0) {
         setOrders(data.map(mapRow));
         setLiveCount(0);
@@ -98,9 +120,12 @@ export default function OrdersPage() {
     }
     loadOrders();
 
+    // Realtime channel — only subscribe once partnerId is known
+    if (!partnerId) return;
+
     const channel = supabase
       .channel("partner-orders")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, (payload) => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `partner_id=eq.${partnerId}` } as any, (payload: any) => {
         if (payload.eventType === "INSERT") {
           setOrders(prev => [mapRow(payload.new), ...prev]);
           setLiveCount(n => n + 1);
@@ -118,7 +143,7 @@ export default function OrdersPage() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [partnerId]);
 
   const filtered = filter === "all" ? orders : orders.filter(o => o.status === filter);
 
@@ -134,7 +159,7 @@ export default function OrdersPage() {
       cancelled: "cancelled_at",
     };
     const extra = tsField[next] ? { [tsField[next]!]: new Date().toISOString() } : {};
-    await (supabase as any).from("orders").update({ status: next, ...extra }).eq("id", uuid);
+    await (supabase as any).from("orders").update({ status: next, ...extra }).eq("id", uuid).eq("partner_id", partnerId);
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: next } : o));
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, status: next } : null);
   }
@@ -142,7 +167,7 @@ export default function OrdersPage() {
   async function cancel(id: string) {
     const order = orders.find(o => o.id === id);
     const uuid  = (order as any)?._uuid ?? id;
-    await (supabase as any).from("orders").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", uuid);
+    await (supabase as any).from("orders").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", uuid).eq("partner_id", partnerId);
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: "cancelled" } : o));
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, status: "cancelled" } : null);
   }
@@ -210,6 +235,15 @@ export default function OrdersPage() {
           </button>
         )}
       </div>
+
+      {error && (
+        <div style={{
+          background: "#FEE2E2", color: "#EF4444", padding: 16, borderRadius: 12, marginBottom: 20,
+          fontSize: 14,
+        }}>
+          {error}
+        </div>
+      )}
 
       {/* FILTER TABS */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
@@ -285,7 +319,7 @@ export default function OrdersPage() {
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 15, fontWeight: 900, color: C.text }}>{o.total} ج</span>
+                    <span style={{ fontSize: 15, fontWeight: 900, color: C.text }}>{o.total} ج.م</span>
                     {o.deliveryType && o.status !== "pending" && o.status !== "cancelled" && (
                       <span style={{
                         fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10,
@@ -405,7 +439,7 @@ export default function OrdersPage() {
                     padding: "8px 0", borderBottom: i < selected.items.length - 1 ? `1px solid ${C.border}` : "none",
                   }}>
                     <span style={{ fontSize: 13, color: C.text }}>{item.name} × {item.qty}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.price * item.qty} ج</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.price * item.qty} ج.م</span>
                   </div>
                 ))}
                 <div style={{
@@ -413,7 +447,7 @@ export default function OrdersPage() {
                   marginTop: 10, padding: "10px 0 0", borderTop: `2px solid ${C.border}`,
                 }}>
                   <span style={{ fontSize: 14, fontWeight: 900, color: C.text }}>الإجمالي</span>
-                  <span style={{ fontSize: 16, fontWeight: 900, color: C.primary }}>{selected.total} ج</span>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: C.primary }}>{selected.total} ج.م</span>
                 </div>
               </div>
 
@@ -513,7 +547,7 @@ export default function OrdersPage() {
                     كابتن من التطبيق يستلم ويوصّل الطلب
                   </div>
                   <div style={{ fontSize: 11, color: C.primary, marginTop: 4, fontWeight: 700 }}>
-                    عمولة 15% على المجموع + رسوم التوصيل
+                    عمولة المنصة + رسوم التوصيل
                   </div>
                 </div>
               </button>
@@ -535,7 +569,7 @@ export default function OrdersPage() {
                     موظف لديك يستلم ويوصّل الطلب
                   </div>
                   <div style={{ fontSize: 11, color: "#059669", marginTop: 4, fontWeight: 700 }}>
-                    عمولة 10% على المجموع الفرعي فقط — بدون رسوم توصيل
+                    عمولة المنصة على المجموع الفرعي فقط — بدون رسوم توصيل
                   </div>
                 </div>
               </button>

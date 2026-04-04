@@ -8,7 +8,6 @@ import { useCart } from "../../lib/cartStore";
 import { useDarkMode } from "../../src/hooks/useDarkMode";
 import { useSupabase } from "../../src/hooks/useSupabase";
 import { analyticsTracker } from "../../src/utils/analyticsTracker";
-import { A11yPresets } from "../../src/hooks/useAccessibility";
 import { SafeAreaScrollView, SafeAreaDisplay } from "../../src/components";
 
 const C = {
@@ -249,7 +248,6 @@ export default function Restaurant() {
             analyticsTracker.trackEvent("restaurant_close");
             router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
           }}
-          {...A11yPresets.pressable}
           style={{
             position: "absolute", top: 52, right: 16,
             width: 38, height: 38, borderRadius: 19,
@@ -267,7 +265,6 @@ export default function Restaurant() {
             analyticsTracker.trackEvent("restaurant_chat", { partnerId });
             router.push(`/chat/partner/${partnerId}` as any);
           }}
-          {...A11yPresets.pressable}
           style={{
             position: "absolute", top: 52, right: 62,
             width: 38, height: 38, borderRadius: 19,
@@ -341,7 +338,6 @@ export default function Restaurant() {
                   analyticsTracker.trackEvent("change_menu_tab", { category: section.category });
                   setActiveTab(i);
                 }}
-                {...A11yPresets.pressable}
                 style={{
                   paddingVertical: 10, paddingHorizontal: 16,
                   borderBottomWidth: 2.5,
@@ -423,7 +419,6 @@ export default function Restaurant() {
                 }}>
                   <Pressable
                     onPress={() => removeItem(item.id)}
-                    {...A11yPresets.pressable}
                     style={{
                       width: 32, height: 32, borderRadius: 10, backgroundColor: colors.surface,
                       justifyContent: "center", alignItems: "center",
@@ -437,7 +432,6 @@ export default function Restaurant() {
                   </Text>
                   <Pressable
                     onPress={() => addItem(item)}
-                    {...A11yPresets.pressable}
                     style={{
                       width: 32, height: 32, borderRadius: 10, backgroundColor: C.primary,
                       justifyContent: "center", alignItems: "center",
@@ -449,7 +443,6 @@ export default function Restaurant() {
               ) : (
                 <Pressable
                   onPress={() => addItem(item)}
-                  {...A11yPresets.pressable}
                   style={{
                     width: 38, height: 38, borderRadius: 12, backgroundColor: C.primary,
                     justifyContent: "center", alignItems: "center",
@@ -476,7 +469,6 @@ export default function Restaurant() {
               analyticsTracker.trackEvent("view_cart", { totalItems, totalPrice });
               router.push("/cart");
             }}
-            {...A11yPresets.pressable}
             style={{
               backgroundColor: C.primary, borderRadius: 20,
               flexDirection: "row", alignItems: "center", justifyContent: "space-between",

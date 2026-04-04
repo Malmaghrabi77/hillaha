@@ -9,7 +9,7 @@ import { router } from "expo-router";
 import { C, getSB } from "../../lib/constants";
 
 const STORE_EMAIL = "hillaha_driver_email";
-const STORE_PASS  = "hillaha_driver_pass";
+const STORE_REFRESH = "hillaha_driver_refresh_token";
 
 export default function DriverLogin() {
   const [email, setEmail]           = useState("");
@@ -41,15 +41,35 @@ export default function DriverLogin() {
     try {
       const supabase = getSB();
       if (!supabase) throw new Error("خطأ في الاتصال");
-      const { error: err } = await supabase.auth.signInWithPassword({
+      const { error: err, data: authData } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       });
       if (err) throw err;
 
-      // Save credentials for future biometric login
+      // Check driver role before allowing login
+      const { data: profile } = await supabase.from("profiles").select("role, driver_application_status").eq("id", authData.user.id).single();
+      if (!profile || (profile.role !== "driver" && profile.role !== "super_admin")) {
+        await supabase.auth.signOut();
+        setError("هذا الحساب غير مسجل كسائق");
+        return;
+      }
+      if (profile.driver_application_status === 'pending') {
+        await supabase.auth.signOut();
+        router.replace("/(auth)/pending-approval");
+        return;
+      }
+      if (profile.driver_application_status === 'rejected') {
+        await supabase.auth.signOut();
+        router.replace("/(auth)/rejected");
+        return;
+      }
+
+      // Save email and refresh token for future biometric login
       await SecureStore.setItemAsync(STORE_EMAIL, email.trim().toLowerCase());
-      await SecureStore.setItemAsync(STORE_PASS,  password);
+      if (authData.session?.refresh_token) {
+        await SecureStore.setItemAsync(STORE_REFRESH, authData.session.refresh_token);
+      }
       setBioReady(true);
 
       router.replace("/(tabs)/home");
@@ -82,9 +102,9 @@ export default function DriverLogin() {
         return;
       }
 
-      const savedEmail = await SecureStore.getItemAsync(STORE_EMAIL);
-      const savedPass  = await SecureStore.getItemAsync(STORE_PASS);
-      if (!savedEmail || !savedPass) {
+      const savedEmail   = await SecureStore.getItemAsync(STORE_EMAIL);
+      const savedRefresh = await SecureStore.getItemAsync(STORE_REFRESH);
+      if (!savedEmail || !savedRefresh) {
         setError("يرجى تسجيل الدخول بالبريد والكلمة مرة واحدة أولاً");
         setBioLoading(false);
         return;
@@ -92,13 +112,47 @@ export default function DriverLogin() {
 
       const supabase = getSB();
       if (!supabase) throw new Error("خطأ في الاتصال");
-      const { error: err } = await supabase.auth.signInWithPassword({
-        email: savedEmail,
-        password: savedPass,
+      const { error: refreshError, data: sessionData } = await supabase.auth.refreshSession({
+        refresh_token: savedRefresh,
       });
-      if (err) throw err;
+      if (refreshError || !sessionData.session) {
+        // Clear stale token
+        await SecureStore.deleteItemAsync(STORE_REFRESH);
+        setError("انتهت الجلسة — سجّل دخولك بالبريد وكلمة المرور");
+        setBioLoading(false);
+        return;
+      }
+
+      // Check driver role before allowing biometric login
+      const { data: profile } = await supabase.from("profiles").select("role, driver_application_status").eq("id", sessionData.session.user.id).single();
+      if (!profile || (profile.role !== "driver" && profile.role !== "super_admin")) {
+        await supabase.auth.signOut();
+        await SecureStore.deleteItemAsync(STORE_REFRESH);
+        setError("هذا الحساب غير مسجل كسائق");
+        setBioLoading(false);
+        return;
+      }
+      if (profile.driver_application_status === 'pending') {
+        await supabase.auth.signOut();
+        await SecureStore.deleteItemAsync(STORE_REFRESH);
+        router.replace("/(auth)/pending-approval");
+        return;
+      }
+      if (profile.driver_application_status === 'rejected') {
+        await supabase.auth.signOut();
+        await SecureStore.deleteItemAsync(STORE_REFRESH);
+        router.replace("/(auth)/rejected");
+        return;
+      }
+
+      // Update stored refresh token with the new one
+      if (sessionData.session?.refresh_token) {
+        await SecureStore.setItemAsync(STORE_REFRESH, sessionData.session.refresh_token);
+      }
       router.replace("/(tabs)/home");
     } catch (e: any) {
+      // Clear stale token on any failure
+      try { await SecureStore.deleteItemAsync(STORE_REFRESH); } catch {}
       setError("فشل تسجيل الدخول، يرجى استخدام البريد وكلمة المرور");
     } finally {
       setBioLoading(false);

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, ScrollView, Pressable,
   StatusBar, RefreshControl, Alert, Linking,
 } from "react-native";
 import * as Location from "expo-location";
-import { C, getSB, haversineDistance, MAX_BICYCLE_DISTANCE_KM } from "../../lib/constants";
+import { C, getSB, haversineDistance, MAX_BICYCLE_DISTANCE_KM, SUPPORT_WHATSAPP } from "../../lib/constants";
 
 interface AvailableOrder {
   _uuid:             string;
@@ -56,6 +56,11 @@ export default function HomeTab() {
   const [driverLat, setDriverLat] = useState<number | null>(null);
   const [driverLng, setDriverLng] = useState<number | null>(null);
 
+  // Ref to avoid stale driverId in realtime closure
+  const driverIdRef = useRef<string | null>(null);
+  // Double-tap guard for accept button
+  const [accepting, setAccepting] = useState<string | null>(null);
+
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -66,6 +71,9 @@ export default function HomeTab() {
       }
     })();
   }, []);
+
+  // Keep driverIdRef in sync with driverId
+  useEffect(() => { driverIdRef.current = driverId; }, [driverId]);
 
   useEffect(() => {
     const supabase = getSB();
@@ -122,16 +130,24 @@ export default function HomeTab() {
       .channel("driver-ready-orders")
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: "orders", filter: "status=eq.ready" },
-        (payload) => {
+        async (payload) => {
           if (payload.new.delivery_type === "self") return;
-          setOrders(prev => [mapOrder(payload.new), ...prev]);
+          // Re-fetch full order with partner join data (realtime payload lacks joins)
+          const { data: fullOrder } = await supabase!
+            .from("orders")
+            .select("*, partners(name, address, lat, lng)")
+            .eq("id", payload.new.id)
+            .single();
+          if (fullOrder) {
+            setOrders(prev => [...prev, mapOrder(fullOrder)]);
+          }
         }
       )
       .on("postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders" },
         (payload) => {
           // إذا أخذ سائق آخر الطلب → أزله من القائمة
-          if (payload.new.driver_id && payload.new.driver_id !== driverId) {
+          if (payload.new.driver_id && payload.new.driver_id !== driverIdRef.current) {
             setOrders(prev => prev.filter(o => o._uuid !== payload.new.id));
           }
         }
@@ -139,9 +155,12 @@ export default function HomeTab() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [driverId]);
+  }, []);
 
   async function acceptOrder(uuid: string) {
+    if (accepting) return;
+    setAccepting(uuid);
+    try {
     const supabase = getSB();
     if (!supabase || !driverId) return;
 
@@ -152,7 +171,7 @@ export default function HomeTab() {
         "يجب شحن محفظتك أولاً لقبول الطلبات.\nتواصل عبر واتساب لطلب كود شحن.",
         [
           { text: "إلغاء", style: "cancel" },
-          { text: "شحن المحفظة", onPress: () => Linking.openURL("https://wa.me/201153624184?text=" + encodeURIComponent("مرحباً، أريد شحن محفظتي كسائق في تطبيق حلّها")) },
+          { text: "شحن المحفظة", onPress: () => Linking.openURL(`https://wa.me/${SUPPORT_WHATSAPP}?text=` + encodeURIComponent("مرحباً، أريد شحن محفظتي كسائق في تطبيق حلّها")) },
         ]
       );
       return;
@@ -165,18 +184,26 @@ export default function HomeTab() {
         `رصيد محفظتك (${walletBalance!.toFixed(2)} ج) أقل من قيمة الطلب (${order.total} ج).\nاشحن محفظتك لزيادة الحد الائتماني.`,
         [
           { text: "إلغاء", style: "cancel" },
-          { text: "شحن المحفظة", onPress: () => Linking.openURL("https://wa.me/201153624184?text=" + encodeURIComponent(`مرحباً، أريد شحن محفظتي بمبلغ ${Math.ceil(order.total - walletBalance!)} جنيه كسائق في تطبيق حلّها`)) },
+          { text: "شحن المحفظة", onPress: () => Linking.openURL(`https://wa.me/${SUPPORT_WHATSAPP}?text=` + encodeURIComponent(`مرحباً، أريد شحن محفظتي بمبلغ ${Math.ceil(order.total - walletBalance!)} جنيه كسائق في تطبيق حلّها`)) },
         ]
       );
       return;
     }
 
-    await supabase.from("orders").update({
-      driver_id:    driverId,
-      status:       "picked_up",
-      picked_up_at: new Date().toISOString(),
-    }).eq("id", uuid);
+    // Atomic claim: only succeeds if no other driver has claimed the order
+    const { data, error } = await (supabase as any).rpc("claim_order_for_driver", {
+      p_order_id: uuid,
+      p_driver_id: driverId,
+    });
+    if (error || !data?.success) {
+      Alert.alert("تنبيه", data?.error || error?.message || "تم قبول هذا الطلب بواسطة سائق آخر");
+      setOrders(prev => prev.filter(o => o._uuid !== uuid));
+      return;
+    }
     setOrders(prev => prev.filter(o => o._uuid !== uuid));
+    } finally {
+      setAccepting(null);
+    }
   }
 
   function rejectOrder(uuid: string) {
@@ -233,7 +260,7 @@ export default function HomeTab() {
           <View>
             <Text style={{ fontSize: 18, fontWeight: "900", color: C.text }}>مرحباً يا سائق! 👋</Text>
             <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>
-              {available.length} طلب{available.length !== 1 ? " متاح" : " متاح"} الآن
+              {available.length} {available.length === 1 ? "طلب متاح" : "طلبات متاحة"} الآن
             </Text>
           </View>
 
@@ -244,7 +271,11 @@ export default function HomeTab() {
               setOnline(newStatus);
               const sb = getSB();
               if (sb && driverId) {
-                await (sb as any).from("profiles").update({ is_online: newStatus }).eq("id", driverId);
+                const { error } = await (sb as any).from("profiles").update({ is_online: newStatus }).eq("id", driverId);
+                if (error) {
+                  setOnline(!newStatus);
+                  Alert.alert("خطأ", "فشل تحديث حالة الاتصال، حاول مرة أخرى");
+                }
               }
             }}
             style={{
@@ -313,7 +344,7 @@ export default function HomeTab() {
             </View>
           </View>
           <Pressable
-            onPress={() => Linking.openURL("https://wa.me/201153624184?text=" + encodeURIComponent("مرحباً، أريد شحن محفظتي كسائق في تطبيق حلّها"))}
+            onPress={() => Linking.openURL(`https://wa.me/${SUPPORT_WHATSAPP}?text=` + encodeURIComponent("مرحباً، أريد شحن محفظتي كسائق في تطبيق حلّها"))}
             style={{
               flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
               paddingVertical: 12, borderRadius: 12, backgroundColor: "#25D366",
@@ -467,9 +498,10 @@ export default function HomeTab() {
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <Pressable
                   onPress={() => acceptOrder(order._uuid)}
+                  disabled={!!accepting}
                   style={{
                     flex: 2, paddingVertical: 13, borderRadius: 12, alignItems: "center",
-                    backgroundColor: C.primary,
+                    backgroundColor: accepting ? C.primarySoft : C.primary,
                     shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
                   }}

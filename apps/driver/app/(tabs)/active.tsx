@@ -61,6 +61,7 @@ export default function ActiveTab() {
   const locationSub     = useRef<Location.LocationSubscription | null>(null);
   const orderUuid       = useRef<string | null>(null);
   const lastDeliveryFee = useRef<number>(0);
+  const driverIdRef     = useRef<string | null>(null);
 
   // Pulse animation for status
   useEffect(() => {
@@ -95,11 +96,12 @@ export default function ActiveTab() {
     async function load() {
       const { data: { user } } = await supabase!.auth.getUser();
       if (!user) return;
+      driverIdRef.current = user.id;
       const { data } = await supabase!
         .from("orders")
         .select("*, partners(name, address), profiles(full_name, phone)")
         .eq("driver_id", user.id)
-        .eq("status", "picked_up")
+        .in("status", ["accepted", "preparing", "ready", "picked_up"])
         .maybeSingle();
       if (data) {
         setOrder(mapActive(data));
@@ -112,8 +114,11 @@ export default function ActiveTab() {
     const channel = supabase
       .channel("driver-active-order")
       .on("postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders" },
+        { event: "UPDATE", schema: "public", table: "orders", filter: driverIdRef.current ? `driver_id=eq.${driverIdRef.current}` : undefined },
         (payload) => {
+          // Only process updates for this driver's orders
+          if (payload.new.driver_id !== driverIdRef.current) return;
+
           if (payload.new.status === "picked_up") {
             setOrder(mapActive(payload.new));
             orderUuid.current = payload.new.id;

@@ -7,6 +7,7 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from "expo-location";
+import { haversineKm } from '../../lib/utils';
 import { useDarkMode } from '../../src/hooks/useDarkMode';
 import { useSupabase } from '../../src/hooks/useSupabase';
 import { analyticsTracker } from '../../src/utils/analyticsTracker';
@@ -15,18 +16,6 @@ import { ANALYTICS_EVENTS } from '../../src/constants/analyticsEvents';
 import { SafeAreaDisplay } from '../../src/components';
 
 const SCREEN = Dimensions.get("window");
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 // ─── Defaults ──────────────────────────────────────────────────────────────
 
@@ -143,16 +132,17 @@ interface PartnerCardProps {
   partner: Partner;
   onPress: () => void;
   distance?: number | null;
+  deliveryBasePrice?: number | null;
 }
 
-function PartnerCard({ partner, onPress, distance }: PartnerCardProps) {
+function PartnerCard({ partner, onPress, distance, deliveryBasePrice }: PartnerCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const { isDarkMode, colors } = useDarkMode();
 
   useEffect(() => {
     // ✅ Prefetch the image
     if (partner?.cover_image) {
-      Image.prefetch(partner.cover_image).catch(() => {});
+      Image.prefetch(partner.cover_image).catch((e) => console.warn("Image prefetch failed:", e));
     }
   }, [partner?.cover_image]);
 
@@ -354,7 +344,8 @@ export default function Home() {
       } else {
         setHasMorePartners(false);
       }
-    } catch {
+    } catch (e) {
+      console.warn("loadMorePartners failed:", e);
     } finally {
       setIsLoadingMore(false);
     }
@@ -363,16 +354,21 @@ export default function Home() {
   // ✅ Load cached partners on app start
   const loadCachedPartners = async () => {
     try {
+      const allCached: Partner[] = [];
       for (let p = 0; p < 3; p++) {
         const cacheKey = `partners_page_${p}`;
         const cached = await AsyncStorage.getItem(cacheKey);
         if (cached) {
           const data = JSON.parse(cached);
-          setAllPartners(prev => [...prev, ...data]);
+          allCached.push(...data);
           setPage(p + 1);
         }
       }
-    } catch {
+      if (allCached.length > 0) {
+        setAllPartners(allCached);
+      }
+    } catch (e) {
+      console.warn("loadCachedPartners failed:", e);
     }
   };
 
@@ -433,7 +429,7 @@ export default function Home() {
             .then(({ data: rule }: any) => {
               if (rule?.base_price) setDeliveryBasePrice(Number(rule.base_price));
             })
-            .catch(() => {});
+            .catch((e: any) => console.warn("Delivery pricing fetch failed:", e));
 
           if (partnersData && partnersData.length > 0) {
             setAllPartners(partnersData as Partner[]);
@@ -458,7 +454,8 @@ export default function Home() {
             }));
             setServices(mapped as Service[]);
           }
-        } catch {
+        } catch (e) {
+          console.warn("fetchData failed:", e);
         } finally {
           setLoading(false);
         }
@@ -485,7 +482,7 @@ export default function Home() {
       if (supabase) {
         const { data: partnersData } = await supabase
           .from("partners")
-          .select("id, name, type, cover_image, delivery_time, delivery_fee, rating, review_count")
+          .select("id, name, type, cover_image, delivery_time, delivery_fee, rating, review_count, lat, lng")
           .eq("is_approved", true)
           .range(0, pageSize - 1)
           .order("rating", { ascending: false });
@@ -496,7 +493,8 @@ export default function Home() {
           await AsyncStorage.setItem("partners_page_0", JSON.stringify(partnersData));
         }
       }
-    } catch {
+    } catch (e) {
+      console.warn("handleRefresh failed:", e);
     } finally {
       setRefreshing(false);
     }
@@ -1242,6 +1240,7 @@ export default function Home() {
               key={p.id}
               partner={p}
               distance={getDistance(p)}
+              deliveryBasePrice={deliveryBasePrice}
               onPress={() => router.push(`/restaurant/${p.id}`)}
             />
           ))}

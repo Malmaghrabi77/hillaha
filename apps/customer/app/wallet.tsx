@@ -1,20 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, TextInput, Pressable, Image, ActivityIndicator, Alert, Modal } from "react-native";
 import { useSupabase } from "../src/hooks/useSupabase";
+import { useDarkMode } from "../src/hooks/useDarkMode";
+import { formatCurrency } from "../lib/utils";
 import { analyticsTracker } from "../src/utils/analyticsTracker";
 import { A11yPresets } from "../src/hooks/useAccessibility";
 import { ANALYTICS_EVENTS } from "../src/constants/analyticsEvents";
 import { SafeAreaScrollView } from "../src/components";
-
-const C = {
-  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
-  pink: "#EC4899",       pinkSoft: "#FCE7F3",
-  bg: "#FAFAFF",         surface: "#FFFFFF",
-  border: "#E7E3FF",     text: "#1F1B2E",
-  textMuted: "#6B6480",  success: "#34D399",
-  warning: "#F59E0B",    danger: "#EF4444",
-  deepPurple: "#6D28D9",
-} as const;
 
 interface Transaction {
   amount: number;
@@ -25,6 +17,7 @@ interface Transaction {
 }
 
 export default function Wallet() {
+  const { colors } = useDarkMode();
   const [balance, setBalance]       = useState(0);
   const [history, setHistory]       = useState<Transaction[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -64,8 +57,8 @@ export default function Wallet() {
           };
         }));
       }
-    } catch {
-      // silent
+    } catch (e) {
+      console.warn("wallet_fetchData:", e);
     }
     setLoading(false);
   }, [supabase]);
@@ -122,7 +115,7 @@ export default function Wallet() {
         analyticsTracker.trackEvent(ANALYTICS_EVENTS.WALLET.CODE_SUBMITTED, { requires_2fa: true });
       } else if (result?.success) {
         analyticsTracker.trackEvent(ANALYTICS_EVENTS.WALLET.CODE_REDEEMED, { amount: result.amount });
-        Alert.alert("تم الشحن بنجاح!", `تمت إضافة ${result.amount} جنيه لمحفظتك`);
+        Alert.alert("تم الشحن بنجاح!", `تمت إضافة ${formatCurrency(result.amount)} لمحفظتك`);
         setCode("");
         setLoading(true);
         fetchData();
@@ -154,7 +147,7 @@ export default function Wallet() {
 
       if (result?.success) {
         analyticsTracker.trackEvent(ANALYTICS_EVENTS.WALLET.CODE_REDEEMED, { amount: result.amount, via_2fa: true });
-        Alert.alert("تم الشحن بنجاح!", `تمت إضافة ${result.amount} جنيه لمحفظتك`);
+        Alert.alert("تم الشحن بنجاح!", `تمت إضافة ${formatCurrency(result.amount)} لمحفظتك`);
         setShow2FA(false);
         setPending2FA(null);
         setVerificationCode("");
@@ -174,8 +167,8 @@ export default function Wallet() {
   // ── Loading ───────────────────────────────────────────────
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color={C.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -247,13 +240,13 @@ export default function Wallet() {
       {/* ── REDEEM CODE SECTION ────────────────────────────── */}
       <View style={{
         marginHorizontal: 16, marginBottom: 20, borderRadius: 20, padding: 18,
-        backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.primary,
-        shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
+        backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary,
+        shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1, shadowRadius: 10, elevation: 3,
       }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 }}>
           <Text style={{ fontSize: 22 }}>🎫</Text>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: C.text }}>شحن المحفظة بكود</Text>
+          <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text }}>شحن المحفظة بكود</Text>
         </View>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
@@ -261,24 +254,23 @@ export default function Wallet() {
             value={code}
             onChangeText={setCode}
             placeholder="أدخل كود الشحن"
-            placeholderTextColor={C.textMuted}
+            placeholderTextColor={colors.textMuted}
             autoCapitalize="characters"
             style={{
-              flex: 1, borderWidth: 1.5, borderColor: C.border, borderRadius: 14,
+              flex: 1, borderWidth: 1.5, borderColor: colors.border, borderRadius: 14,
               paddingHorizontal: 14, paddingVertical: 12,
-              backgroundColor: C.bg, fontSize: 15, fontWeight: "700",
-              color: C.text, textAlign: "center", letterSpacing: 2,
+              backgroundColor: colors.bg, fontSize: 15, fontWeight: "700",
+              color: colors.text, textAlign: "center", letterSpacing: 2,
             }}
           />
           <Pressable
             onPress={handleRedeem}
             disabled={redeeming || !code.trim()}
-            {...A11yPresets.pressable}
             style={{
               paddingHorizontal: 22, borderRadius: 14,
-              backgroundColor: redeeming || !code.trim() ? C.primarySoft : C.primary,
+              backgroundColor: redeeming || !code.trim() ? colors.primarySoft : colors.primary,
               justifyContent: "center", alignItems: "center",
-              shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
+              shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
             }}
           >
@@ -289,27 +281,27 @@ export default function Wallet() {
           </Pressable>
         </View>
 
-        <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 10, textAlign: "center" }}>
+        <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 10, textAlign: "center" }}>
           أدخل الكود الذي حصلت عليه لشحن محفظتك
         </Text>
       </View>
 
       {/* ── TRANSACTION HISTORY ─────────────────────────────── */}
       <View style={{ paddingHorizontal: 16 }}>
-        <Text style={{ fontSize: 16, fontWeight: "900", color: C.text, marginBottom: 12 }}>
+        <Text style={{ fontSize: 16, fontWeight: "900", color: colors.text, marginBottom: 12 }}>
           سجل المعاملات
         </Text>
 
         {history.length === 0 ? (
           <View style={{
             padding: 40, borderRadius: 20, alignItems: "center",
-            backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+            backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
           }}>
             <Text style={{ fontSize: 48, marginBottom: 12 }}>👛</Text>
-            <Text style={{ fontWeight: "900", color: C.text, fontSize: 16, marginBottom: 6 }}>
+            <Text style={{ fontWeight: "900", color: colors.text, fontSize: 16, marginBottom: 6 }}>
               لا توجد معاملات بعد
             </Text>
-            <Text style={{ color: C.textMuted, fontSize: 13, textAlign: "center" }}>
+            <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: "center" }}>
               قم بشحن محفظتك بكود لبدء استخدامها
             </Text>
           </View>
@@ -318,7 +310,7 @@ export default function Wallet() {
             <View key={i} style={{
               flexDirection: "row", alignItems: "center",
               padding: 14, borderRadius: 16, marginBottom: 8,
-              backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+              backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
             }}>
               <View style={{
                 width: 40, height: 40, borderRadius: 12, marginLeft: 12,
@@ -330,14 +322,14 @@ export default function Wallet() {
                 </Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: "700", color: C.text, fontSize: 13 }}>{h.description}</Text>
-                <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 3 }}>{h.date}</Text>
+                <Text style={{ fontWeight: "700", color: colors.text, fontSize: 13 }}>{h.description}</Text>
+                <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 3 }}>{h.date}</Text>
               </View>
               <Text style={{
                 fontWeight: "900", fontSize: 16,
                 color: h.credit ? "#059669" : "#EF4444",
               }}>
-                {h.credit ? "+" : ""}{h.amount.toFixed(2)}
+                {h.credit ? "+" : ""}{formatCurrency(h.amount)}
               </Text>
             </View>
           ))
@@ -363,7 +355,7 @@ export default function Wallet() {
           <View style={{
             width: "100%",
             maxWidth: 380,
-            backgroundColor: C.surface,
+            backgroundColor: colors.surface,
             borderRadius: 24,
             padding: 28,
             shadowColor: "#000",
@@ -376,18 +368,18 @@ export default function Wallet() {
             <View style={{ alignItems: "center", marginBottom: 20 }}>
               <View style={{
                 width: 60, height: 60, borderRadius: 16,
-                backgroundColor: C.primarySoft,
+                backgroundColor: colors.primarySoft,
                 justifyContent: "center", alignItems: "center",
                 marginBottom: 12,
               }}>
                 <Text style={{ fontSize: 30 }}>🔐</Text>
               </View>
-              <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, marginBottom: 6 }}>
+              <Text style={{ fontSize: 18, fontWeight: "900", color: colors.text, marginBottom: 6 }}>
                 تأكيد إضافي مطلوب
               </Text>
-              <Text style={{ fontSize: 13, color: C.textMuted, textAlign: "center" }}>
+              <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: "center" }}>
                 هذا الكود بمبلغ{" "}
-                <Text style={{ fontWeight: "900", color: C.primary }}>
+                <Text style={{ fontWeight: "900", color: colors.primary }}>
                   {pending2FA?.amount ?? 0}
                 </Text>{" "}
                 جنيه — أدخل رمز التحقق للمتابعة
@@ -399,19 +391,19 @@ export default function Wallet() {
               value={verificationCode}
               onChangeText={setVerificationCode}
               placeholder="أدخل رمز التحقق المكون من 6 أرقام"
-              placeholderTextColor={C.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="number-pad"
               maxLength={6}
               style={{
-                borderWidth: 2, borderColor: C.primary, borderRadius: 16,
+                borderWidth: 2, borderColor: colors.primary, borderRadius: 16,
                 paddingHorizontal: 16, paddingVertical: 14,
-                backgroundColor: C.bg, fontSize: 24, fontWeight: "900",
-                color: C.text, textAlign: "center", letterSpacing: 8,
+                backgroundColor: colors.bg, fontSize: 24, fontWeight: "900",
+                color: colors.text, textAlign: "center", letterSpacing: 8,
                 marginBottom: 8,
               }}
             />
 
-            <Text style={{ color: C.textMuted, fontSize: 11, textAlign: "center", marginBottom: 20 }}>
+            <Text style={{ color: colors.textMuted, fontSize: 11, textAlign: "center", marginBottom: 20 }}>
               تم إرسال رمز التحقق — أدخله هنا للتأكيد
             </Text>
 
@@ -421,7 +413,7 @@ export default function Wallet() {
               disabled={confirming || verificationCode.length !== 6}
               style={{
                 paddingVertical: 14, borderRadius: 14,
-                backgroundColor: confirming || verificationCode.length !== 6 ? C.primarySoft : C.primary,
+                backgroundColor: confirming || verificationCode.length !== 6 ? colors.primarySoft : colors.primary,
                 alignItems: "center",
                 marginBottom: 10,
               }}
@@ -436,12 +428,12 @@ export default function Wallet() {
               onPress={() => { setShow2FA(false); setPending2FA(null); setVerificationCode(""); }}
               style={{
                 paddingVertical: 12, borderRadius: 14,
-                backgroundColor: C.bg,
+                backgroundColor: colors.bg,
                 alignItems: "center",
-                borderWidth: 1, borderColor: C.border,
+                borderWidth: 1, borderColor: colors.border,
               }}
             >
-              <Text style={{ color: C.textMuted, fontWeight: "700", fontSize: 14 }}>إلغاء</Text>
+              <Text style={{ color: colors.textMuted, fontWeight: "700", fontSize: 14 }}>إلغاء</Text>
             </Pressable>
           </View>
         </View>

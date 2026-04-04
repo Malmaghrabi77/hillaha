@@ -81,12 +81,11 @@ export default function Step7Review() {
       });
       if (appErr) throw appErr;
 
-      // 5. Update profiles
+      // 5. Update profiles (role is set by handle_new_user trigger, not client)
       await (supabase as any).from("profiles").upsert({
         id: userId,
         full_name: data.fullName.trim(),
         phone: data.phone.trim(),
-        role: "driver",
         avatar_url: urls.selfieUrl,
         vehicle_type: data.vehicleType,
         is_approved: false,

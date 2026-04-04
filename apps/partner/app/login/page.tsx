@@ -37,8 +37,22 @@ export default function LoginPage() {
     try {
       const sb = getSupabase();
       if (!sb) throw new Error("لا يوجد اتصال");
-      const { error: err } = await sb.auth.signInWithPassword({ email: email.toLowerCase(), password });
+      const { data: authData, error: err } = await sb.auth.signInWithPassword({ email: email.toLowerCase(), password });
       if (err) throw err;
+
+      // Check user role - only allow partner/store_admin/super_admin/admin/accountant
+      const userId = authData?.user?.id;
+      if (userId) {
+        const { data: profile } = await (sb as any).from("profiles").select("role").eq("id", userId).maybeSingle();
+        const allowedRoles = ["partner", "store_admin", "super_admin", "admin", "accountant"];
+        if (!profile || !allowedRoles.includes(profile.role)) {
+          await sb.auth.signOut();
+          setError("هذا الحساب غير مصرح له بالدخول");
+          setLoading(false);
+          return;
+        }
+      }
+
       router.push("/dashboard");
     } catch (e: any) {
       const msg = e?.message ?? "";

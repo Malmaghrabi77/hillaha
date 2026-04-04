@@ -7,7 +7,6 @@ import { router } from "expo-router";
 import { useDarkMode } from '../../src/hooks/useDarkMode';
 import { useSupabase } from '../../src/hooks/useSupabase';
 import { analyticsTracker } from '../../src/utils/analyticsTracker';
-import { A11yPresets } from '../../src/hooks/useAccessibility';
 import { ANALYTICS_EVENTS } from '../../src/constants/analyticsEvents';
 import { SafeAreaScrollView } from '../../src/components';
 import { LocationPickerMap } from '../../src/components/LocationPickerMap';
@@ -71,8 +70,9 @@ export default function P2PDeliveryScreen() {
     if (supabase) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        await supabase.from("delivery_requests").insert({
-          sender_id:      user?.id ?? null,
+        if (!user) { Alert.alert("خطأ", "يجب تسجيل الدخول أولاً"); return; }
+        const { error } = await supabase.from("delivery_requests").insert({
+          sender_id:      user.id,
           package_size:   size,
           from_address:   fromAddress,
           from_latitude:  fromLat,
@@ -88,7 +88,8 @@ export default function P2PDeliveryScreen() {
           notes:          notes || null,
           tracking_code:  code,
         });
-      } catch {}
+        if (error) { Alert.alert("خطأ", "تعذر حفظ الطلب، حاول مرة أخرى"); return; }
+      } catch (e) { console.warn("service_booking_insert:", e); Alert.alert("خطأ", "تعذر الاتصال بالخادم"); return; }
     }
     setShowModal(true);
   };
@@ -100,7 +101,6 @@ export default function P2PDeliveryScreen() {
         <Pressable
           onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/home")}
           style={[styles.backBtn, { backgroundColor: colors.primarySoft }]}
-          {...A11yPresets.button}
         >
           <Text style={{ fontSize: 20, color: colors.primary }}>←</Text>
         </Pressable>
@@ -145,7 +145,6 @@ export default function P2PDeliveryScreen() {
                 { backgroundColor: colors.surface, borderColor: colors.border },
                 size === s.id && [styles.sizeRowActive, { borderColor: colors.primary, backgroundColor: colors.primarySoft }],
               ]}
-              {...A11yPresets.button}
             >
               <Text style={{ fontSize: 28 }}>{s.icon}</Text>
               <View style={{ flex: 1, marginHorizontal: 12 }}>
@@ -313,7 +312,6 @@ export default function P2PDeliveryScreen() {
         <Pressable
           onPress={handleSend}
           style={[styles.sendBtn, { backgroundColor: colors.primary }]}
-          {...A11yPresets.button}
         >
           <Text style={styles.sendBtnText}>أرسل الآن</Text>
         </Pressable>
@@ -344,14 +342,12 @@ export default function P2PDeliveryScreen() {
             <Pressable
               style={[styles.modalBtn, { backgroundColor: colors.primary }]}
               onPress={() => { setShowModal(false); router.push("/(tabs)/orders"); }}
-              {...A11yPresets.button}
             >
               <Text style={{ color: "white", fontWeight: "900", fontSize: 15 }}>متابعة طلباتي</Text>
             </Pressable>
             <Pressable
               style={[styles.modalBtn, { backgroundColor: "transparent", borderWidth: 1.5, borderColor: colors.border, marginTop: 8 }]}
               onPress={() => { setShowModal(false); router.push("/(tabs)/home"); }}
-              {...A11yPresets.button}
             >
               <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>العودة للرئيسية</Text>
             </Pressable>

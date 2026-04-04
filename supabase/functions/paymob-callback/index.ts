@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { createHmac } from "https://deno.land/std@0.168.0/crypto/mod.ts";
+
 
 serve(async (req: Request) => {
   try {
@@ -71,6 +71,39 @@ serve(async (req: Request) => {
     const isSuccess = obj.success === true && obj.pending === false;
 
     if (orderId) {
+      // Verify payment amount matches order total before marking as paid
+      const { data: order } = await supabase
+        .from("orders")
+        .select("total, payment_status")
+        .eq("id", orderId)
+        .single();
+
+      // Idempotency: skip if already processed
+      if (order?.payment_status === "paid") {
+        return new Response(JSON.stringify({ received: true, already_processed: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // Amount verification: PayMob sends amount in cents
+      const expectedCents = order ? Math.round(order.total * 100) : null;
+      const receivedCents = obj.amount_cents;
+      if (isSuccess && expectedCents !== null && receivedCents !== expectedCents) {
+        console.error(`Amount mismatch for order ${orderId}: expected ${expectedCents}, got ${receivedCents}`);
+        await supabase
+          .from("orders")
+          .update({
+            payment_status: "amount_mismatch",
+            paymob_transaction_id: String(obj.id),
+          })
+          .eq("id", orderId);
+        return new Response(JSON.stringify({ received: true, error: "amount_mismatch" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
       await supabase
         .from("orders")
         .update({

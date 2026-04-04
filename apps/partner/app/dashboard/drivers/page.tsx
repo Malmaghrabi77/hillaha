@@ -30,6 +30,8 @@ export default function DriversPage() {
     startTime: "09:00",
     endTime: "18:00",
   });
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     loadDrivers();
@@ -44,10 +46,27 @@ export default function DriversPage() {
         return;
       }
 
-      const { data, error: err } = await (supabase
-        .from("driver_assignments") as any)
+      // Detect partner_id from authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await (supabase as any).from("profiles").select("role, partner_id").eq("id", user.id).maybeSingle();
+      const isSA = profile?.role === "super_admin";
+      setIsSuperAdmin(isSA);
+      const pId = profile?.partner_id;
+      setPartnerId(pId || null);
+
+      if (!isSA && !pId) {
+        setError("لا يوجد متجر مرتبط بحسابك");
+        setLoading(false);
+        return;
+      }
+
+      let query = (supabase.from("driver_assignments") as any)
         .select("*, profiles(full_name)")
         .order("assigned_at", { ascending: false });
+      if (!isSA && pId) query = query.eq("partner_id", pId);
+
+      const { data, error: err } = await query;
 
       if (err) throw err;
 
@@ -81,6 +100,7 @@ export default function DriversPage() {
         .insert([
           {
             driver_id: selectedDriverId,
+            partner_id: partnerId,
             day_of_week: schedule.dayOfWeek,
             start_time: schedule.startTime,
             end_time: schedule.endTime,
@@ -118,7 +138,8 @@ export default function DriversPage() {
       const { error: err } = await (supabase
         .from("driver_assignments") as any)
         .delete()
-        .eq("id", driverId);
+        .eq("id", driverId)
+        .eq("partner_id", partnerId);
 
       if (err) throw err;
       await loadDrivers();
@@ -295,10 +316,7 @@ export default function DriversPage() {
                       الأرباح
                     </div>
                     <div style={{ fontSize: '18px', fontWeight: 700 }}>
-                      {driver.total_earnings.toFixed(2)} ر.س
-                    </div>
-                    <div style={{ fontSize: '11px', color: theme.colors.textMuted }}>
-                      العمولة: {(driver.commission_rate * 100).toFixed(0)}%
+                      {driver.total_earnings.toFixed(2)} ج.م
                     </div>
                   </div>
 

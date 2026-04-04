@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import * as Location from "expo-location";
+import { haversineKm } from "../../lib/utils";
 import { useDarkMode } from "../../src/hooks/useDarkMode";
 import { useSupabase } from "../../src/hooks/useSupabase";
 import { analyticsTracker } from "../../src/utils/analyticsTracker";
@@ -23,18 +24,6 @@ interface Partner {
   delivery_fee: number;
   lat?: number | null;
   lng?: number | null;
-}
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 const POPULAR_TAGS = ["مطاعم", "شاورما", "برجر", "صيدلية", "قهوة وحلويات", "طبيب"];
@@ -104,9 +93,10 @@ export default function Search() {
         .select("id, name, type, cover_image, rating, review_count, delivery_time, delivery_fee, lat, lng")
         .eq("is_approved", true);
 
-      // Search filter
+      // Search filter — sanitize to prevent PostgREST injection
       if (query.trim()) {
-        queryBuilder = queryBuilder.or(`name.ilike.%${query}%,type.ilike.%${query}%`);
+        const sanitized = query.replace(/[.,()]/g, '');
+        queryBuilder = queryBuilder.or(`name.ilike.%${sanitized}%,type.ilike.%${sanitized}%`);
       }
 
       // Rating filter
@@ -330,7 +320,7 @@ export default function Search() {
             </View>
             <View style={{ alignItems: "center" }}>
               <Text style={{ fontSize: 12, fontWeight: "900", color: colors.primary }}>
-                {deliveryBasePrice ? `من ${deliveryBasePrice}` : `${p.delivery_fee}`} ج
+                {deliveryBasePrice ? `من ${deliveryBasePrice}` : `${p.delivery_fee}`} ج.م
               </Text>
               <Text style={{ fontSize: 9, color: colors.textMuted, marginTop: 2 }}>توصيل</Text>
               {userLat != null && userLng != null && p.lat != null && p.lng != null && (() => {

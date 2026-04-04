@@ -7,7 +7,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useDarkMode } from "../../../src/hooks/useDarkMode";
 import { useSupabase } from "../../../src/hooks/useSupabase";
 import { analyticsTracker } from "../../../src/utils/analyticsTracker";
-import { A11yPresets } from "../../../src/hooks/useAccessibility";
 import { SafeAreaDisplay } from "../../../src/components";
 
 const C = {
@@ -32,6 +31,7 @@ export default function PartnerChat() {
   const [loading, setLoading] = useState(true);
   const [partnerName, setPartnerName] = useState("المتجر");
   const [partnerPhone, setPartnerPhone] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
   const scrollRef = useRef<FlatList>(null);
   const { isDarkMode, colors } = useDarkMode();
   const supabase = useSupabase();
@@ -44,6 +44,11 @@ export default function PartnerChat() {
       if (!supabase) { setLoading(false); return; }
 
       try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        const currentUserId = user?.id;
+        if (currentUserId) setUserId(currentUserId);
+
         // Get partner info
         const { data: partnerData } = await supabase
           .from("partners")
@@ -56,29 +61,38 @@ export default function PartnerChat() {
           setPartnerPhone(partnerData.phone || "");
         }
 
-        // Get messages
-        const { data: msgData } = await supabase
+        // Get messages — scoped to this customer
+        const query = supabase
           .from("messages")
           .select("*")
           .eq("partner_id", partnerId)
           .order("created_at", { ascending: true })
           .limit(100);
 
+        if (currentUserId) {
+          query.eq("customer_id", currentUserId);
+        }
+
+        const { data: msgData } = await query;
+
         if (msgData) {
           setMessages(msgData as Message[]);
         }
-      } catch {
+      } catch (e) {
+        console.warn("load_partner_chat:", e);
       } finally {
         setLoading(false);
       }
     }
 
     load();
+  }, [partnerId, supabase]);
 
-    // Subscribe to new messages
-    if (!supabase) return;
+  // Separate useEffect for realtime — depends on userId so it's never stale in the callback
+  useEffect(() => {
+    if (!supabase || !partnerId || !userId) return;
     const channel = supabase
-      .channel(`chat-partner-${partnerId}`)
+      .channel(`chat-partner-${partnerId}-${userId}`)
         .on(
           "postgres_changes",
           {
@@ -88,14 +102,19 @@ export default function PartnerChat() {
             filter: `partner_id=eq.${partnerId}`,
           },
           (payload: any) => {
-            setMessages(prev => [...prev, payload.new as Message]);
+            // Only show messages for this customer
+            if (payload.new.customer_id && payload.new.customer_id !== userId) return;
+            setMessages(prev => {
+              if (prev.some(m => m.id === (payload.new as Message).id)) return prev;
+              return [...prev, payload.new as Message];
+            });
             scrollRef.current?.scrollToEnd({ animated: true });
           }
         )
         .subscribe();
 
       return () => { supabase.removeChannel(channel); };
-  }, [partnerId, supabase]);
+  }, [partnerId, supabase, userId]);
 
   async function sendMessage() {
     if (!newMessage.trim() || !partnerId) return;
@@ -106,23 +125,23 @@ export default function PartnerChat() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user?.id)
+        .single();
       await supabase.from("messages").insert({
         partner_id: partnerId,
+        customer_id: user?.id,
         message: newMessage.trim(),
         sender_type: "customer",
         sender_id: user?.id,
+        sender_name: profile?.full_name || "عميل",
       });
       setNewMessage("");
-    } catch {
+    } catch (e) {
+      console.warn("send_partner_message:", e);
     }
-  }
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color={C.primary} />
-      </View>
-    );
   }
 
   return (
@@ -144,7 +163,6 @@ export default function PartnerChat() {
             analyticsTracker.trackEvent("chat_back");
             router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
           }}
-          {...A11yPresets.pressable}
           style={{
             width: 40, height: 40, borderRadius: 12,
             backgroundColor: C.primarySoft,
@@ -163,9 +181,10 @@ export default function PartnerChat() {
               analyticsTracker.trackEvent("call_partner", { partnerId });
               try {
                 require("react-native").Linking.openURL(`tel:${partnerPhone}`);
-              } catch (e) {}
+              } catch (e) {
+                console.warn("call_partner:", e);
+              }
             }}
-            {...A11yPresets.pressable}
             style={{
               width: 40, height: 40, borderRadius: 12,
               backgroundColor: "#D1FAE5",
@@ -247,7 +266,6 @@ export default function PartnerChat() {
         <Pressable
           onPress={sendMessage}
           disabled={!newMessage.trim()}
-          {...A11yPresets.pressable}
           style={{
             width: 40, height: 40, borderRadius: 20,
             backgroundColor: newMessage.trim() ? C.primary : C.primarySoft,

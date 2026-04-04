@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabase } from "@hillaha/core";
 
 const C = {
@@ -15,6 +15,8 @@ const C = {
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const invitationCode = searchParams.get("invitation") || searchParams.get("code") || "";
   const [step, setStep] = useState<"email" | "password" | "profile">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,6 +25,44 @@ export default function SignupPage() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [invitationValid, setInvitationValid] = useState<boolean | null>(null);
+  const [invitationChecking, setInvitationChecking] = useState(true);
+
+  // Validate invitation code on mount
+  useEffect(() => {
+    async function validateInvitation() {
+      if (!invitationCode) {
+        setInvitationValid(false);
+        setInvitationChecking(false);
+        return;
+      }
+      try {
+        const sb = getSupabase();
+        if (!sb) {
+          setInvitationValid(false);
+          setInvitationChecking(false);
+          return;
+        }
+        const { data, error: fetchError } = await (sb.from("partner_invitations") as any)
+          .select("id, email, status")
+          .eq("invitation_code", invitationCode)
+          .eq("status", "pending")
+          .maybeSingle();
+
+        if (fetchError || !data) {
+          setInvitationValid(false);
+        } else {
+          setInvitationValid(true);
+          if (data.email) setEmail(data.email);
+        }
+      } catch {
+        setInvitationValid(false);
+      } finally {
+        setInvitationChecking(false);
+      }
+    }
+    validateInvitation();
+  }, [invitationCode]);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -150,6 +190,39 @@ export default function SignupPage() {
         padding: 20,
       }}
     >
+      {invitationChecking ? (
+        <div style={{
+          background: C.surface, borderRadius: 24, padding: "40px 36px",
+          width: "100%", maxWidth: 420, textAlign: "center",
+          boxShadow: "0 20px 60px rgba(139,92,246,0.15)",
+        }}>
+          <div style={{ fontSize: 14, color: C.textMuted }}>جاري التحقق من رابط الدعوة...</div>
+        </div>
+      ) : !invitationValid ? (
+        <div style={{
+          background: C.surface, borderRadius: 24, padding: "40px 36px",
+          width: "100%", maxWidth: 420, textAlign: "center",
+          boxShadow: "0 20px 60px rgba(139,92,246,0.15)",
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+          <h2 style={{ margin: "0 0 12px", fontSize: 20, fontWeight: 900, color: C.text }}>
+            التسجيل بدعوة فقط
+          </h2>
+          <p style={{ color: C.textMuted, fontSize: 13, lineHeight: 1.7, marginBottom: 20 }}>
+            تسجيل متجر جديد يتطلب رابط دعوة صالح من الإدارة. تواصل معنا للحصول على دعوة.
+          </p>
+          <a
+            href="/login"
+            style={{
+              display: "inline-block", padding: "12px 24px", borderRadius: 10,
+              background: C.primary, color: "white", fontWeight: 700, fontSize: 14,
+              textDecoration: "none",
+            }}
+          >
+            الذهاب لتسجيل الدخول
+          </a>
+        </div>
+      ) : (
       <div
         style={{
           background: C.surface,
@@ -467,6 +540,7 @@ export default function SignupPage() {
           </a>
         </p>
       </div>
+      )}
 
       <style>{`
         @keyframes fadeIn {

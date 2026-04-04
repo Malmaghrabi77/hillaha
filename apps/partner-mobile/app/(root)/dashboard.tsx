@@ -7,25 +7,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { getSupabase } from "@hillaha/core";
-import { Audio } from "expo-av";
+import { getSupabase } from "@/lib/supabase";
+import { useAudioPlayer } from "expo-audio";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "@/lib/theme";
 
-const playNewOrderSound = async () => {
-  try {
-    const { sound } = await Audio.Sound.createAsync(
-      require("../../assets/sounds/new-order.wav")
-    );
-    await sound.playAsync();
-    sound.setOnPlaybackStatusUpdate((status: any) => {
-      if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
-    });
-  } catch (e) {
-    console.log("Sound play error:", e);
-  }
-};
+const soundSource = require("../../assets/sounds/new-order.wav");
 
 interface Order {
   id: string;
@@ -44,6 +33,7 @@ interface Stats {
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const player = useAudioPlayer(soundSource);
   const [stats, setStats] = useState<Stats>({
     ordersToday: 0,
     revenueToday: 0,
@@ -71,7 +61,7 @@ export default function DashboardScreen() {
         "postgres_changes" as any,
         { event: "INSERT", schema: "public", table: "orders", filter: `partner_id=eq.${partnerId}` },
         () => {
-          playNewOrderSound();
+          try { player.seekTo(0); player.play(); } catch (e) { console.warn("play_new_order_sound:", e); }
           loadDashboardData();
         }
       )
@@ -97,7 +87,7 @@ export default function DashboardScreen() {
       }
 
       // Get partner info
-      const { data: partnerData } = await supabase
+      const { data: partnerData } = await (supabase as any)
         .from("partners")
         .select("id, rating, review_count")
         .eq("user_id", user.user.id)
@@ -109,13 +99,13 @@ export default function DashboardScreen() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const { data: ordersData, count: totalCount } = await supabase
+        const { data: ordersData, count: totalCount } = await (supabase as any)
           .from("orders")
-          .select("*", { count: "exact" })
+          .select("id, status, total, created_at, customer_name", { count: "exact" })
           .eq("partner_id", partnerData.id)
           .gte("created_at", today.toISOString())
           .order("created_at", { ascending: false })
-          .limit(5);
+          .limit(500);
 
         // Calculate stats
         let revenueToday = 0;
@@ -124,7 +114,7 @@ export default function DashboardScreen() {
 
         if (ordersData) {
           ordersData.forEach((order: any) => {
-            revenueToday += order.total || 0;
+            if (order.status === "delivered") revenueToday += order.total || 0;
             if (order.status === "pending") pendingCount++;
             completedOrders.push({
               id: order.id || "",
@@ -162,11 +152,15 @@ export default function DashboardScreen() {
     switch (status) {
       case "pending":
         return COLORS.warning;
+      case "awaiting_payment_approval":
+        return COLORS.warning;
       case "accepted":
         return COLORS.primary;
       case "preparing":
         return COLORS.primary;
       case "ready":
+        return COLORS.success;
+      case "picked_up":
         return COLORS.success;
       case "delivered":
         return COLORS.success;
@@ -181,12 +175,16 @@ export default function DashboardScreen() {
     switch (status) {
       case "pending":
         return "معلق";
+      case "awaiting_payment_approval":
+        return "بانتظار الدفع";
       case "accepted":
         return "مقبول";
       case "preparing":
         return "قيد التحضير";
       case "ready":
         return "جاهز";
+      case "picked_up":
+        return "تم الاستلام";
       case "delivered":
         return "تم التسليم";
       case "cancelled":
@@ -223,8 +221,15 @@ export default function DashboardScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.greeting}>مرحباً 👋</Text>
-        <Text style={styles.date}>{new Date().toLocaleDateString("ar-EG")}</Text>
+        <View>
+          <Text style={styles.greeting}>مرحباً 👋</Text>
+          <Text style={styles.date}>{new Date().toLocaleDateString("ar-EG")}</Text>
+        </View>
+        <Image
+          source={require("../../assets/images/icon.png")}
+          style={styles.headerLogo}
+          resizeMode="contain"
+        />
       </View>
 
       {/* Stats Grid */}
@@ -330,6 +335,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
     paddingBottom: SPACING.md,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerLogo: {
+    width: 40,
+    height: 40,
   },
   greeting: {
     fontSize: FONT_SIZES["2xl"],

@@ -60,6 +60,8 @@ export default function FinancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [partnerName, setPartnerName] = useState<string>("");
+  const [partnerEmail, setPartnerEmail] = useState<string>("");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     loadFinanceData();
@@ -74,11 +76,25 @@ export default function FinancePage() {
         return;
       }
 
-      const { data: session } = await supabase.auth.getSession();
-      if (session?.session?.user) {
+      const { data: { user } } = await supabase.auth.getUser();
+      let pId: string | null = null;
+      let isSA = false;
+      if (user) {
+        setPartnerEmail(user.email || "");
+        const { data: userProfile } = await (supabase as any).from("profiles").select("role, partner_id").eq("id", user.id).maybeSingle();
+        isSA = userProfile?.role === "super_admin";
+        setIsSuperAdmin(isSA);
+        pId = userProfile?.partner_id || null;
+
+        if (!isSA && !pId) {
+          setError("لا يوجد متجر مرتبط بحسابك");
+          setLoading(false);
+          return;
+        }
+
         const { data: partner } = await (supabase.from("partners") as any)
           .select("business_name")
-          .eq("user_id", session.session.user.id)
+          .eq("user_id", user.id)
           .single();
         if (partner) {
           setPartnerName(partner.business_name || "متجري");
@@ -94,11 +110,14 @@ export default function FinancePage() {
       const settlements: WeeklySettlement[] = [];
 
       for (const week of weeks) {
-        const { data: orders } = await (supabase.from("orders") as any)
+        let ordersQuery = (supabase.from("orders") as any)
           .select("total, app_commission")
           .gte("created_at", week.start.toISOString())
           .lte("created_at", week.end.toISOString())
           .eq("status", "delivered");
+        if (!isSA && pId) ordersQuery = ordersQuery.eq("partner_id", pId);
+
+        const { data: orders } = await ordersQuery;
 
         const ordersData = orders || [];
         const sales = ordersData.reduce((s: number, o: any) => s + (o.total || 0), 0);
@@ -143,7 +162,7 @@ export default function FinancePage() {
     }));
     generateFinanceReport(reportData, {
       name: partnerName || "متجري",
-      email: "partner@example.com",
+      email: partnerEmail,
     });
   };
 
@@ -208,14 +227,14 @@ export default function FinancePage() {
         {[
           {
             label: "إجمالي المستحق (8 أسابيع)",
-            value: `${totalPayout.toLocaleString("ar-EG")} ج.س`,
+            value: `${totalPayout.toLocaleString("ar-EG")} ج.م`,
             icon: "💰", color: C.success, bg: "#D1FAE5",
           },
-          {
+          ...(isSuperAdmin ? [{
             label: "إجمالي المبيعات",
-            value: `${totalSales.toLocaleString("ar-EG")} ج.س`,
+            value: `${totalSales.toLocaleString("ar-EG")} ج.م`,
             icon: "📦", color: C.primary, bg: C.primarySoft,
-          },
+          }] : []),
           {
             label: "إجمالي الطلبات",
             value: `${totalOrders}`,
@@ -251,7 +270,7 @@ export default function FinancePage() {
           <div style={{ display: "flex", gap: 40, alignItems: "baseline" }}>
             <div>
               <div style={{ fontSize: 32, fontWeight: 900 }}>
-                {currentWeek.netPayout.toLocaleString("ar-EG")} ج.س
+                {currentWeek.netPayout.toLocaleString("ar-EG")} ج.م
               </div>
               <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>المبلغ المستحق لك هذا الأسبوع</div>
             </div>
@@ -261,12 +280,14 @@ export default function FinancePage() {
               </div>
               <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>طلب مكتمل</div>
             </div>
+            {isSuperAdmin && (
             <div>
               <div style={{ fontSize: 20, fontWeight: 900 }}>
-                {currentWeek.sales.toLocaleString("ar-EG")} ج.س
+                {currentWeek.sales.toLocaleString("ar-EG")} ج.م
               </div>
               <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>مبيعات</div>
             </div>
+            )}
           </div>
         </div>
       )}
@@ -295,7 +316,7 @@ export default function FinancePage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: `2px solid ${C.border}` }}>
-                  {["الفترة", "الطلبات", "المبيعات", "المبلغ المستحق", "الحالة"].map((h) => (
+                  {["الفترة", "الطلبات", ...(isSuperAdmin ? ["المبيعات"] : []), "المبلغ المستحق", "الحالة"].map((h) => (
                     <th key={h} style={{
                       padding: "12px", textAlign: "right",
                       fontSize: 11, fontWeight: 700, color: C.textMuted,
@@ -314,11 +335,13 @@ export default function FinancePage() {
                     <td style={{ padding: "14px 12px", fontSize: 13, color: C.text, fontWeight: 700 }}>
                       {w.orders}
                     </td>
+                    {isSuperAdmin && (
                     <td style={{ padding: "14px 12px", fontSize: 13, color: C.textMuted }}>
-                      {w.sales.toLocaleString("ar-EG")} ج.س
+                      {w.sales.toLocaleString("ar-EG")} ج.م
                     </td>
+                    )}
                     <td style={{ padding: "14px 12px", fontSize: 14, fontWeight: 900, color: C.success }}>
-                      {w.netPayout.toLocaleString("ar-EG")} ج.س
+                      {w.netPayout.toLocaleString("ar-EG")} ج.م
                     </td>
                     <td style={{ padding: "14px 12px" }}>
                       <span style={{

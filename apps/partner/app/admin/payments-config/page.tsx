@@ -33,6 +33,10 @@ interface PaymentMethod {
   is_enabled: boolean;
   commission_rate: number;
   requires_config: boolean;
+  receiving_phone?: string;
+  receiving_account?: string;
+  receiving_name?: string;
+  instructions_ar?: string;
 }
 
 export default function PaymentMethodsPage() {
@@ -41,6 +45,8 @@ export default function PaymentMethodsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPhone, setEditingPhone] = useState<{ id: string; phone: string } | null>(null);
+  const [savingPhone, setSavingPhone] = useState(false);
   const [configForm, setConfigForm] = useState({
     merchant_id: "",
     api_key: "",
@@ -94,6 +100,35 @@ export default function PaymentMethodsPage() {
       });
     } catch (error) {
       console.error("Error toggling payment method:", error);
+    }
+  };
+
+  const saveReceivingPhone = async (methodId: string, phone: string) => {
+    setSavingPhone(true);
+    try {
+      const supabase = getSupabase();
+      if (!supabase) return;
+
+      const { error } = await (supabase.from("payment_methods") as any)
+        .update({ receiving_phone: phone.trim() })
+        .eq("id", methodId);
+
+      if (error) throw error;
+
+      setMethods(methods.map(m => m.id === methodId ? { ...m, receiving_phone: phone.trim() } : m));
+      setEditingPhone(null);
+
+      await (supabase.from("payment_method_logs") as any).insert({
+        payment_method_id: methodId,
+        admin_id: auth.user?.id,
+        action: "configured",
+        status: "success",
+        notes: `Updated receiving phone to ${phone.trim()}`,
+      });
+    } catch (error) {
+      console.error("Error saving phone:", error);
+    } finally {
+      setSavingPhone(false);
     }
   };
 
@@ -206,6 +241,137 @@ export default function PaymentMethodsPage() {
           تفعيل وتعطيل طرق الدفع وإدارة إعداداتها
         </p>
       </div>
+
+      {/* Mobile Wallets Quick Setup */}
+      {auth.isSuperAdmin && (() => {
+        const mobileWallets = methods.filter(m =>
+          ["vodafone_cash", "etisalat_cash", "orange_money", "we_pay"].includes(m.code)
+        );
+        if (mobileWallets.length === 0) return null;
+
+        return (
+          <div style={{
+            marginBottom: 32,
+            padding: 24,
+            borderRadius: 16,
+            background: `linear-gradient(135deg, ${C.primary}08, ${C.success}08)`,
+            border: `2px solid ${C.primary}30`,
+          }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900, color: C.text, margin: "0 0 8px 0" }}>
+              📱 تفعيل المحافظ الإلكترونية
+            </h2>
+            <p style={{ fontSize: 13, color: C.textMuted, margin: "0 0 20px 0" }}>
+              فعّل طرق الدفع بالمحافظ الإلكترونية وأدخل أرقام الاستقبال
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+              {mobileWallets.map((wallet) => (
+                <div key={wallet.id} style={{
+                  background: C.surface,
+                  borderRadius: 12,
+                  padding: 16,
+                  border: `1px solid ${wallet.is_enabled ? C.success : C.border}`,
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 20 }}>{wallet.icon}</span>
+                      <span style={{ fontWeight: 800, fontSize: 14, color: C.text }}>{wallet.name_ar}</span>
+                    </div>
+                    <button
+                      onClick={() => togglePaymentMethod(wallet.id, wallet.is_enabled)}
+                      style={{
+                        width: 50, height: 28, borderRadius: 14, border: "none",
+                        background: wallet.is_enabled ? C.success : C.border,
+                        cursor: "pointer", position: "relative", transition: "all 0.3s ease",
+                      }}
+                    >
+                      <div style={{
+                        width: 24, height: 24, borderRadius: 12, background: "white",
+                        position: "absolute", top: 2,
+                        right: wallet.is_enabled ? 24 : 2, transition: "right 0.3s ease",
+                      }} />
+                    </button>
+                  </div>
+
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "8px 0",
+                    borderTop: `1px solid ${C.border}`,
+                  }}>
+                    <span style={{ fontSize: 12, color: C.textMuted, whiteSpace: "nowrap" }}>رقم الاستقبال:</span>
+                    {editingPhone?.id === wallet.id ? (
+                      <div style={{ display: "flex", gap: 4, flex: 1 }}>
+                        <input
+                          type="tel"
+                          value={editingPhone.phone}
+                          onChange={(e) => setEditingPhone({ ...editingPhone, phone: e.target.value })}
+                          placeholder="01XXXXXXXXX"
+                          style={{
+                            flex: 1, padding: "6px 10px", borderRadius: 6,
+                            border: `1px solid ${C.primary}`, fontSize: 13, outline: "none",
+                          }}
+                          dir="ltr"
+                        />
+                        <button
+                          onClick={() => saveReceivingPhone(wallet.id, editingPhone.phone)}
+                          disabled={savingPhone}
+                          style={{
+                            padding: "6px 12px", borderRadius: 6, border: "none",
+                            background: C.success, color: "white", fontSize: 12,
+                            fontWeight: 700, cursor: "pointer",
+                          }}
+                        >
+                          {savingPhone ? "..." : "حفظ"}
+                        </button>
+                        <button
+                          onClick={() => setEditingPhone(null)}
+                          style={{
+                            padding: "6px 8px", borderRadius: 6, border: `1px solid ${C.border}`,
+                            background: "transparent", fontSize: 12, cursor: "pointer",
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                        <span style={{
+                          fontSize: 13, fontWeight: 700, direction: "ltr",
+                          color: wallet.receiving_phone ? C.text : C.danger,
+                        }}>
+                          {wallet.receiving_phone || "غير محدد"}
+                        </span>
+                        <button
+                          onClick={() => setEditingPhone({ id: wallet.id, phone: wallet.receiving_phone || "" })}
+                          style={{
+                            padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.primary}`,
+                            background: "transparent", color: C.primary, fontSize: 11,
+                            fontWeight: 700, cursor: "pointer",
+                          }}
+                        >
+                          تعديل
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{
+                    fontSize: 11, color: wallet.is_enabled ? C.success : C.danger,
+                    fontWeight: 700, marginTop: 4,
+                  }}>
+                    {wallet.is_enabled ? "✅ مفعّل" : "⛔ معطّل"}
+                    {wallet.is_enabled && !wallet.receiving_phone && (
+                      <span style={{ color: C.warning, marginRight: 8 }}>
+                        — ⚠️ أدخل رقم الاستقبال
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Payment Methods by Category */}
       {Object.entries(groupedMethods).map(([category, categoryMethods]) => {

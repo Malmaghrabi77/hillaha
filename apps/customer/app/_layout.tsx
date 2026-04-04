@@ -7,6 +7,7 @@ import { CartProvider } from "../lib/cartStore";
 import { LocaleProvider } from "../lib/i18n";
 import { getCustomerSupabase } from "../lib/supabase";
 import { DarkModeProvider } from "../src/hooks/useDarkMode";
+import { usePushNotifications } from "../src/hooks/usePushNotifications";
 import * as Sentry from "@sentry/react-native";
 
 // ── Prevent auto-hide: we control dismiss timing ──────────────────────────────
@@ -83,6 +84,9 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => voi
 
 export default function RootLayout() {
   const [booted, setBooted] = useState(false);
+
+  // Activate push notifications
+  usePushNotifications();
 
   useEffect(() => {
     // ── Single auth source of truth ────────────────────────────────────────

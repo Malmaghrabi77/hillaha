@@ -7,6 +7,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { getCustomerSupabase as getSupabase, getCustomerSupabase } from "../../lib/supabase";
+import { useDarkMode } from "../../src/hooks/useDarkMode";
 import { COUNTRIES, detectCountryIndex, searchCountries } from "../../src/constants/countryCodes";
 
 // Lazy-load native modules to prevent crash if they fail to initialize
@@ -15,22 +16,13 @@ let SecureStore: typeof import("expo-secure-store") | null = null;
 try { LocalAuthentication = require("expo-local-authentication"); } catch {}
 try { SecureStore = require("expo-secure-store"); } catch {}
 
-const C = {
-  primary: "#8B5CF6",   primarySoft: "#EDE9FE",
-  pink: "#EC4899",       pinkSoft: "#FCE7F3",
-  bg: "#FAFAFF",         surface: "#FFFFFF",
-  border: "#E7E3FF",     text: "#1F1B2E",
-  textMuted: "#6B6480",  success: "#34D399",
-  warning: "#F59E0B",    danger: "#EF4444",
-  deepPurple: "#6D28D9",
-} as const;
-
-const STORE_EMAIL = "hillaha_customer_email";
-const STORE_PASS  = "hillaha_customer_pass";
+const STORE_EMAIL   = "hillaha_customer_email";
+const STORE_REFRESH = "hillaha_customer_refresh";
 
 type AuthMode = "email" | "phone";
 
 export default function Login() {
+  const { colors } = useDarkMode();
   const [authMode, setAuthMode]       = useState<AuthMode>("email");
   const [countryIdx, setCountryIdx]   = useState(() => detectCountryIndex());
   const [showCountry, setShowCountry] = useState(false);
@@ -57,9 +49,9 @@ export default function Login() {
         if (!LocalAuthentication || !SecureStore) { setBioReady(false); return; }
         const hasHw      = await LocalAuthentication.hasHardwareAsync();
         const enrolled   = await LocalAuthentication.isEnrolledAsync();
-        const savedEmail = await SecureStore.getItemAsync(STORE_EMAIL);
-        const savedPass  = await SecureStore.getItemAsync(STORE_PASS);
-        setBioReady(hasHw && enrolled && !!savedEmail && !!savedPass);
+        const savedEmail   = await SecureStore.getItemAsync(STORE_EMAIL);
+        const savedRefresh = await SecureStore.getItemAsync(STORE_REFRESH);
+        setBioReady(hasHw && enrolled && !!savedEmail && !!savedRefresh);
       } catch {
         setBioReady(false);
       }
@@ -92,10 +84,10 @@ export default function Login() {
       if (err) throw err;
 
       // Save credentials for future biometric login
-      if (SecureStore) {
+      if (SecureStore && data.session?.refresh_token) {
         try {
           await SecureStore.setItemAsync(STORE_EMAIL, email.trim().toLowerCase());
-          await SecureStore.setItemAsync(STORE_PASS, password);
+          await SecureStore.setItemAsync(STORE_REFRESH, data.session.refresh_token);
           setBioReady(true);
         } catch {}
       }
@@ -138,10 +130,10 @@ export default function Login() {
         return;
       }
 
-      const savedEmail = await SecureStore!.getItemAsync(STORE_EMAIL);
-      const savedPass  = await SecureStore!.getItemAsync(STORE_PASS);
+      const savedEmail   = await SecureStore!.getItemAsync(STORE_EMAIL);
+      const savedRefresh = await SecureStore!.getItemAsync(STORE_REFRESH);
 
-      if (!savedEmail || !savedPass) {
+      if (!savedEmail || !savedRefresh) {
         setError("يرجى تسجيل الدخول بالبريد وكلمة المرور مرة واحدة أولاً");
         setBioLoading(false);
         return;
@@ -150,16 +142,20 @@ export default function Login() {
       const supabase = getSupabase();
       if (!supabase) throw new Error("خطأ في الاتصال — تأكد من استقرار الإنترنت");
 
-      const { error: err } = await supabase.auth.signInWithPassword({
-        email: savedEmail,
-        password: savedPass,
+      const { data: sessionData, error: err } = await supabase.auth.refreshSession({
+        refresh_token: savedRefresh,
       });
 
-      if (err) {
-        setError("فشل تسجيل الدخول — تأكد من صحة بياناتك أو سجّل دخول يدوياً");
+      if (err || !sessionData.session) {
+        // Refresh token expired — clear stored tokens
+        await SecureStore!.deleteItemAsync(STORE_REFRESH);
+        setError("انتهت الجلسة — سجّل دخولك بالبريد وكلمة المرور مجدداً");
         setBioLoading(false);
         return;
       }
+
+      // Update stored refresh token with the new one
+      await SecureStore!.setItemAsync(STORE_REFRESH, sessionData.session.refresh_token);
 
       router.replace("/(tabs)/home");
     } catch (e: any) {
@@ -185,6 +181,7 @@ export default function Login() {
       const fullPhone = COUNTRIES[countryIdx].code + cleanPhone;
       const { error: err } = await supabase.auth.signInWithOtp({ phone: fullPhone });
       if (err) throw err;
+      setOtpSent(true);
       setResendTimer(60);
       setOtp(["", "", "", "", "", ""]);
       setTimeout(() => otpRefs.current[0]?.focus(), 300);
@@ -272,16 +269,16 @@ export default function Login() {
   // ══════════════════════════════════════════════════════════════════════
   if (otpSent) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={["top", "left", "right"]}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top", "left", "right"]}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }} keyboardShouldPersistTaps="handled">
           <View style={{ alignItems: "center", marginBottom: 32 }}>
             <Text style={{ fontSize: 52, marginBottom: 16 }}>📱</Text>
-            <Text style={{ fontSize: 22, fontWeight: "900", color: C.text, marginBottom: 8 }}>
+            <Text style={{ fontSize: 22, fontWeight: "900", color: colors.text, marginBottom: 8 }}>
               كود التحقق
             </Text>
-            <Text style={{ color: C.textMuted, textAlign: "center", lineHeight: 22, fontSize: 14 }}>
+            <Text style={{ color: colors.textMuted, textAlign: "center", lineHeight: 22, fontSize: 14 }}>
               تم إرسال كود التحقق إلى{"\n"}
-              <Text style={{ fontWeight: "700", color: C.primary }}>{maskedPhone()}</Text>
+              <Text style={{ fontWeight: "700", color: colors.primary }}>{maskedPhone()}</Text>
             </Text>
           </View>
 
@@ -304,9 +301,9 @@ export default function Login() {
                 maxLength={1}
                 style={{
                   width: 48, height: 56, borderRadius: 14,
-                  borderWidth: 2, borderColor: digit ? C.primary : C.border,
-                  backgroundColor: digit ? C.primarySoft : C.surface,
-                  fontSize: 22, fontWeight: "900", color: C.text,
+                  borderWidth: 2, borderColor: digit ? colors.primary : colors.border,
+                  backgroundColor: digit ? colors.primarySoft : colors.surface,
+                  fontSize: 22, fontWeight: "900", color: colors.text,
                   textAlign: "center",
                 }}
               />
@@ -319,9 +316,9 @@ export default function Login() {
             disabled={loading}
             style={{
               paddingVertical: 16, borderRadius: 16, marginBottom: 16,
-              backgroundColor: loading ? C.primarySoft : C.primary,
+              backgroundColor: loading ? colors.primarySoft : colors.primary,
               alignItems: "center",
-              shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
+              shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 },
               shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
             }}
           >
@@ -333,7 +330,7 @@ export default function Login() {
 
           {/* Resend */}
           <Pressable onPress={handleResendOtp} disabled={resendTimer > 0} style={{ alignItems: "center", marginBottom: 20 }}>
-            <Text style={{ color: resendTimer > 0 ? C.textMuted : C.primary, fontWeight: "700", fontSize: 13 }}>
+            <Text style={{ color: resendTimer > 0 ? colors.textMuted : colors.primary, fontWeight: "700", fontSize: 13 }}>
               {resendTimer > 0
                 ? `إعادة إرسال الكود (${resendTimer} ثانية)`
                 : "إعادة إرسال الكود"
@@ -343,7 +340,7 @@ export default function Login() {
 
           {/* Back */}
           <Pressable onPress={() => { setOtpSent(false); setError(""); setOtp(["", "", "", "", "", ""]); }} style={{ alignItems: "center" }}>
-            <Text style={{ color: C.textMuted, fontSize: 13 }}>
+            <Text style={{ color: colors.textMuted, fontSize: 13 }}>
               ← تغيير رقم الهاتف
             </Text>
           </Pressable>
@@ -356,7 +353,7 @@ export default function Login() {
   // MAIN LOGIN FORM
   // ══════════════════════════════════════════════════════════════════════
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={["top", "left", "right"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top", "left", "right"]}>
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}
         keyboardShouldPersistTaps="handled"
@@ -368,18 +365,18 @@ export default function Login() {
             style={{ width: 80, height: 80, resizeMode: "contain", marginBottom: 12 }}
           />
           <View style={{ alignItems: "center", marginBottom: 12 }}>
-            <Text style={{ fontSize: 20, color: C.text, fontWeight: "900", marginBottom: 8 }}>حلها يحلها</Text>
+            <Text style={{ fontSize: 20, color: colors.text, fontWeight: "900", marginBottom: 8 }}>حلها يحلها</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ fontSize: 16, color: C.primary, fontWeight: "900" }}>7illaha</Text>
+              <Text style={{ fontSize: 16, color: colors.primary, fontWeight: "900" }}>7illaha</Text>
               <Image
                 source={require("../../assets/hillaha-logo.png")}
                 style={{ width: 20, height: 20, resizeMode: "contain" }}
               />
-              <Text style={{ fontSize: 16, color: C.primary, fontWeight: "900" }}>7illaha</Text>
+              <Text style={{ fontSize: 16, color: colors.primary, fontWeight: "900" }}>7illaha</Text>
             </View>
           </View>
-          <Text style={{ fontSize: 24, fontWeight: "900", color: C.text }}>تسجيل الدخول</Text>
-          <Text style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>أهلاً بعودتك لحلّها</Text>
+          <Text style={{ fontSize: 24, fontWeight: "900", color: colors.text }}>تسجيل الدخول</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 4 }}>أهلاً بعودتك لحلّها</Text>
         </View>
 
         {/* ── BIOMETRIC QUICK LOGIN ─────────────────────────── */}
@@ -388,21 +385,21 @@ export default function Login() {
             onPress={handleBiometricLogin}
             disabled={bioLoading}
             style={{
-              backgroundColor: C.primarySoft,
+              backgroundColor: colors.primarySoft,
               borderRadius: 20, padding: 18, marginBottom: 20,
               alignItems: "center", gap: 8,
-              borderWidth: 2, borderColor: C.primary,
-              shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
+              borderWidth: 2, borderColor: colors.primary,
+              shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 },
               shadowOpacity: 0.2, shadowRadius: 12, elevation: 4,
             }}
           >
             {bioLoading ? (
-              <ActivityIndicator color={C.primary} />
+              <ActivityIndicator color={colors.primary} />
             ) : (
               <>
                 <Text style={{ fontSize: 42 }}>🔐</Text>
-                <Text style={{ fontWeight: "900", fontSize: 16, color: C.primary }}>دخول ببصمة الإصبع / الوجه</Text>
-                <Text style={{ fontSize: 12, color: C.textMuted }}>اضغط للمصادقة الحيوية</Text>
+                <Text style={{ fontWeight: "900", fontSize: 16, color: colors.primary }}>دخول ببصمة الإصبع / الوجه</Text>
+                <Text style={{ fontSize: 12, color: colors.textMuted }}>اضغط للمصادقة الحيوية</Text>
               </>
             )}
           </Pressable>
@@ -411,27 +408,27 @@ export default function Login() {
         {/* DIVIDER */}
         {biometricReady && (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
-            <Text style={{ color: C.textMuted, fontSize: 12 }}>أو</Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+            <Text style={{ color: colors.textMuted, fontSize: 12 }}>أو</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
           </View>
         )}
 
         {/* MODE TOGGLE */}
         <View style={{
           flexDirection: "row", borderRadius: 14, overflow: "hidden",
-          borderWidth: 1.5, borderColor: C.border, marginBottom: 20,
+          borderWidth: 1.5, borderColor: colors.border, marginBottom: 20,
         }}>
           <Pressable
             onPress={() => { setAuthMode("email"); setError(""); }}
             style={{
               flex: 1, paddingVertical: 12, alignItems: "center",
-              backgroundColor: authMode === "email" ? C.primary : C.surface,
+              backgroundColor: authMode === "email" ? colors.primary : colors.surface,
             }}
           >
             <Text style={{
               fontWeight: "800", fontSize: 13,
-              color: authMode === "email" ? "white" : C.textMuted,
+              color: authMode === "email" ? "white" : colors.textMuted,
             }}>
               ✉️ بالبريد الإلكتروني
             </Text>
@@ -440,12 +437,12 @@ export default function Login() {
             onPress={() => { setAuthMode("phone"); setError(""); }}
             style={{
               flex: 1, paddingVertical: 12, alignItems: "center",
-              backgroundColor: authMode === "phone" ? C.primary : C.surface,
+              backgroundColor: authMode === "phone" ? colors.primary : colors.surface,
             }}
           >
             <Text style={{
               fontWeight: "800", fontSize: 13,
-              color: authMode === "phone" ? "white" : C.textMuted,
+              color: authMode === "phone" ? "white" : colors.textMuted,
             }}>
               📞 برقم الهاتف
             </Text>
@@ -463,27 +460,27 @@ export default function Login() {
         {authMode === "email" && (
           <>
             <View style={{ marginBottom: 14 }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: C.textMuted, marginBottom: 6 }}>البريد الإلكتروني</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1.5, borderColor: C.border, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10 }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted, marginBottom: 6 }}>البريد الإلكتروني</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10 }}>
                 <Text style={{ fontSize: 18 }}>✉️</Text>
                 <TextInput
                   value={email} onChangeText={setEmail}
-                  placeholder="example@email.com" placeholderTextColor={C.textMuted}
+                  placeholder="example@email.com" placeholderTextColor={colors.textMuted}
                   keyboardType="email-address" autoCapitalize="none"
-                  style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
+                  style={{ flex: 1, fontSize: 14, color: colors.text, textAlign: "right" }}
                 />
               </View>
             </View>
 
             <View style={{ marginBottom: 8 }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: C.textMuted, marginBottom: 6 }}>كلمة المرور</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1.5, borderColor: C.border, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10 }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted, marginBottom: 6 }}>كلمة المرور</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10 }}>
                 <Text style={{ fontSize: 18 }}>🔒</Text>
                 <TextInput
                   value={password} onChangeText={setPassword}
-                  placeholder="كلمة المرور" placeholderTextColor={C.textMuted}
+                  placeholder="كلمة المرور" placeholderTextColor={colors.textMuted}
                   secureTextEntry={!showPass}
-                  style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
+                  style={{ flex: 1, fontSize: 14, color: colors.text, textAlign: "right" }}
                 />
                 <Pressable onPress={() => setShowPass(v => !v)}>
                   <Text style={{ fontSize: 18 }}>{showPass ? "🙈" : "👁️"}</Text>
@@ -494,7 +491,7 @@ export default function Login() {
             <Pressable
               onPress={() => {
                 if (!email.trim()) {
-                  setErrMsg("أدخل بريدك الإلكتروني أولاً لإعادة تعيين كلمة المرور");
+                  setError("أدخل بريدك الإلكتروني أولاً لإعادة تعيين كلمة المرور");
                   return;
                 }
                 setLoading(true);
@@ -508,7 +505,7 @@ export default function Login() {
               }}
               style={{ alignSelf: "flex-start", marginBottom: 24 }}
             >
-              <Text style={{ color: C.primary, fontWeight: "700", fontSize: 13 }}>نسيت كلمة المرور؟</Text>
+              <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 13 }}>نسيت كلمة المرور؟</Text>
             </Pressable>
 
             <Pressable
@@ -516,9 +513,9 @@ export default function Login() {
               disabled={loading}
               style={{
                 paddingVertical: 16, borderRadius: 16, marginBottom: 16,
-                backgroundColor: loading ? C.primarySoft : C.primary,
+                backgroundColor: loading ? colors.primarySoft : colors.primary,
                 alignItems: "center",
-                shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
+                shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 },
                 shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
               }}
             >
@@ -534,21 +531,21 @@ export default function Login() {
         {authMode === "phone" && (
           <>
             <View style={{ marginBottom: 20 }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: C.textMuted, marginBottom: 6 }}>رقم الهاتف</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1.5, borderColor: C.border, borderRadius: 14, backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10 }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted, marginBottom: 6 }}>رقم الهاتف</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 12, gap: 10 }}>
                 <Pressable
                   onPress={() => { setCountrySearch(""); setShowCountry(true); }}
                   style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
                 >
                   <Text style={{ fontSize: 18 }}>{COUNTRIES[countryIdx].flag}</Text>
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: C.text }}>{COUNTRIES[countryIdx].code}</Text>
-                  <Text style={{ fontSize: 10, color: C.textMuted }}>▼</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.text }}>{COUNTRIES[countryIdx].code}</Text>
+                  <Text style={{ fontSize: 10, color: colors.textMuted }}>▼</Text>
                 </Pressable>
                 <TextInput
                   value={phone} onChangeText={setPhone}
-                  placeholder="رقم الهاتف" placeholderTextColor={C.textMuted}
+                  placeholder="رقم الهاتف" placeholderTextColor={colors.textMuted}
                   keyboardType="phone-pad"
-                  style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
+                  style={{ flex: 1, fontSize: 14, color: colors.text, textAlign: "right" }}
                 />
               </View>
             </View>
@@ -558,9 +555,9 @@ export default function Login() {
               disabled={loading}
               style={{
                 paddingVertical: 16, borderRadius: 16, marginBottom: 16,
-                backgroundColor: loading ? C.primarySoft : C.primary,
+                backgroundColor: loading ? colors.primarySoft : colors.primary,
                 alignItems: "center",
-                shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
+                shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 },
                 shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
               }}
             >
@@ -574,9 +571,9 @@ export default function Login() {
 
         {/* DIVIDER */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 }}>
-          <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
-          <Text style={{ color: C.textMuted, fontSize: 12 }}>أو</Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: C.border }} />
+          <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+          <Text style={{ color: colors.textMuted, fontSize: 12 }}>أو</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
         </View>
 
         {/* REGISTER LINK */}
@@ -584,11 +581,11 @@ export default function Login() {
           onPress={() => router.push("/(auth)/register")}
           style={{
             paddingVertical: 14, borderRadius: 16,
-            borderWidth: 2, borderColor: C.primary,
+            borderWidth: 2, borderColor: colors.primary,
             alignItems: "center",
           }}
         >
-          <Text style={{ color: C.primary, fontWeight: "900", fontSize: 15 }}>إنشاء حساب جديد</Text>
+          <Text style={{ color: colors.primary, fontWeight: "900", fontSize: 15 }}>إنشاء حساب جديد</Text>
         </Pressable>
       </ScrollView>
 
@@ -596,26 +593,26 @@ export default function Login() {
       <Modal visible={showCountry} transparent animationType="slide">
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
           <View style={{
-            backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            backgroundColor: colors.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24,
             maxHeight: "75%", paddingTop: 16,
           }}>
-            <View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: C.border, alignSelf: "center", marginBottom: 12 }} />
-            <Text style={{ fontSize: 17, fontWeight: "900", color: C.text, textAlign: "center", marginBottom: 12 }}>اختر الدولة</Text>
+            <View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: colors.border, alignSelf: "center", marginBottom: 12 }} />
+            <Text style={{ fontSize: 17, fontWeight: "900", color: colors.text, textAlign: "center", marginBottom: 12 }}>اختر الدولة</Text>
 
             {/* Search */}
             <View style={{
               marginHorizontal: 16, marginBottom: 12, flexDirection: "row", alignItems: "center",
-              borderWidth: 1.5, borderColor: C.border, borderRadius: 14,
-              backgroundColor: C.surface, paddingHorizontal: 14, paddingVertical: 10, gap: 8,
+              borderWidth: 1.5, borderColor: colors.border, borderRadius: 14,
+              backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 10, gap: 8,
             }}>
               <Text style={{ fontSize: 16 }}>🔍</Text>
               <TextInput
                 value={countrySearch}
                 onChangeText={setCountrySearch}
                 placeholder="ابحث عن الدولة..."
-                placeholderTextColor={C.textMuted}
+                placeholderTextColor={colors.textMuted}
                 autoFocus
-                style={{ flex: 1, fontSize: 14, color: C.text, textAlign: "right" }}
+                style={{ flex: 1, fontSize: 14, color: colors.text, textAlign: "right" }}
               />
             </View>
 
@@ -637,33 +634,33 @@ export default function Login() {
                     style={{
                       flexDirection: "row", alignItems: "center", gap: 12,
                       paddingVertical: 14, paddingHorizontal: 20,
-                      backgroundColor: isSelected ? C.primarySoft : "transparent",
+                      backgroundColor: isSelected ? colors.primarySoft : "transparent",
                     }}
                   >
                     <Text style={{ fontSize: 24 }}>{item.flag}</Text>
-                    <Text style={{ fontSize: 15, fontWeight: "700", color: C.text, flex: 1 }}>{item.nameAr}</Text>
-                    <Text style={{ fontSize: 14, color: C.textMuted, fontWeight: "600" }}>{item.code}</Text>
-                    {isSelected && <Text style={{ fontSize: 16, color: C.primary }}>✓</Text>}
+                    <Text style={{ fontSize: 15, fontWeight: "700", color: colors.text, flex: 1 }}>{item.nameAr}</Text>
+                    <Text style={{ fontSize: 14, color: colors.textMuted, fontWeight: "600" }}>{item.code}</Text>
+                    {isSelected && <Text style={{ fontSize: 16, color: colors.primary }}>✓</Text>}
                   </Pressable>
                 );
               }}
-              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: C.border, marginHorizontal: 20 }} />}
+              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 20 }} />}
               style={{ maxHeight: 400 }}
             />
 
             <Pressable
               onPress={() => { setShowCountry(false); setCountrySearch(""); }}
-              style={{ padding: 16, alignItems: "center", borderTopWidth: 1, borderTopColor: C.border }}
+              style={{ padding: 16, alignItems: "center", borderTopWidth: 1, borderTopColor: colors.border }}
             >
-              <Text style={{ fontSize: 15, fontWeight: "800", color: C.danger }}>إلغاء</Text>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: colors.danger }}>إلغاء</Text>
             </Pressable>
           </View>
         </View>
       </Modal>
 
       {/* BG CIRCLES */}
-      <View style={{ position: "absolute", top: -80, right: -60, width: 220, height: 220, borderRadius: 110, backgroundColor: C.primarySoft, opacity: 0.7 }} />
-      <View style={{ position: "absolute", bottom: 100, left: -50, width: 160, height: 160, borderRadius: 80, backgroundColor: C.pinkSoft, opacity: 0.5 }} />
+      <View style={{ position: "absolute", top: -80, right: -60, width: 220, height: 220, borderRadius: 110, backgroundColor: colors.primarySoft, opacity: 0.7 }} />
+      <View style={{ position: "absolute", bottom: 100, left: -50, width: 160, height: 160, borderRadius: 80, backgroundColor: colors.pinkSoft, opacity: 0.5 }} />
     </SafeAreaView>
   );
 }

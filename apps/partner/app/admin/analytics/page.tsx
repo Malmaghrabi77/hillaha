@@ -233,7 +233,7 @@ export default function AnalyticsPage() {
     return <div style={{ padding: 40, textAlign: "center", color: "#6B6480" }}>جاري التحميل...</div>;
   }
 
-  if (!auth.isSuperAdmin) {
+  if (!auth.isSuperAdmin && !auth.isAccountant) {
     return (
       <div dir="rtl" style={{ padding: "24px" }}>
         <div
@@ -246,7 +246,7 @@ export default function AnalyticsPage() {
           }}
         >
           <h2 style={{ color: C.danger, margin: "0 0 8px 0" }}>🔒 الوصول مرفوض</h2>
-          <p style={{ color: C.textMuted }}>هذه الصفحة متاحة فقط للسوبر أدمن</p>
+          <p style={{ color: C.textMuted }}>هذه الصفحة متاحة للسوبر أدمن والمحاسبين فقط</p>
         </div>
       </div>
     );

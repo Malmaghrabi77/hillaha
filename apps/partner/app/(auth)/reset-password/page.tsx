@@ -46,8 +46,8 @@ function ResetPasswordContent() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+    if (newPassword.length < 8) {
+      setError("كلمة المرور يجب أن تكون 8 أحرف على الأقل");
       setLoading(false);
       return;
     }

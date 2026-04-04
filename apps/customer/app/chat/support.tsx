@@ -51,7 +51,7 @@ export default function SupportChat() {
           .eq("status", "open")
           .order("created_at", { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (existingTicket) {
           ticketId = existingTicket.id;

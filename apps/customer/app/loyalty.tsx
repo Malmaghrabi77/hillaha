@@ -341,7 +341,6 @@ export default function Loyalty() {
                 <Pressable
                   disabled={!canRedeem}
                   onPress={() => handleRedeem(r)}
-                  {...A11yPresets.pressable}
                   style={{
                     paddingVertical: 10, paddingHorizontal: 16, borderRadius: 14,
                     backgroundColor: isRedeemed ? "#059669" : canRedeem ? "#7C3AED" : "#E5E7EB",

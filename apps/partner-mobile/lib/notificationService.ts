@@ -3,7 +3,7 @@
  * خدمة إدارة الإشعارات والـ Push Tokens
  */
 
-import { getSupabase } from "@hillaha/core";
+import { getSupabase } from "@/lib/supabase";
 
 /**
  * حفظ Expo Push Token في قاعدة البيانات
@@ -17,7 +17,7 @@ export async function savePushToken(pushToken: string): Promise<boolean> {
     if (!user.user) return false;
 
     // البحث عن شريك المستخدم
-    const { data: partner } = await supabase
+    const { data: partner } = await (supabase as any)
       .from("partners")
       .select("id")
       .eq("user_id", user.user.id)
@@ -29,7 +29,7 @@ export async function savePushToken(pushToken: string): Promise<boolean> {
     }
 
     // تحديث الـ push token
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("partners")
       .update({
         push_token: pushToken,
@@ -67,7 +67,7 @@ export async function updateNotificationPreferences(preferences: {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return false;
 
-    const { data: partner } = await supabase
+    const { data: partner } = await (supabase as any)
       .from("partners")
       .select("id, notification_preferences")
       .eq("user_id", user.user.id)
@@ -80,7 +80,7 @@ export async function updateNotificationPreferences(preferences: {
       ...preferences,
     };
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("partners")
       .update({ notification_preferences: updatedPrefs })
       .eq("id", partner.id);
@@ -109,7 +109,7 @@ export async function toggleNotifications(enabled: boolean): Promise<boolean> {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return false;
 
-    const { data: partner } = await supabase
+    const { data: partner } = await (supabase as any)
       .from("partners")
       .select("id")
       .eq("user_id", user.user.id)
@@ -117,7 +117,7 @@ export async function toggleNotifications(enabled: boolean): Promise<boolean> {
 
     if (!partner) return false;
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("partners")
       .update({ notifications_enabled: enabled })
       .eq("id", partner.id);
@@ -146,7 +146,7 @@ export async function getNotificationLogs(limit: number = 20) {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return [];
 
-    const { data: partner } = await supabase
+    const { data: partner } = await (supabase as any)
       .from("partners")
       .select("id")
       .eq("user_id", user.user.id)
@@ -154,7 +154,7 @@ export async function getNotificationLogs(limit: number = 20) {
 
     if (!partner) return [];
 
-    const { data: logs, error } = await supabase
+    const { data: logs, error } = await (supabase as any)
       .from("notification_logs")
       .select("*")
       .eq("partner_id", partner.id)
@@ -187,7 +187,7 @@ export async function logNotification(
     const supabase = getSupabase();
     if (!supabase) return false;
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("notification_logs")
       .insert({
         partner_id: partnerId,
@@ -214,16 +214,18 @@ export async function logNotification(
  * تحديث حالة الإشعار (قراءة/عدم قراءة)
  */
 export async function markNotificationAsRead(
-  notificationId: string
+  notificationId: string,
+  userId: string
 ): Promise<boolean> {
   try {
     const supabase = getSupabase();
     if (!supabase) return false;
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("notification_logs")
       .update({ read_at: new Date().toISOString() })
-      .eq("id", notificationId);
+      .eq("id", notificationId)
+      .eq("recipient_id", userId);
 
     if (error) {
       console.error("❌ خطأ في تحديث حالة الإشعار:", error);
@@ -240,15 +242,16 @@ export async function markNotificationAsRead(
 /**
  * حذف إشعار
  */
-export async function deleteNotification(notificationId: string): Promise<boolean> {
+export async function deleteNotification(notificationId: string, userId: string): Promise<boolean> {
   try {
     const supabase = getSupabase();
     if (!supabase) return false;
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("notification_logs")
       .delete()
-      .eq("id", notificationId);
+      .eq("id", notificationId)
+      .eq("recipient_id", userId);
 
     if (error) {
       console.error("❌ خطأ في حذف الإشعار:", error);

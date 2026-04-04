@@ -72,7 +72,7 @@ serve(async (req: Request) => {
       const { data: partnerTokens } = await supabase
         .from("partners")
         .select("id, push_token")
-        .in("id", targetIds)
+        .in("user_id", targetIds)
         .eq("notifications_enabled", true)
         .not("push_token", "is", null);
 
@@ -107,7 +107,7 @@ serve(async (req: Request) => {
     const { data: partnerTokens } = await supabase
       .from("partners")
       .select("id, push_token")
-      .in("id", targetIds)
+      .in("user_id", targetIds)
       .eq("notifications_enabled", true)
       .not("push_token", "is", null);
 
@@ -134,7 +134,7 @@ serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify({ success: true, sent: results.sent, failed: results.failed }),
-      { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders(req) } }
     );
   } catch (error) {
     return new Response(

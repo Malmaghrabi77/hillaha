@@ -100,7 +100,7 @@ function RootLayoutInner() {
         const profileResult = await Promise.race([
           (supabase as any)
             .from("profiles")
-            .select("driver_application_status, is_approved")
+            .select("role, driver_application_status, is_approved")
             .eq("id", userId)
             .single(),
           new Promise<null>((r) => setTimeout(() => r(null), 4000)),
@@ -108,10 +108,22 @@ function RootLayoutInner() {
 
         if (!mounted) return;
 
-        const status = (profileResult as any)?.data?.driver_application_status;
-        if (status === "pending") setTarget("/(auth)/pending-approval");
+        const profile = (profileResult as any)?.data;
+        const role = profile?.role;
+        const status = profile?.driver_application_status;
+
+        // Only allow drivers and super_admins into the driver app
+        if (role && role !== "driver" && role !== "super_admin") {
+          await supabase.auth.signOut();
+          setTarget("/(auth)/login");
+        } else if (status === "pending") setTarget("/(auth)/pending-approval");
         else if (status === "rejected") setTarget("/(auth)/rejected");
-        else setTarget("/(tabs)/home");
+        else if (status === "approved" || status === "active") setTarget("/(tabs)/home");
+        else {
+          // Unknown status or no driver profile — redirect to login
+          await supabase.auth.signOut();
+          setTarget("/(auth)/login");
+        }
       } catch {
         if (mounted) setTarget("/(auth)/login");
       } finally {

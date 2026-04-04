@@ -7,7 +7,6 @@ import * as Clipboard from "expo-clipboard";
 import { useDarkMode } from "../../src/hooks/useDarkMode";
 import { useSupabase } from "../../src/hooks/useSupabase";
 import { analyticsTracker } from "../../src/utils/analyticsTracker";
-import { A11yPresets } from "../../src/hooks/useAccessibility";
 import { SafeAreaScrollView } from "../../src/components";
 
 const C = {
@@ -129,7 +128,6 @@ export default function ReferralsScreen() {
             analyticsTracker.trackEvent("referrals_back");
             router.canGoBack() ? router.back() : router.replace("/(tabs)/home");
           }}
-          {...A11yPresets.pressable}
           style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
         >
           <Text style={{ fontSize: 20, color: "white" }}>←</Text>
@@ -180,7 +178,6 @@ export default function ReferralsScreen() {
 
                 <Pressable
                   onPress={copyToClipboard}
-                  {...A11yPresets.pressable}
                   style={{
                     backgroundColor: C.primary,
                     paddingVertical: 8,
@@ -195,7 +192,6 @@ export default function ReferralsScreen() {
               {/* Share Button */}
               <Pressable
                 onPress={shareReferral}
-                {...A11yPresets.pressable}
                 style={{
                   backgroundColor: C.primary,
                   paddingVertical: 12,

@@ -7,7 +7,6 @@ import { router } from "expo-router";
 import { useDarkMode } from '../src/hooks/useDarkMode';
 import { useSupabase } from '../src/hooks/useSupabase';
 import { analyticsTracker } from '../src/utils/analyticsTracker';
-import { A11yPresets } from '../src/hooks/useAccessibility';
 import { ANALYTICS_EVENTS } from '../src/constants/analyticsEvents';
 import { AppHeader } from '../src/components';
 import { LocationPickerMap } from '../src/components/LocationPickerMap';
@@ -88,7 +87,7 @@ export default function Addresses() {
       if (!user) return;
 
       if (editingId) {
-        // Update existing address
+        // Update existing address — scoped to current user for defense-in-depth
         await supabase
           .from("addresses")
           .update({
@@ -101,7 +100,8 @@ export default function Addresses() {
             latitude: form.latitude,
             longitude: form.longitude,
           })
-          .eq("id", editingId);
+          .eq("id", editingId)
+          .eq("user_id", user.id);
       } else {
         // Create new address
         await supabase.from("addresses").insert({
@@ -138,7 +138,9 @@ export default function Addresses() {
           onPress: async () => {
             analyticsTracker.trackEvent(ANALYTICS_EVENTS.ADDRESS.DELETED, { address_id: id });
             if (!supabase) return;
-            await supabase.from("addresses").delete().eq("id", id);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            await supabase.from("addresses").delete().eq("id", id).eq("user_id", user.id);
             fetchAddresses();
           },
           style: "destructive",
@@ -165,7 +167,8 @@ export default function Addresses() {
       await supabase
         .from("addresses")
         .update({ is_default: true })
-        .eq("id", id);
+        .eq("id", id)
+        .eq("user_id", user.id);
 
       fetchAddresses();
     } catch {
@@ -258,7 +261,6 @@ export default function Addresses() {
                         paddingVertical: 8, borderRadius: 10,
                         alignItems: "center",
                       }}
-                      {...A11yPresets.button}
                     >
                       <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 12 }}>تعديل</Text>
                     </Pressable>
@@ -270,7 +272,6 @@ export default function Addresses() {
                           paddingVertical: 8, borderRadius: 10,
                           alignItems: "center",
                         }}
-                        {...A11yPresets.button}
                       >
                         <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 12 }}>اجعله افتراضياً</Text>
                       </Pressable>
@@ -282,7 +283,6 @@ export default function Addresses() {
                         backgroundColor: colors.dangerSoft || "rgba(239, 68, 68, 0.15)",
                         justifyContent: "center", alignItems: "center",
                       }}
-                      {...A11yPresets.button}
                     >
                       <Text style={{ fontSize: 16 }}>🗑️</Text>
                     </Pressable>
@@ -310,7 +310,6 @@ export default function Addresses() {
             shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
           }}
-          {...A11yPresets.button}
         >
           <Text style={{ color: "white", fontWeight: "900", fontSize: 16 }}>+ إضافة عنوان جديد</Text>
         </Pressable>
@@ -474,7 +473,6 @@ export default function Addresses() {
                   paddingVertical: 14, borderRadius: 12,
                   alignItems: "center",
                 }}
-                {...A11yPresets.button}
               >
                 <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>إلغاء</Text>
               </Pressable>
@@ -485,7 +483,6 @@ export default function Addresses() {
                   paddingVertical: 14, borderRadius: 12,
                   alignItems: "center",
                 }}
-                {...A11yPresets.button}
               >
                 <Text style={{ color: "white", fontWeight: "700", fontSize: 14 }}>حفظ</Text>
               </Pressable>

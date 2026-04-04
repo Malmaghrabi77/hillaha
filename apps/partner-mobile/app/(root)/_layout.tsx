@@ -1,52 +1,50 @@
-import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { useNavigation } from "@react-navigation/native";
-import { useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { COLORS, SPACING } from "@/lib/theme";
+import { useEffect, useState } from "react";
+import { Tabs, useRouter } from "expo-router";
+import { Text, View, StyleSheet, ActivityIndicator } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "@/lib/theme";
+import { useNotifications } from "@/lib/notifications";
+import { getSupabase } from "@/lib/supabase";
 
-const Tab = createBottomTabNavigator();
-
-// Placeholder screens (to be replaced with actual components)
-const Dashboard = () => (
-  <View style={styles.placeholder}>
-    <Text>Dashboard</Text>
-  </View>
-);
-
-const Orders = () => (
-  <View style={styles.placeholder}>
-    <Text>Orders</Text>
-  </View>
-);
-
-const Menu = () => (
-  <View style={styles.placeholder}>
-    <Text>Menu</Text>
-  </View>
-);
-
-const Finance = () => (
-  <View style={styles.placeholder}>
-    <Text>Finance</Text>
-  </View>
-);
-
-const Reviews = () => (
-  <View style={styles.placeholder}>
-    <Text>Reviews</Text>
-  </View>
-);
-
-const More = () => (
-  <View style={styles.placeholder}>
-    <Text>More</Text>
-  </View>
-);
+const TAB_ITEMS = [
+  { name: "dashboard", title: "الرئيسية", icon: "📊" },
+  { name: "orders", title: "الطلبات", icon: "📦" },
+  { name: "menu", title: "القائمة", icon: "🍽️" },
+  { name: "finance", title: "المالية", icon: "💰" },
+  { name: "reviews", title: "التقييمات", icon: "⭐" },
+  { name: "more", title: "المزيد", icon: "⚙️" },
+] as const;
 
 export default function RootLayout() {
+  useNotifications();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const supabase = getSupabase();
+        if (!supabase) { router.replace("/(auth)/login"); return; }
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.replace("/(auth)/login"); return; }
+        setReady(true);
+      } catch {
+        router.replace("/(auth)/login");
+      }
+    })();
+  }, []);
+
+  if (!ready) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.bg }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
   return (
-    <Tab.Navigator
+    <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: COLORS.primary,
@@ -55,144 +53,51 @@ export default function RootLayout() {
           backgroundColor: COLORS.surface,
           borderTopColor: COLORS.border,
           borderTopWidth: 1,
-          paddingBottom: SPACING.sm,
+          paddingBottom: Math.max(insets.bottom, SPACING.sm),
           paddingTop: SPACING.sm,
+          height: 60 + Math.max(insets.bottom, SPACING.sm),
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-          marginTop: -SPACING.sm,
+          fontSize: FONT_SIZES.xs,
+          fontWeight: "700",
         },
       }}
     >
-      <Tab.Screen
-        name="dashboard"
-        component={Dashboard}
-        options={{
-          title: "الرئيسية",
-          tabBarLabel: "الرئيسية",
-          tabBarIcon: ({ color, focused }) => (
-            <Text
-              style={{
-                fontSize: 20,
-                color,
-                opacity: focused ? 1 : 0.6,
-              }}
-            >
-              📊
-            </Text>
-          ),
-        }}
-      />
-
-      <Tab.Screen
-        name="orders"
-        component={Orders}
-        options={{
-          title: "الطلبات",
-          tabBarLabel: "الطلبات",
-          tabBarIcon: ({ color, focused }) => (
-            <Text
-              style={{
-                fontSize: 20,
-                color,
-                opacity: focused ? 1 : 0.6,
-              }}
-            >
-              📦
-            </Text>
-          ),
-        }}
-      />
-
-      <Tab.Screen
-        name="menu"
-        component={Menu}
-        options={{
-          title: "القائمة",
-          tabBarLabel: "القائمة",
-          tabBarIcon: ({ color, focused }) => (
-            <Text
-              style={{
-                fontSize: 20,
-                color,
-                opacity: focused ? 1 : 0.6,
-              }}
-            >
-              🍽️
-            </Text>
-          ),
-        }}
-      />
-
-      <Tab.Screen
-        name="finance"
-        component={Finance}
-        options={{
-          title: "المالية",
-          tabBarLabel: "المالية",
-          tabBarIcon: ({ color, focused }) => (
-            <Text
-              style={{
-                fontSize: 20,
-                color,
-                opacity: focused ? 1 : 0.6,
-              }}
-            >
-              💰
-            </Text>
-          ),
-        }}
-      />
-
-      <Tab.Screen
-        name="reviews"
-        component={Reviews}
-        options={{
-          title: "التقييمات",
-          tabBarLabel: "التقييمات",
-          tabBarIcon: ({ color, focused }) => (
-            <Text
-              style={{
-                fontSize: 20,
-                color,
-                opacity: focused ? 1 : 0.6,
-              }}
-            >
-              ⭐
-            </Text>
-          ),
-        }}
-      />
-
-      <Tab.Screen
-        name="more"
-        component={More}
-        options={{
-          title: "المزيد",
-          tabBarLabel: "المزيد",
-          tabBarIcon: ({ color, focused }) => (
-            <Text
-              style={{
-                fontSize: 20,
-                color,
-                opacity: focused ? 1 : 0.6,
-              }}
-            >
-              ⋯
-            </Text>
-          ),
-        }}
-      />
-    </Tab.Navigator>
+      {TAB_ITEMS.map(({ name, title, icon }) => (
+        <Tabs.Screen
+          key={name}
+          name={name}
+          options={{
+            title,
+            tabBarLabel: title,
+            tabBarIcon: ({ focused }) => (
+              <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
+                <Text style={[styles.icon, focused && styles.iconActive]}>{icon}</Text>
+              </View>
+            ),
+          }}
+        />
+      ))}
+    </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
-  placeholder: {
-    flex: 1,
+  iconContainer: {
+    width: 36,
+    height: 28,
+    borderRadius: BORDER_RADIUS.sm,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.bg,
+  },
+  iconContainerActive: {
+    backgroundColor: COLORS.primarySoft,
+  },
+  icon: {
+    fontSize: 18,
+    opacity: 0.5,
+  },
+  iconActive: {
+    opacity: 1,
   },
 });

@@ -26,6 +26,8 @@ export default function PromotionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const [formData, setFormData] = useState<{
     name: string;
@@ -62,10 +64,27 @@ export default function PromotionsPage() {
         return;
       }
 
-      const { data, error: err } = await (supabase
-        .from("promotions") as any)
+      // Detect partner_id from authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await (supabase as any).from("profiles").select("role, partner_id").eq("id", user.id).maybeSingle();
+      const isSA = profile?.role === "super_admin";
+      setIsSuperAdmin(isSA);
+      const pId = profile?.partner_id;
+      setPartnerId(pId || null);
+
+      if (!isSA && !pId) {
+        setError("لا يوجد متجر مرتبط بحسابك");
+        setLoading(false);
+        return;
+      }
+
+      let query = (supabase.from("promotions") as any)
         .select("*")
         .order("created_at", { ascending: false });
+      if (!isSA && pId) query = query.eq("partner_id", pId);
+
+      const { data, error: err } = await query;
 
       if (err) throw err;
       setPromotions(data || []);
@@ -80,6 +99,21 @@ export default function PromotionsPage() {
 
   const handleSavePromotion = async () => {
     try {
+      // Validate discount value
+      if (formData.discount_value <= 0) {
+        setError("قيمة الخصم يجب أن تكون أكبر من صفر");
+        return;
+      }
+      if (formData.discount_type === "percentage" && formData.discount_value > 100) {
+        setError("نسبة الخصم لا يمكن أن تتجاوز 100%");
+        return;
+      }
+      // Validate dates
+      if (formData.start_date && formData.end_date && formData.start_date >= formData.end_date) {
+        setError("تاريخ الانتهاء يجب أن يكون بعد تاريخ البداية");
+        return;
+      }
+
       const supabase = getSupabase();
       if (!supabase) {
         setError("خطأ في الاتصال");
@@ -91,14 +125,16 @@ export default function PromotionsPage() {
         const { error: err } = await (supabase
           .from("promotions") as any)
           .update(formData)
-          .eq("id", editingId);
+          .eq("id", editingId)
+          .eq("partner_id", partnerId);
 
         if (err) throw err;
       } else {
         // Insert new
+        const insertData = partnerId ? { ...formData, partner_id: partnerId } : formData;
         const { error: err } = await (supabase
           .from("promotions") as any)
-          .insert([formData]);
+          .insert([insertData]);
 
         if (err) throw err;
       }
@@ -137,7 +173,8 @@ export default function PromotionsPage() {
       const { error: err } = await (supabase
         .from("promotions") as any)
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .eq("partner_id", partnerId);
 
       if (err) throw err;
       await loadPromotions();
@@ -316,11 +353,11 @@ export default function PromotionsPage() {
               >
                 <p style={{ margin: 0, color: theme.colors.primary, fontWeight: 700 }}>
                   خصم {promo.discount_value}
-                  {promo.discount_type === 'percentage' ? '%' : ' ريال'}
+                  {promo.discount_type === 'percentage' ? '%' : ' ج.م'}
                 </p>
                 {promo.min_order_value > 0 && (
                   <p style={{ margin: `${theme.spacing[1]} 0 0 0`, fontSize: '12px' }}>
-                    الحد الأدنى: {promo.min_order_value} ريال
+                    الحد الأدنى: {promo.min_order_value} ج.م
                   </p>
                 )}
               </div>
@@ -433,7 +470,7 @@ export default function PromotionsPage() {
                 }}
               >
                 <option value="percentage">نسبة مئوية (%)</option>
-                <option value="fixed">مبلغ ثابت (ر.س)</option>
+                <option value="fixed">مبلغ ثابت (ج.م)</option>
               </select>
             </div>
 

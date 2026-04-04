@@ -25,6 +25,8 @@ export default function ReviewsPage() {
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [showReplyModal, setShowReplyModal] = useState(false);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     loadReviews();
@@ -39,10 +41,27 @@ export default function ReviewsPage() {
         return;
       }
 
-      const { data, error: err } = await (supabase
-        .from("reviews") as any)
+      // Detect partner_id from authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await (supabase as any).from("profiles").select("role, partner_id").eq("id", user.id).maybeSingle();
+      const isSA = profile?.role === "super_admin";
+      setIsSuperAdmin(isSA);
+      const pId = profile?.partner_id;
+      setPartnerId(pId || null);
+
+      if (!isSA && !pId) {
+        setError("لا يوجد متجر مرتبط بحسابك");
+        setLoading(false);
+        return;
+      }
+
+      let query = (supabase.from("reviews") as any)
         .select("*, profiles(full_name)")
         .order("created_at", { ascending: false });
+      if (!isSA && pId) query = query.eq("partner_id", pId);
+
+      const { data, error: err } = await query;
 
       if (err) throw err;
 
@@ -81,7 +100,8 @@ export default function ReviewsPage() {
           response: replyText,
           responded_at: new Date().toISOString(),
         })
-        .eq("id", replyingToId);
+        .eq("id", replyingToId)
+        .eq("partner_id", partnerId);
 
       if (err) throw err;
 

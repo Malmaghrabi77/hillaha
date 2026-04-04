@@ -40,11 +40,6 @@ export async function extractTextFromImage(imageUri: string): Promise<string> {
   }
 }
 
-// Date patterns: DD/MM/YYYY, DD-MM-YYYY, YYYY/MM/DD, YYYY-MM-DD
-const DATE_PATTERNS = [
-  /(\d{1,2})[\/\-\.]\s*(\d{1,2})[\/\-\.]\s*(20\d{2})/g, // DD/MM/YYYY
-  /(20\d{2})[\/\-\.]\s*(\d{1,2})[\/\-\.]\s*(\d{1,2})/g, // YYYY/MM/DD
-];
 
 /**
  * Try to extract an expiry date from OCR text.

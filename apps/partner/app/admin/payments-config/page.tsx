@@ -56,9 +56,9 @@ export default function PaymentMethodsPage() {
   });
 
   useEffect(() => {
-    if (!auth.user || (!auth.isSuperAdmin && auth.role !== 'admin')) return;
+    if (!auth.user || !auth.isSuperAdmin) return;
     loadPaymentMethods();
-  }, [auth.user, auth.isSuperAdmin, auth.role]);
+  }, [auth.user, auth.isSuperAdmin]);
 
   const loadPaymentMethods = async () => {
     try {
@@ -184,11 +184,11 @@ export default function PaymentMethodsPage() {
     return <div style={{ padding: 40, textAlign: "center", color: C.textMuted }}>جاري التحميل...</div>;
   }
 
-  if (!auth.isSuperAdmin && auth.role !== 'admin') {
+  if (!auth.isSuperAdmin) {
     return (
       <div style={{ padding: "24px", textAlign: "center" }}>
         <p style={{ color: C.danger, fontWeight: 700 }}>
-          ⛔ هذه الصفحة متاحة فقط للسوبر أدمن والفريد أدمن
+          ⛔ هذه الصفحة متاحة فقط للسوبر أدمن
         </p>
       </div>
     );

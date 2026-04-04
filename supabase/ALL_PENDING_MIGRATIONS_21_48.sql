@@ -4278,7 +4278,10 @@ ADD COLUMN IF NOT EXISTS total_earnings DECIMAL(10,2) DEFAULT 0;
 
 -- Create index on role for faster filtering
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
-CREATE INDEX IF NOT EXISTS idx_profiles_is_active ON profiles(is_active);
+DO $$ BEGIN
+  CREATE INDEX IF NOT EXISTS idx_profiles_is_active ON profiles(is_active);
+EXCEPTION WHEN undefined_column THEN NULL;
+END $$;
 
 -- ===== PARTNERS TABLE UPDATES =====
 

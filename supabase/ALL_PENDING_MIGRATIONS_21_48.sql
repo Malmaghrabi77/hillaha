@@ -1587,11 +1587,10 @@ $$;
 -- ============================================================
 ALTER TABLE IF EXISTS messages ENABLE ROW LEVEL SECURITY;
 
+-- messages_select_own policy skipped: receiver_id column does not exist in messages table.
+-- Correct RLS policies are already created in migration 23.
+
 DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'messages' AND policyname = 'messages_select_own') THEN
-    CREATE POLICY messages_select_own ON messages FOR SELECT
-      USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
-  END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'messages' AND policyname = 'messages_insert_own') THEN
     CREATE POLICY messages_insert_own ON messages FOR INSERT
       WITH CHECK (auth.uid() = sender_id);
